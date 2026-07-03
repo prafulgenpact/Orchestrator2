@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+# Fast gate: lint only what is staged. Full verification happens in scripts/verify.sh.
+# Portable: no bash-4 features (works on macOS bash 3.2).
+set -uo pipefail
+cd "$(git rev-parse --show-toplevel)"
+
+STAGED=$(git diff --cached --name-only --diff-filter=ACMR)
+[ -z "$STAGED" ] && exit 0
+
+# Optional: forbid direct commits to main (export ALLOW_MAIN_COMMITS=0 to enable)
+BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
+if [ "$BRANCH" = "main" ] && [ "${ALLOW_MAIN_COMMITS:-1}" = "0" ]; then
+  echo "[pre-commit] direct commits to main are disabled here (work on a branch)" >&2
+  exit 1
+fi
+
+rc=0
+
+# secrets never enter history — stdlib scanner, runs everywhere
+python3 scripts/secret_scan.py --staged || rc=1
+
+PY_FILES=$(printf '%s\n' "$STAGED" | grep -E '\.py$' || true)
+if [ -n "$PY_FILES" ] && command -v ruff >/dev/null 2>&1; then
+  printf '%s\n' "$PY_FILES" | tr '\n' '\0' | xargs -0 ruff check || rc=1
+  printf '%s\n' "$PY_FILES" | tr '\n' '\0' | xargs -0 ruff format --check || rc=1
+fi
+
+WEB_FILES=$(printf '%s\n' "$STAGED" | grep -E '\.(ts|tsx|js|jsx)$' || true)
+if [ -n "$WEB_FILES" ] && [ -f web/package.json ]; then
+  printf '%s\n' "$WEB_FILES" | tr '\n' '\0' | xargs -0 npx --prefix web eslint || rc=1
+fi
+
+if [ $rc -ne 0 ]; then
+  echo "[pre-commit] ❌ lint failed — fix before committing (try: ruff check --fix . && ruff format .)" >&2
+fi
+exit $rc

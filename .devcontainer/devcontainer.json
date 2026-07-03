@@ -1,0 +1,13 @@
+{
+  "name": "agentic-project",
+  "image": "mcr.microsoft.com/devcontainers/python:1-3.12-bookworm",
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": { "version": "20" }
+  },
+  "postCreateCommand": "make bootstrap",
+  "customizations": {
+    "vscode": {
+      "extensions": ["charliermarsh.ruff", "ms-python.mypy-type-checker"]
+    }
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "configured": false,
+  "agent_cmd": "2",
+  "env": {
+    "AGENT_LLM_MODE": "replay"
+  }
+}

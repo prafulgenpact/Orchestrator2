@@ -1,0 +1,28 @@
+# Harness-owned files: safe to overwrite when updating from a newer scaffold.
+# User-owned files (verify.config, .proofignore, specs/, docs/, src/, tests/,
+# CLAUDE.md project section) are NEVER listed here.
+scripts/fingerprint.py
+scripts/gen_proof.py
+scripts/check_proof.py
+scripts/loop_detector.py
+scripts/drift_check.py
+scripts/verify.sh
+scripts/install_hooks.sh
+scripts/gate_bash.sh
+scripts/gate_edit.sh
+scripts/lint_file.sh
+scripts/stop_gate.sh
+scripts/session_brief.sh
+scripts/secret_scan.py
+scripts/doctor.py
+scripts/update_from_scaffold.sh
+githooks/pre-commit
+githooks/pre-push
+githooks/commit-msg
+Makefile
+.claude/settings.json
+.claude/agents/auditor.md
+.github/workflows/verify.yml
+PLAYBOOK.md
+VERSION
+scaffold.manifest

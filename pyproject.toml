@@ -1,0 +1,48 @@
+[project]
+name = "a-multi-agent-orchestrator-system-calling-relevant-apps-basis-intent-recognition"
+version = "0.1.0"
+description = "It recognises user intent, breaks it down into smaller tasks and then calls relevant APPS to complete the task"
+requires-python = ">=3.10"
+dependencies = []
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+src = ["src", "tests"]
+# Harness tooling under scripts/ is vendored (managed via update_from_scaffold.sh),
+# not this project's code — lint/format only src/ and tests/. force-exclude makes
+# the exclusion apply even to paths passed explicitly (e.g. the pre-commit hook).
+extend-exclude = ["scripts"]
+force-exclude = true
+
+[tool.ruff.lint]
+select = [
+  "E", "F", "W",   # pycodestyle + pyflakes
+  "I",             # import sorting
+  "N",             # naming
+  "UP",            # modern syntax
+  "B",             # bugbear (real bug patterns)
+  "A",             # builtin shadowing
+  "C4",            # comprehension issues
+  "SIM",           # simplifiable code
+  "ARG",           # unused arguments
+  "RUF",           # ruff-native rules
+]
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
+mypy_path = "src"
+explicit_package_bases = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = "-ra"
+
+[tool.coverage.run]
+source = ["src"]
+branch = true
+
+[tool.coverage.report]
+show_missing = true

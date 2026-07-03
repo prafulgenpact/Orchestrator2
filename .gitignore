@@ -1,0 +1,21 @@
+# caches & environments
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+node_modules/
+dist/
+build/
+
+# transient verification workspace (proofs/ IS committed; reports/ is not)
+reports/
+.verify.lock/
+.scaffold-backup/
+
+# secrets & local overrides
+.env
+.env.*
+.claude/settings.local.json

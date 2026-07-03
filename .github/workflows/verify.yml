@@ -1,0 +1,61 @@
+# Server-side enforcement: the layer no local bypass can defeat.
+# Job 1 audits the committed proof against the pushed code (contract check).
+# Job 2 re-runs the entire verification from scratch (trust nothing local).
+# Make BOTH required status checks in branch protection (see PLAYBOOK.md §9).
+name: verify
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+concurrency:
+  group: verify-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # For PRs, audit the actual head commit, not the synthetic merge commit.
+  PROOF_REF: ${{ github.event.pull_request.head.sha || github.sha }}
+
+jobs:
+  proof-audit:
+    name: audit committed proof (contract)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Validate the proof committed with this code
+        run: python3 scripts/check_proof.py --ref "$PROOF_REF"
+
+  re-verify:
+    name: independent re-verification
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Bootstrap (locked toolchain)
+        run: |
+          python3 -m pip install -r requirements-dev.txt
+          if [ -f web/package.json ]; then npm --prefix web ci; fi
+      - name: Run full verification from scratch
+        env:
+          CI: "true"
+        run: bash scripts/verify.sh
+      - name: Upload evidence (reports + regenerated proof)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: verification-evidence-${{ github.sha }}
+          path: |
+            reports/
+            proofs/latest.json
+          retention-days: 90

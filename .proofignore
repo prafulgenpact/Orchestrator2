@@ -1,0 +1,10 @@
+# Paths that do NOT invalidate a test proof when they change.
+# Everything else is "code": change one byte and the proof goes stale.
+# HUMAN-OWNED FILE: agents are blocked from editing it.
+docs/**
+specs/**
+.github/**
+.devcontainer/**
+.claude/**
+*.md
+LICENSE

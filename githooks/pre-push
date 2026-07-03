@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+# ---------------------------------------------------------------------------
+# THE CONTRACT, enforced: nothing leaves this machine without a fresh,
+# committed, tamper-checked PASS proof bound to the exact code being pushed.
+# The proof is read FROM THE COMMIT ITSELF (git show <sha>:proofs/latest.json),
+# so an uncommitted or stale proof cannot sneak code out.
+# ---------------------------------------------------------------------------
+set -uo pipefail
+cd "$(git rev-parse --show-toplevel)"
+
+ZERO="0000000000000000000000000000000000000000"
+rc=0
+
+while read -r local_ref local_sha remote_ref remote_sha; do
+  [ -z "${local_ref:-}" ] && continue
+  [ "$local_sha" = "$ZERO" ] && continue   # branch deletion — nothing to prove
+
+  echo "[pre-push] validating proof for $local_ref ($(git rev-parse --short "$local_sha"))"
+  if python3 scripts/check_proof.py --ref "$local_sha"; then
+    echo "[pre-push] ✅ proof valid — push allowed"
+  else
+    echo "" >&2
+    echo "[pre-push] ⛔ PUSH BLOCKED: no valid PASS proof for this exact code." >&2
+    echo "           Run:  make verify && make seal     then push again." >&2
+    echo "           (Bypassing with --no-verify is a contract violation and CI will catch it anyway.)" >&2
+    rc=1
+  fi
+done
+
+exit $rc

@@ -1,0 +1,18 @@
+{
+  "name": "happy path \u2014 copy per acceptance criterion, rename to *.json to arm",
+  "args": "--task 'summarize the input file'",
+  "stdin": "",
+  "env": {
+    "AGENT_LLM_MODE": "replay"
+  },
+  "timeout_s": 300,
+  "expect": {
+    "exit_code": 0,
+    "stdout_contains": [
+      "summary"
+    ],
+    "files_exist": [
+      "output/summary.md"
+    ]
+  }
+}
