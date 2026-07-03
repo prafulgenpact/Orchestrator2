@@ -1,0 +1,190 @@
+{
+  "schema_version": 1,
+  "apps": [
+    {
+      "id": "simulated-learning",
+      "name": "Simulated Learning",
+      "description": "Adaptive ML/AI learning with interactive simulations and sandboxed code execution inside lessons.",
+      "capabilities": [
+        "run Python code in a one-shot sandbox for lesson practice",
+        "answer in-lesson questions grounded in the current concept's theory"
+      ],
+      "example_tasks": [
+        "practice a machine-learning concept by running example code",
+        "ask a question about the current lesson's theory"
+      ],
+      "fallback": false
+    },
+    {
+      "id": "arxiv-papers",
+      "name": "ArXiv Paper Guide",
+      "description": "Discover and analyze AI research papers from arXiv and external URLs.",
+      "capabilities": [
+        "search arXiv by free-text query or by topic",
+        "fetch a paper's full details by arXiv id",
+        "analyze a paper (summary, key takeaways, ELI5, concepts, or Q&A)",
+        "fetch and parse a paper from a URL (non-arXiv sources included)"
+      ],
+      "example_tasks": [
+        "find recent papers on mixture-of-experts",
+        "summarize the key takeaways of an arXiv paper",
+        "explain a specific paper in simple terms"
+      ],
+      "fallback": false
+    },
+    {
+      "id": "coding-playground",
+      "name": "Coding Playground",
+      "description": "Interactive Jupyter-based Python environment with a persistent kernel for data exploration and model training.",
+      "capabilities": [
+        "execute Python in a persistent Jupyter kernel where state persists across calls",
+        "check or restart the kernel to manage state",
+        "list available datasets and preview them (head, dtypes, shape)"
+      ],
+      "example_tasks": [
+        "train a model on a sample dataset",
+        "run exploratory data analysis on a dataset",
+        "prototype and iterate on Python code interactively"
+      ],
+      "fallback": false
+    },
+    {
+      "id": "ai-intelligence-deck",
+      "name": "AI Intelligence Deck",
+      "description": "AI news aggregation and trend-intelligence dashboard.",
+      "capabilities": [
+        "get cached AI news items organized by category",
+        "generate a TL;DR executive summary of current AI news",
+        "analyze trends across the cached AI news corpus"
+      ],
+      "example_tasks": [
+        "what is the latest in AI news",
+        "summarize this week's AI developments",
+        "what trends are emerging across AI news"
+      ],
+      "fallback": false
+    },
+    {
+      "id": "social-media-ai",
+      "name": "Social Media AI",
+      "description": "Aggregates and categorizes social content from Twitter/X, Medium, and other platforms.",
+      "capabilities": [
+        "get the latest aggregated Twitter/X content",
+        "get the latest aggregated Medium content",
+        "get content across all platforms in one call",
+        "list the content categories currently classified"
+      ],
+      "example_tasks": [
+        "what is trending on Twitter about AI",
+        "show me recent Medium posts",
+        "aggregate social media content across platforms"
+      ],
+      "fallback": false
+    },
+    {
+      "id": "stanford-llm",
+      "name": "Stanford LLM Course",
+      "description": "Chatbot assistant grounded in Stanford CME 295 (Transformers & Large Language Models) course material.",
+      "capabilities": [
+        "answer questions about the Stanford CME 295 Transformers/LLM course, grounded in course materials",
+        "hold a multi-turn conversation with the course assistant"
+      ],
+      "example_tasks": [
+        "explain self-attention using the Stanford course",
+        "help me study transformers with CME 295 materials"
+      ],
+      "fallback": false
+    },
+    {
+      "id": "stats-teacher",
+      "name": "Statistics Teacher",
+      "description": "Interactive statistics tutor that answers questions grounded in specific course modules.",
+      "capabilities": [
+        "answer a statistics question grounded in a specific course module, with conversation context"
+      ],
+      "example_tasks": [
+        "explain hypothesis testing",
+        "help me understand p-values"
+      ],
+      "fallback": false
+    },
+    {
+      "id": "teach-me",
+      "name": "Teach Me",
+      "description": "Adaptive first-principles learning with generated concept maps and conversational lessons.",
+      "capabilities": [
+        "list learning topics already started",
+        "fetch a topic with its concept map and message history",
+        "start a new learning topic (generates a concept map and first lesson)",
+        "continue a lesson by sending a message grounded in the concept map"
+      ],
+      "example_tasks": [
+        "teach me a new topic from first principles",
+        "start learning about reinforcement learning",
+        "continue my lesson on backpropagation"
+      ],
+      "fallback": false
+    },
+    {
+      "id": "github-learnings",
+      "name": "Github Learnings",
+      "description": "Ingests GitHub repositories and extracts learnings and patterns with searchable Q&A.",
+      "capabilities": [
+        "ingest a GitHub repository (clone, parse, index)",
+        "list ingested repositories and their status",
+        "list extracted learnings, optionally filtered by repo",
+        "free-text search across extracted learnings"
+      ],
+      "example_tasks": [
+        "learn how a GitHub repo implements a feature",
+        "ingest a repo and extract its key patterns",
+        "search what I have learned from repositories"
+      ],
+      "fallback": false
+    },
+    {
+      "id": "blogs-playground",
+      "name": "Blogs Playground",
+      "description": "Drafts and refines personal blog posts through a multi-stage writing pipeline in the user's voice.",
+      "capabilities": [
+        "list existing blog posts",
+        "fetch a blog with its full body and versions",
+        "suggest blog topics that fit the user's voice",
+        "draft a complete blog post (plan, research, write, critique, polish)",
+        "refine an existing blog with a natural-language instruction"
+      ],
+      "example_tasks": [
+        "draft a blog post about agentic AI",
+        "suggest blog topics in my voice",
+        "revise my blog to be more concise"
+      ],
+      "fallback": false
+    },
+    {
+      "id": "research-assistant",
+      "name": "Research Assistant",
+      "description": "Conducts long-form research synthesis with configurable depth and voice over a personal source corpus.",
+      "capabilities": [
+        "start a research run on a topic with configurable depth and voice",
+        "list and fetch research runs with their output and sources",
+        "manage a corpus of uploaded source documents",
+        "list saved research notes and cancel in-flight runs"
+      ],
+      "example_tasks": [
+        "research the state of the art in retrieval-augmented generation and synthesize a report",
+        "run a deep research pass on a topic with citations"
+      ],
+      "fallback": false
+    },
+    {
+      "id": "web-search",
+      "name": "Web Search (fallback)",
+      "description": "General web lookup for subtasks that no built-in app covers.",
+      "capabilities": [
+        "answer general questions or fetch live facts from the open web when no specialized app applies"
+      ],
+      "example_tasks": [],
+      "fallback": true
+    }
+  ]
+}
