@@ -1,0 +1,103 @@
+{
+  "schema": "proof/v1",
+  "created_utc": "2026-07-03T12:38:23+00:00",
+  "result": "PASS",
+  "failed_checks": [],
+  "missing_required_checks": [],
+  "required_checks": [
+    "py-lint",
+    "py-format",
+    "py-types",
+    "py-unit",
+    "e2e",
+    "secrets"
+  ],
+  "fingerprint": "87eb21cfc27d46b07367a07b7202093e0bccea204f9008815bb5435b48fc5c83",
+  "git": {
+    "commit": "22796a869de7a9c1011fbdf767e02b9acd2392ff",
+    "branch": "Orchestrator2",
+    "dirty_tracked_files": false
+  },
+  "checks": [
+    {
+      "name": "py-lint",
+      "status": "pass",
+      "duration_s": 0,
+      "evidence": "reports/py-lint.log"
+    },
+    {
+      "name": "py-format",
+      "status": "pass",
+      "duration_s": 0,
+      "evidence": "reports/py-format.log"
+    },
+    {
+      "name": "py-types",
+      "status": "pass",
+      "duration_s": 1,
+      "evidence": "reports/py-types.log"
+    },
+    {
+      "name": "py-unit",
+      "status": "pass",
+      "duration_s": 2,
+      "evidence": "reports/py-unit.log"
+    },
+    {
+      "name": "e2e",
+      "status": "pass",
+      "duration_s": 1,
+      "evidence": "reports/e2e.log"
+    },
+    {
+      "name": "secrets",
+      "status": "pass",
+      "duration_s": 0,
+      "evidence": "reports/secrets.log"
+    },
+    {
+      "name": "secrets-gitleaks",
+      "status": "pass",
+      "duration_s": 0,
+      "evidence": "reports/secrets-gitleaks.log"
+    },
+    {
+      "name": "dep-audit",
+      "status": "pass",
+      "duration_s": 17,
+      "evidence": "reports/dep-audit.log"
+    },
+    {
+      "name": "diff-cover",
+      "status": "pass",
+      "duration_s": 1,
+      "evidence": "reports/diff-cover.log"
+    }
+  ],
+  "tests": {
+    "unit": {
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time_s": 0.1
+    },
+    "e2e": {
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 1,
+      "time_s": 0.02
+    },
+    "web_e2e": null,
+    "coverage_pct": 100.0
+  },
+  "environment": {
+    "python": "Python 3.10.0",
+    "node": "v24.7.0",
+    "ruff": "ruff 0.5.5",
+    "pytest": "pytest 8.3.2",
+    "os": "Darwin 25.5.0"
+  },
+  "content_hash": "71a684c5c72e7fe3c7d13e8c0d743e69253e3cdc190d2e4cd67d9767483d4320"
+}
