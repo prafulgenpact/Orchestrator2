@@ -1,6 +1,6 @@
 # Task: baseline-green
 
-Status: in progress
+Status: DONE
 Type: chore
 Scope: verify.config, pyproject.toml, tests/**
 Phase: Phase 1 (walking skeleton) — establishes the green baseline it builds on
@@ -34,4 +34,4 @@ Each one names the check that proves it (all in `proofs/latest.json`).
 
 ## Done
 
-Proof commit: <sha>   Auditor verdict: n-a   Docs updated: n-a
+Proof commit: dbb04d8 (verified 22796a8, fingerprint 87eb21cfc27d)   Auditor verdict: n-a   Docs updated: yes (STATE.md)
