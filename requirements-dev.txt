@@ -6,3 +6,7 @@ pytest==8.3.2
 pytest-cov==5.0.0
 pip-audit==2.7.3
 diff_cover==9.1.1
+
+# Runtime dependency. The project is run via PYTHONPATH (never pip-installed), so it
+# is pinned here to be installed in dev + CI. Only live/record mode imports it.
+anthropic==0.109.1

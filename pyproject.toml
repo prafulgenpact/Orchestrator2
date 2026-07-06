@@ -3,7 +3,7 @@ name = "a-multi-agent-orchestrator-system-calling-relevant-apps-basis-intent-rec
 version = "0.1.0"
 description = "It recognises user intent, breaks it down into smaller tasks and then calls relevant APPS to complete the task"
 requires-python = ">=3.10"
-dependencies = []
+dependencies = ["anthropic>=0.109,<1"]
 
 [tool.ruff]
 target-version = "py310"
