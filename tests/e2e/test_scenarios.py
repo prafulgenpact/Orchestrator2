@@ -37,6 +37,8 @@ def test_scenario(path: Path, tmp_path: Path) -> None:
     sc = json.loads(path.read_text())
     env = {**os.environ, **CFG.get("env", {}), **sc.get("env", {})}
     env.setdefault("AGENT_WORKDIR", str(tmp_path))
+    # the CLI runs from tmp_path, so put the package's src/ on PYTHONPATH
+    env["PYTHONPATH"] = str(HERE.parent.parent / "src") + os.pathsep + env.get("PYTHONPATH", "")
     cmd = f"{CFG['agent_cmd']} {sc.get('args', '')}".strip()
 
     r = subprocess.run(

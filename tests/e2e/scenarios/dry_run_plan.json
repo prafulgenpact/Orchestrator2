@@ -1,0 +1,12 @@
+{
+  "args": "\"plan my week of learning transformers\"",
+  "expect": {
+    "exit_code": 0,
+    "stdout_contains": [
+      "Intent:",
+      "Step 1",
+      "->",
+      "no apps were invoked"
+    ]
+  }
+}

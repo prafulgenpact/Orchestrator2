@@ -10,8 +10,9 @@ A phase is complete only when its exit criterion is verified (sealed PASS proof
   harness proves it (e2e configured, first real scenario/flow green).
 - Maps to: AC-1
 - Tasks:
-  - [ ] 20260703-walking-skeleton — replace sample code, wire e2e kit to the real thing
-- Status: not started
+  - [x] 20260703-baseline-green — green the scaffold, first sealed PASS proof
+  - [x] 20260703-dry-run-orchestrator — CLI decomposes a task and reports app-per-subtask (dry run); e2e replay scenarios green
+- Status: done (dry-run slice of AC-1 proven by tests/e2e replay scenarios)
 
 ## Phase 2 — Core build
 

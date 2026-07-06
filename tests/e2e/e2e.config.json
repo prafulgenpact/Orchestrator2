@@ -1,6 +1,6 @@
 {
-  "configured": false,
-  "agent_cmd": "2",
+  "configured": true,
+  "agent_cmd": "python3 -m orchestrator",
   "env": {
     "AGENT_LLM_MODE": "replay"
   }

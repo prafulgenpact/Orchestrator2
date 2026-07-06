@@ -1,0 +1,11 @@
+{
+  "args": "--json \"plan my week of learning transformers\"",
+  "expect": {
+    "exit_code": 0,
+    "json_stdout_keys": [
+      "intent",
+      "subtasks",
+      "task"
+    ]
+  }
+}

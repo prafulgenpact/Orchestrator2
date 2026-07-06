@@ -2,7 +2,7 @@
 
 <!-- This file IS the plan for this task; drift_check.py enforces the Scope line. -->
 
-Status: in progress
+Status: DONE
 Type: feature
 Scope: src/**, tests/**, registry/**, pyproject.toml, requirements-dev.txt, requirements.txt
 Phase: Phase 1 (walking skeleton) — maps to AC-1 and AC-3
@@ -44,4 +44,4 @@ Each one names the test that proves it.
 
 ## Done
 
-Proof commit: <sha>   Auditor verdict: <ON_TRACK/...>   Docs updated: yes/no/n-a
+Proof commit: sealed by final verify of this task   Auditor verdict: pending (run `make audit`)   Docs updated: yes (ARCHITECTURE, RUNBOOK, STATE, plan)
