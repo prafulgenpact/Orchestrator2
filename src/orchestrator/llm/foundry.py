@@ -1,10 +1,11 @@
 """Anthropic Foundry client — the real LLM backend.
 
 Credentials resolve from the environment first, then from a sibling app's ``.env``
-so this project shares the same Foundry setup as the other apps. The anthropic SDK
-is imported lazily (and dynamically) inside ``complete`` so replay-mode runs — unit
-tests, e2e, CI — need neither the package nor a key, and so type-checking does not
-depend on the SDK's internals.
+so this project shares the same Foundry setup as the other apps. The model used for a
+request is resolved separately (``resolve_model``) and independently of credentials,
+so replay reproduces the same request whether or not a live ``.env`` is present. The
+anthropic SDK is imported lazily and dynamically inside ``complete`` so replay-mode
+runs — unit tests, e2e, CI — need neither the package nor a key.
 """
 
 from __future__ import annotations
@@ -25,11 +26,19 @@ DEFAULT_FALLBACK_ENV = Path(__file__).resolve().parents[5] / "Blogs Playground" 
 
 @dataclass(frozen=True)
 class FoundryCredentials:
-    """Everything needed to make a live Foundry call."""
+    """The endpoint credentials for a live Foundry call."""
 
     api_key: str
     base_url: str
-    model: str
+
+
+def resolve_model(override: str | None = None) -> str:
+    """Model for a request: explicit override > ORCHESTRATOR_MODEL > pinned default.
+
+    Deliberately independent of credentials so record and replay produce the same
+    request hash regardless of whether a live .env is present.
+    """
+    return override or os.environ.get("ORCHESTRATOR_MODEL") or DEFAULT_MODEL
 
 
 def _parse_env_file(path: Path) -> dict[str, str]:
@@ -48,11 +57,10 @@ def _parse_env_file(path: Path) -> dict[str, str]:
     return values
 
 
-def resolve_credentials(model_override: str | None = None) -> FoundryCredentials:
-    """Resolve Foundry credentials: process env wins, then the fallback .env file.
+def resolve_credentials() -> FoundryCredentials:
+    """Resolve Foundry endpoint credentials: process env wins, then the fallback .env.
 
-    Model precedence: explicit override > ORCHESTRATOR_MODEL > ANTHROPIC_MODEL >
-    the pinned default. Raises LLMError if the API key or base URL cannot be found.
+    Raises LLMError if the API key or base URL cannot be found.
     """
     fallback_override = os.environ.get("ORCHESTRATOR_FALLBACK_ENV")
     fallback_path = Path(fallback_override) if fallback_override else DEFAULT_FALLBACK_ENV
@@ -68,13 +76,7 @@ def resolve_credentials(model_override: str | None = None) -> FoundryCredentials
             "missing Foundry credentials: set ANTHROPIC_FOUNDRY_API_KEY and "
             "ANTHROPIC_FOUNDRY_BASE_URL (or point ORCHESTRATOR_FALLBACK_ENV at a .env)"
         )
-    model = (
-        model_override
-        or os.environ.get("ORCHESTRATOR_MODEL")
-        or pick("ANTHROPIC_MODEL")
-        or DEFAULT_MODEL
-    )
-    return FoundryCredentials(api_key=api_key, base_url=base_url, model=model)
+    return FoundryCredentials(api_key=api_key, base_url=base_url)
 
 
 class FoundryClient:

@@ -17,6 +17,7 @@ from orchestrator.llm.foundry import (
     FoundryClient,
     _parse_env_file,
     resolve_credentials,
+    resolve_model,
 )
 from orchestrator.llm.replay import RecordingClient, ReplayClient
 
@@ -66,27 +67,25 @@ def test_resolve_from_process_env(monkeypatch: pytest.MonkeyPatch) -> None:
     creds = resolve_credentials()
     assert creds.api_key == "test-key"
     assert creds.base_url == "https://foundry.example/api"
-    assert creds.model == DEFAULT_MODEL
 
 
 def test_resolve_from_fallback_file(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     env = tmp_path / "fallback.env"
     env.write_text(
-        "ANTHROPIC_FOUNDRY_API_KEY=file-key\n"
-        "ANTHROPIC_FOUNDRY_BASE_URL=https://file/api\n"
-        "ANTHROPIC_MODEL=claude-from-file\n"
+        "ANTHROPIC_FOUNDRY_API_KEY=file-key\n" "ANTHROPIC_FOUNDRY_BASE_URL=https://file/api\n"
     )
     monkeypatch.setenv("ORCHESTRATOR_FALLBACK_ENV", str(env))
     creds = resolve_credentials()
     assert creds.api_key == "file-key"
-    assert creds.model == "claude-from-file"
+    assert creds.base_url == "https://file/api"
 
 
-def test_model_precedence(monkeypatch: pytest.MonkeyPatch) -> None:
-    _set_creds(monkeypatch)
-    assert resolve_credentials("explicit").model == "explicit"
+def test_resolve_model_precedence(monkeypatch: pytest.MonkeyPatch) -> None:
+    assert resolve_model() == DEFAULT_MODEL
+    assert resolve_model("explicit") == "explicit"
     monkeypatch.setenv("ORCHESTRATOR_MODEL", "from-orch-env")
-    assert resolve_credentials().model == "from-orch-env"
+    assert resolve_model() == "from-orch-env"
+    assert resolve_model("explicit-wins") == "explicit-wins"
 
 
 def test_missing_credentials_raises() -> None:
