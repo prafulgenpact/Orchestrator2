@@ -1,1 +1,1 @@
-20260703-dry-run-orchestrator.md
+20260707-app-contracts-registry.md

@@ -13,7 +13,33 @@
         "practice a machine-learning concept by running example code",
         "ask a question about the current lesson's theory"
       ],
-      "fallback": false
+      "fallback": false,
+      "port": 8001,
+      "health": "/api/health",
+      "operations": [
+        {
+          "name": "execute_code",
+          "description": "Run a one-shot Python snippet and return stdout/stderr (lesson practice; runs in-process, not a hard sandbox).",
+          "method": "POST",
+          "path": "/api/execute",
+          "timeout_s": 30,
+          "destructive": false,
+          "idempotency": "none",
+          "retry": { "transient_max": 0, "backoff_s": 0 },
+          "request_fields": ["code", "timeout"]
+        },
+        {
+          "name": "ask_question",
+          "description": "Answer an in-lesson question grounded in the current concept's theory (LLM).",
+          "method": "POST",
+          "path": "/api/ask",
+          "timeout_s": 90,
+          "destructive": false,
+          "idempotency": "supported",
+          "retry": { "transient_max": 2, "backoff_s": 5 },
+          "request_fields": ["question", "concept_title", "track_name", "theory_context"]
+        }
+      ]
     },
     {
       "id": "arxiv-papers",
@@ -30,7 +56,88 @@
         "summarize the key takeaways of an arXiv paper",
         "explain a specific paper in simple terms"
       ],
-      "fallback": false
+      "fallback": false,
+      "port": 8002,
+      "health": "/api/health",
+      "operations": [
+        {
+          "name": "search_papers_by_query",
+          "description": "Search arXiv by free-text query; upserts and returns matched papers.",
+          "method": "POST",
+          "path": "/api/papers/search",
+          "timeout_s": 30,
+          "destructive": false,
+          "idempotency": "supported",
+          "retry": { "transient_max": 2, "backoff_s": 3 },
+          "request_fields": ["query", "max_results"]
+        },
+        {
+          "name": "search_papers_by_topic",
+          "description": "Search arXiv by topic (mapped to a category), ranked.",
+          "method": "POST",
+          "path": "/api/topics/search",
+          "timeout_s": 30,
+          "destructive": false,
+          "idempotency": "supported",
+          "retry": { "transient_max": 2, "backoff_s": 3 },
+          "request_fields": ["topic", "max_results"]
+        },
+        {
+          "name": "get_paper_by_id",
+          "description": "Fetch a paper's full details by arXiv id (from DB or arxiv.org).",
+          "method": "POST",
+          "path": "/api/papers/by-id",
+          "timeout_s": 30,
+          "destructive": false,
+          "idempotency": "supported",
+          "retry": { "transient_max": 2, "backoff_s": 3 },
+          "request_fields": ["arxiv_id"]
+        },
+        {
+          "name": "analyze_paper",
+          "description": "Analyze a stored paper via LLM. mode: summary|takeaways|eli5|concepts|qa (qa needs question). Paper must be persisted first.",
+          "method": "POST",
+          "path": "/api/ai/analyze",
+          "timeout_s": 90,
+          "destructive": false,
+          "idempotency": "supported",
+          "retry": { "transient_max": 2, "backoff_s": 5 },
+          "request_fields": ["arxiv_id", "mode", "question"]
+        },
+        {
+          "name": "chat_about_paper",
+          "description": "Multi-turn chat about a stored paper (or general) via LLM.",
+          "method": "POST",
+          "path": "/api/ai/chat",
+          "timeout_s": 90,
+          "destructive": false,
+          "idempotency": "supported",
+          "retry": { "transient_max": 2, "backoff_s": 5 },
+          "request_fields": ["messages", "arxiv_id"]
+        },
+        {
+          "name": "fetch_url_paper",
+          "description": "Fetch and parse a paper from an arbitrary URL (PDF/HTML) — no LLM. Chain into analyze_url_paper.",
+          "method": "POST",
+          "path": "/api/url-paper/fetch",
+          "timeout_s": 45,
+          "destructive": false,
+          "idempotency": "supported",
+          "retry": { "transient_max": 2, "backoff_s": 3 },
+          "request_fields": ["url"]
+        },
+        {
+          "name": "analyze_url_paper",
+          "description": "Analyze already-fetched URL-paper content via LLM. mode as in analyze_paper.",
+          "method": "POST",
+          "path": "/api/url-paper/analyze",
+          "timeout_s": 90,
+          "destructive": false,
+          "idempotency": "supported",
+          "retry": { "transient_max": 2, "backoff_s": 5 },
+          "request_fields": ["url", "title", "content", "mode", "question"]
+        }
+      ]
     },
     {
       "id": "coding-playground",
@@ -46,7 +153,77 @@
         "run exploratory data analysis on a dataset",
         "prototype and iterate on Python code interactively"
       ],
-      "fallback": false
+      "fallback": false,
+      "port": 8003,
+      "health": "/health",
+      "operations": [
+        {
+          "name": "get_kernel_status",
+          "description": "Check the Jupyter kernel status (alive/idle/dead).",
+          "method": "GET",
+          "path": "/api/kernel/status",
+          "timeout_s": 20,
+          "destructive": false,
+          "idempotency": "supported",
+          "retry": { "transient_max": 2, "backoff_s": 3 },
+          "request_fields": []
+        },
+        {
+          "name": "start_kernel",
+          "description": "Start the Jupyter kernel if not running.",
+          "method": "POST",
+          "path": "/api/kernel/start",
+          "timeout_s": 30,
+          "destructive": false,
+          "idempotency": "none",
+          "retry": { "transient_max": 0, "backoff_s": 0 },
+          "request_fields": []
+        },
+        {
+          "name": "restart_kernel",
+          "description": "Restart the kernel — clears all in-memory state.",
+          "method": "POST",
+          "path": "/api/kernel/restart",
+          "timeout_s": 30,
+          "destructive": true,
+          "idempotency": "none",
+          "retry": { "transient_max": 0, "backoff_s": 0 },
+          "request_fields": []
+        },
+        {
+          "name": "interrupt_kernel",
+          "description": "Interrupt (SIGINT) the running kernel execution.",
+          "method": "POST",
+          "path": "/api/kernel/interrupt",
+          "timeout_s": 20,
+          "destructive": false,
+          "idempotency": "none",
+          "retry": { "transient_max": 0, "backoff_s": 0 },
+          "request_fields": []
+        },
+        {
+          "name": "list_datasets",
+          "description": "List available datasets (trailing slash required).",
+          "method": "GET",
+          "path": "/api/datasets/",
+          "timeout_s": 20,
+          "destructive": false,
+          "idempotency": "supported",
+          "retry": { "transient_max": 2, "backoff_s": 3 },
+          "request_fields": []
+        },
+        {
+          "name": "preview_dataset",
+          "description": "Preview a dataset by id (n_rows query param, default 100).",
+          "method": "GET",
+          "path": "/api/datasets/{dataset_id}/preview",
+          "timeout_s": 20,
+          "destructive": false,
+          "idempotency": "supported",
+          "retry": { "transient_max": 2, "backoff_s": 3 },
+          "request_fields": ["dataset_id", "n_rows"]
+        }
+      ]
     },
     {
       "id": "ai-intelligence-deck",
@@ -62,7 +239,44 @@
         "summarize this week's AI developments",
         "what trends are emerging across AI news"
       ],
-      "fallback": false
+      "fallback": false,
+      "port": 8004,
+      "health": "/health",
+      "operations": [
+        {
+          "name": "get_cached_news_by_category",
+          "description": "Return cached AI news organized by category (news/visionaries/tweets). No LLM.",
+          "method": "GET",
+          "path": "/api/data",
+          "timeout_s": 20,
+          "destructive": false,
+          "idempotency": "supported",
+          "retry": { "transient_max": 2, "backoff_s": 3 },
+          "request_fields": []
+        },
+        {
+          "name": "generate_tldr_summary",
+          "description": "Generate a TL;DR executive summary from cached articles (LLM). provider: openai|gemini.",
+          "method": "POST",
+          "path": "/api/summary",
+          "timeout_s": 90,
+          "destructive": false,
+          "idempotency": "supported",
+          "retry": { "transient_max": 2, "backoff_s": 5 },
+          "request_fields": ["provider"]
+        },
+        {
+          "name": "get_trends",
+          "description": "Detect trending topics across cached articles (LLM). provider: openai|gemini.",
+          "method": "POST",
+          "path": "/api/trends",
+          "timeout_s": 90,
+          "destructive": false,
+          "idempotency": "supported",
+          "retry": { "transient_max": 2, "backoff_s": 5 },
+          "request_fields": ["provider"]
+        }
+      ]
     },
     {
       "id": "social-media-ai",
@@ -79,7 +293,55 @@
         "show me recent Medium posts",
         "aggregate social media content across platforms"
       ],
-      "fallback": false
+      "fallback": false,
+      "port": 8005,
+      "health": "/api/health",
+      "operations": [
+        {
+          "name": "get_all_feeds",
+          "description": "Fetch + categorize Twitter and Medium in one call (Tavily search + LLM); slowest.",
+          "method": "GET",
+          "path": "/api/all",
+          "timeout_s": 180,
+          "destructive": false,
+          "idempotency": "supported",
+          "retry": { "transient_max": 1, "backoff_s": 10 },
+          "request_fields": []
+        },
+        {
+          "name": "get_twitter_feed",
+          "description": "Fetch + categorize latest Twitter/X content (Tavily search + LLM).",
+          "method": "GET",
+          "path": "/api/twitter",
+          "timeout_s": 120,
+          "destructive": false,
+          "idempotency": "supported",
+          "retry": { "transient_max": 1, "backoff_s": 10 },
+          "request_fields": []
+        },
+        {
+          "name": "get_medium_feed",
+          "description": "Fetch + categorize latest Medium content (Tavily search + LLM).",
+          "method": "GET",
+          "path": "/api/medium",
+          "timeout_s": 120,
+          "destructive": false,
+          "idempotency": "supported",
+          "retry": { "transient_max": 1, "backoff_s": 10 },
+          "request_fields": []
+        },
+        {
+          "name": "get_categories",
+          "description": "Return the static list of content categories. No search/LLM.",
+          "method": "GET",
+          "path": "/api/categories",
+          "timeout_s": 20,
+          "destructive": false,
+          "idempotency": "supported",
+          "retry": { "transient_max": 2, "backoff_s": 3 },
+          "request_fields": []
+        }
+      ]
     },
     {
       "id": "stanford-llm",
@@ -93,7 +355,22 @@
         "explain self-attention using the Stanford course",
         "help me study transformers with CME 295 materials"
       ],
-      "fallback": false
+      "fallback": false,
+      "port": 8006,
+      "health": "/api/health",
+      "operations": [
+        {
+          "name": "chat_with_assistant",
+          "description": "Send the full conversation history to the CME 295 course assistant and get a grounded reply (LLM). Multi-turn is client-managed via the messages array.",
+          "method": "POST",
+          "path": "/api/chat",
+          "timeout_s": 90,
+          "destructive": false,
+          "idempotency": "supported",
+          "retry": { "transient_max": 2, "backoff_s": 5 },
+          "request_fields": ["messages"]
+        }
+      ]
     },
     {
       "id": "stats-teacher",
@@ -106,7 +383,22 @@
         "explain hypothesis testing",
         "help me understand p-values"
       ],
-      "fallback": false
+      "fallback": false,
+      "port": 8007,
+      "health": "/api/health",
+      "operations": [
+        {
+          "name": "ask_question",
+          "description": "Answer a stats question grounded in a course module with conversation context (LLM). Streams text/plain chunks — aggregate the body, not JSON.",
+          "method": "POST",
+          "path": "/api/qa",
+          "timeout_s": 90,
+          "destructive": false,
+          "idempotency": "supported",
+          "retry": { "transient_max": 2, "backoff_s": 5 },
+          "request_fields": ["question", "module_id", "module_title", "module_part", "conversation_history"]
+        }
+      ]
     },
     {
       "id": "teach-me",
@@ -123,7 +415,55 @@
         "start learning about reinforcement learning",
         "continue my lesson on backpropagation"
       ],
-      "fallback": false
+      "fallback": false,
+      "port": 8008,
+      "health": "/models",
+      "operations": [
+        {
+          "name": "list_topics",
+          "description": "List learning topics already started (most recent first).",
+          "method": "GET",
+          "path": "/topics",
+          "timeout_s": 20,
+          "destructive": false,
+          "idempotency": "supported",
+          "retry": { "transient_max": 2, "backoff_s": 3 },
+          "request_fields": []
+        },
+        {
+          "name": "get_topic",
+          "description": "Fetch a topic with its concept map and full message history.",
+          "method": "GET",
+          "path": "/topics/{topic_id}",
+          "timeout_s": 20,
+          "destructive": false,
+          "idempotency": "supported",
+          "retry": { "transient_max": 2, "backoff_s": 3 },
+          "request_fields": ["topic_id"]
+        },
+        {
+          "name": "create_topic",
+          "description": "Start a new topic — generates concept map + first lesson via a multi-agent pipeline (long-running).",
+          "method": "POST",
+          "path": "/topics",
+          "timeout_s": 180,
+          "destructive": false,
+          "idempotency": "none",
+          "retry": { "transient_max": 0, "backoff_s": 0 },
+          "request_fields": ["title", "model"]
+        },
+        {
+          "name": "send_user_message",
+          "description": "Continue a lesson with a grounded teaching reply (LLM). Persists the turn; non-empty content required.",
+          "method": "POST",
+          "path": "/topics/{topic_id}/messages",
+          "timeout_s": 120,
+          "destructive": false,
+          "idempotency": "none",
+          "retry": { "transient_max": 0, "backoff_s": 0 },
+          "request_fields": ["topic_id", "content", "model"]
+        }
+      ]
     },
     {
       "id": "github-learnings",
@@ -140,7 +480,55 @@
         "ingest a repo and extract its key patterns",
         "search what I have learned from repositories"
       ],
-      "fallback": false
+      "fallback": false,
+      "port": 8009,
+      "health": "/api/repos/",
+      "operations": [
+        {
+          "name": "list_repos",
+          "description": "List every ingested repository with status and metadata.",
+          "method": "GET",
+          "path": "/api/repos/",
+          "timeout_s": 20,
+          "destructive": false,
+          "idempotency": "supported",
+          "retry": { "transient_max": 2, "backoff_s": 3 },
+          "request_fields": []
+        },
+        {
+          "name": "ingest_repository",
+          "description": "Clone, parse, chunk, embed and index a GitHub repo — synchronous and long-running.",
+          "method": "POST",
+          "path": "/api/repos/",
+          "timeout_s": 180,
+          "destructive": false,
+          "idempotency": "none",
+          "retry": { "transient_max": 0, "backoff_s": 0 },
+          "request_fields": ["url", "options"]
+        },
+        {
+          "name": "list_learnings",
+          "description": "List extracted learnings, optionally filtered by repo_id (query param).",
+          "method": "GET",
+          "path": "/api/learnings/",
+          "timeout_s": 20,
+          "destructive": false,
+          "idempotency": "supported",
+          "retry": { "transient_max": 2, "backoff_s": 3 },
+          "request_fields": ["repo_id"]
+        },
+        {
+          "name": "search_learnings",
+          "description": "Free-text search across learnings (SQLite LIKE). Required 'q' query param; empty q -> 400.",
+          "method": "GET",
+          "path": "/api/learnings/search",
+          "timeout_s": 20,
+          "destructive": false,
+          "idempotency": "supported",
+          "retry": { "transient_max": 2, "backoff_s": 3 },
+          "request_fields": ["q"]
+        }
+      ]
     },
     {
       "id": "blogs-playground",
@@ -158,7 +546,77 @@
         "suggest blog topics in my voice",
         "revise my blog to be more concise"
       ],
-      "fallback": false
+      "fallback": false,
+      "port": 8010,
+      "health": "/api/health",
+      "operations": [
+        {
+          "name": "list_blogs",
+          "description": "List existing blog posts (summary metadata).",
+          "method": "GET",
+          "path": "/api/blogs",
+          "timeout_s": 20,
+          "destructive": false,
+          "idempotency": "supported",
+          "retry": { "transient_max": 2, "backoff_s": 3 },
+          "request_fields": []
+        },
+        {
+          "name": "get_blog",
+          "description": "Fetch a blog by id with full body, history and versions array.",
+          "method": "GET",
+          "path": "/api/blog/{blog_id}",
+          "timeout_s": 20,
+          "destructive": false,
+          "idempotency": "supported",
+          "retry": { "transient_max": 2, "backoff_s": 3 },
+          "request_fields": ["blog_id"]
+        },
+        {
+          "name": "suggest_topics",
+          "description": "Suggest unwritten topics in the writer's voice (LLM). limit query param (default 5, max 12).",
+          "method": "GET",
+          "path": "/api/topics/suggestions",
+          "timeout_s": 90,
+          "destructive": false,
+          "idempotency": "supported",
+          "retry": { "transient_max": 2, "backoff_s": 5 },
+          "request_fields": ["limit"]
+        },
+        {
+          "name": "generate_blog_async",
+          "description": "Submit a full draft-pipeline run in the background; returns run_id immediately. Poll get_run for the finished blog.",
+          "method": "POST",
+          "path": "/api/blog/generate/async",
+          "timeout_s": 30,
+          "destructive": false,
+          "idempotency": "none",
+          "retry": { "transient_max": 0, "backoff_s": 0 },
+          "request_fields": ["topic", "model", "research", "research_depth", "thinking_depth", "verification", "word_count_target", "audience"]
+        },
+        {
+          "name": "iterate_blog_async",
+          "description": "Submit a natural-language refine of an existing blog in the background; returns run_id. Poll get_run.",
+          "method": "POST",
+          "path": "/api/blog/{blog_id}/iterate/async",
+          "timeout_s": 30,
+          "destructive": false,
+          "idempotency": "none",
+          "retry": { "transient_max": 0, "backoff_s": 0 },
+          "request_fields": ["blog_id", "instruction", "model"]
+        },
+        {
+          "name": "get_run",
+          "description": "Poll a generate/iterate run by run_id; when complete it carries the finished blog.",
+          "method": "GET",
+          "path": "/api/runs/{run_id}",
+          "timeout_s": 20,
+          "destructive": false,
+          "idempotency": "supported",
+          "retry": { "transient_max": 2, "backoff_s": 3 },
+          "request_fields": ["run_id"]
+        }
+      ]
     },
     {
       "id": "research-assistant",
@@ -174,7 +632,99 @@
         "research the state of the art in retrieval-augmented generation and synthesize a report",
         "run a deep research pass on a topic with citations"
       ],
-      "fallback": false
+      "fallback": false,
+      "port": 8011,
+      "health": "/api/health",
+      "operations": [
+        {
+          "name": "start_research",
+          "description": "Start a research run (fire-and-forget); returns run_id. depth: child|smart|expert; voice: default|feynman|new_yorker|indian_uncle. Poll get_run.",
+          "method": "POST",
+          "path": "/api/research",
+          "timeout_s": 30,
+          "destructive": false,
+          "idempotency": "none",
+          "retry": { "transient_max": 0, "backoff_s": 0 },
+          "request_fields": ["topic", "depth", "voice", "feedback", "feedback_tag", "feedback_span", "parent_run_id"]
+        },
+        {
+          "name": "list_runs",
+          "description": "List recent research runs (most recent first); each carries latest output_md.",
+          "method": "GET",
+          "path": "/api/runs",
+          "timeout_s": 20,
+          "destructive": false,
+          "idempotency": "supported",
+          "retry": { "transient_max": 2, "backoff_s": 3 },
+          "request_fields": []
+        },
+        {
+          "name": "get_run",
+          "description": "Fetch a run by id: {run, versions} with output_md and sources per version.",
+          "method": "GET",
+          "path": "/api/runs/{run_id}",
+          "timeout_s": 20,
+          "destructive": false,
+          "idempotency": "supported",
+          "retry": { "transient_max": 2, "backoff_s": 3 },
+          "request_fields": ["run_id"]
+        },
+        {
+          "name": "cancel_run",
+          "description": "Cancel an in-flight research run by id.",
+          "method": "POST",
+          "path": "/api/runs/{run_id}/cancel",
+          "timeout_s": 20,
+          "destructive": false,
+          "idempotency": "none",
+          "retry": { "transient_max": 0, "backoff_s": 0 },
+          "request_fields": ["run_id"]
+        },
+        {
+          "name": "list_notes",
+          "description": "List saved research notes (commonplace book); optional q text filter.",
+          "method": "GET",
+          "path": "/api/notes",
+          "timeout_s": 20,
+          "destructive": false,
+          "idempotency": "supported",
+          "retry": { "transient_max": 2, "backoff_s": 3 },
+          "request_fields": ["q"]
+        },
+        {
+          "name": "list_corpus_documents",
+          "description": "List uploaded source documents in the corpus.",
+          "method": "GET",
+          "path": "/api/corpus",
+          "timeout_s": 20,
+          "destructive": false,
+          "idempotency": "supported",
+          "retry": { "transient_max": 2, "backoff_s": 3 },
+          "request_fields": []
+        },
+        {
+          "name": "upload_corpus_document",
+          "description": "Upload a source document (multipart/form-data) into the corpus; extracts, chunks, ingests. Max 30 MB.",
+          "method": "POST",
+          "path": "/api/corpus/upload",
+          "timeout_s": 120,
+          "destructive": false,
+          "idempotency": "none",
+          "retry": { "transient_max": 0, "backoff_s": 0 },
+          "request_fields": ["file"]
+        },
+        {
+          "name": "delete_corpus_document",
+          "description": "Delete a source document from the corpus by id.",
+          "method": "DELETE",
+          "path": "/api/corpus/{doc_id}",
+          "timeout_s": 20,
+          "destructive": true,
+          "idempotency": "none",
+          "retry": { "transient_max": 0, "backoff_s": 0 },
+          "request_fields": ["doc_id"]
+        }
+      ]
     },
     {
       "id": "web-search",
