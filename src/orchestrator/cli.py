@@ -42,6 +42,11 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
         action="store_true",
         help="actually invoke the selected apps and show their real results (default: dry run)",
     )
+    parser.add_argument(
+        "--verbose",
+        action="store_true",
+        help="with --execute, also show operation, status, timing, and full output",
+    )
     parser.add_argument("--json", action="store_true", help="emit the plan as JSON")
     parser.add_argument("--model", help="override the model id")
     parser.add_argument("--registry", help="path to a registry apps.json (default: bundled)")
@@ -89,7 +94,7 @@ def main(argv: list[str] | None = None, *, client: LLMClient | None = None) -> i
         except LLMError as exc:
             print(f"error: {exc}", file=sys.stderr)
             return 4
-        print(render_execution(result))
+        print(render_execution(plan, result, verbose=args.verbose))
         return 0
 
     print(render_json(plan) if args.json else render_human(plan))

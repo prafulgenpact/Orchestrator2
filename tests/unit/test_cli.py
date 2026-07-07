@@ -146,9 +146,11 @@ def test_execute_success(
     rc = main(["find moe papers", "--execute"], client=client)
     out = capsys.readouterr().out
     assert rc == 0
-    assert "-> OK" in out
-    assert "ArXiv Paper Guide" in out
-    assert "papers" in out
+    assert "Plan — 1 subtask(s)" in out
+    assert "ArXiv Paper Guide  (confidence 0.95)" in out
+    assert "why: searches arxiv" in out
+    assert "papers" in out  # real output shown
+    assert "op=" not in out  # clean by default (no operational detail)
     assert "no apps were invoked" not in out  # NOT the dry-run banner
 
 
@@ -174,7 +176,32 @@ def test_execute_fallback_skipped(capsys: pytest.CaptureFixture[str]) -> None:
     rc = main(["something obscure", "--execute"], client=FakeLLM([resp]))
     out = capsys.readouterr().out
     assert rc == 0
-    assert "-> SKIP" in out
+    assert "Web Search (fallback)" in out
+    assert "not executed" in out
+
+
+def test_execute_verbose_shows_operational_detail(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    async def _call(app: Any, op: Any, _args: Any, **_kw: Any) -> CallResult:
+        return CallResult(
+            app.id,
+            op.name,
+            "http://127.0.0.1:8002/api/papers/search",
+            True,
+            200,
+            {"papers": []},
+            None,
+            0.5,
+        )
+
+    monkeypatch.setattr("orchestrator.executor.call_operation", _call)
+    client = FakeLLM([_arxiv_plan_response(), _SELECTOR_RESPONSE])
+    rc = main(["find moe papers", "--execute", "--verbose"], client=client)
+    out = capsys.readouterr().out
+    assert rc == 0
+    assert "op=search_papers_by_query" in out
+    assert "status=ok" in out
 
 
 class _PlanThenLLMError:

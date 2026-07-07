@@ -104,56 +104,97 @@ def test_banner_constant_used() -> None:
 # --- render_execution --------------------------------------------------------
 
 
-def _result(status: str, output: object = None, error: str | None = None) -> SubtaskResult:
+def _result(
+    sub_id: str,
+    app_id: str,
+    app_name: str,
+    status: str,
+    *,
+    output: object = None,
+    error: str | None = None,
+    source: str | None = "http://127.0.0.1:8006/api/chat",
+) -> SubtaskResult:
     return SubtaskResult(
-        subtask_id="t1",
-        app_id="arxiv-papers",
-        app_name="ArXiv Paper Guide",
+        subtask_id=sub_id,
+        app_id=app_id,
+        app_name=app_name,
         status=status,
-        operation="search_papers_by_query",
+        operation="chat_with_assistant",
         output=output,
-        source="http://127.0.0.1:8002/api/papers/search",
+        source=source,
         error=error,
         duration_s=1.23,
     )
 
 
-def test_render_execution_ok() -> None:
-    pr = PlanResult("t", "i", (_result("ok", output={"papers": ["a"]}),))
-    out = render_execution(pr)
-    assert "Executed 1 subtask(s): 1 ok" in out
-    assert "ArXiv Paper Guide :: search_papers_by_query" in out
-    assert "-> OK" in out
-    assert "source: http://127.0.0.1:8002/api/papers/search" in out
-    assert '"papers"' in out  # real output shown
+def _one_ok(output: object) -> tuple[Plan, PlanResult]:
+    sub = _sub("t1")  # -> Stanford LLM Course, confidence 0.90, rationale "because"
+    plan = _plan((sub,))
+    res = _result("t1", sub.app.app_id, sub.app.app_name, "ok", output=output)
+    return plan, PlanResult(plan.task, plan.intent, (res,))
 
 
-def test_render_execution_error() -> None:
-    out = render_execution(PlanResult("t", "i", (_result("error", error="retry: boom"),)))
-    assert "-> ERROR" in out
-    assert "error: retry: boom" in out
+def test_execution_clean_shows_plan_and_result() -> None:
+    plan, result = _one_ok({"reply": "hello"})
+    out = render_execution(plan, result)
+    assert "Task: learn transformers" in out
+    assert "Intent: build a learning plan" in out
+    assert "Plan — 1 subtask(s) in 1 step(s):" in out
+    assert "-> Stanford LLM Course  (confidence 0.90)" in out
+    assert "why: because" in out
+    assert "Results:" in out
+    assert "reply" in out  # real output shown
+    assert "source: http://127.0.0.1:8006/api/chat" in out
 
 
-def test_render_execution_skipped() -> None:
-    skipped = SubtaskResult(
-        "t1",
-        "web-search",
-        "Web Search (fallback)",
-        "skipped",
-        None,
-        None,
-        None,
-        "web-search fallback not executed yet (deferred)",
-        0.0,
+def test_execution_clean_hides_operational_detail() -> None:
+    plan, result = _one_ok({"reply": "hi"})
+    out = render_execution(plan, result)  # not verbose
+    assert "op=" not in out
+    assert "status=" not in out
+    assert "chat_with_assistant" not in out  # operation name is operational detail
+    assert "1.23s" not in out
+
+
+def test_execution_verbose_adds_detail() -> None:
+    plan, result = _one_ok({"reply": "hi"})
+    out = render_execution(plan, result, verbose=True)
+    assert "op=chat_with_assistant" in out
+    assert "status=ok" in out
+    assert "1.23s" in out
+
+
+def test_execution_verbose_output_untruncated() -> None:
+    long_text = "y" * 800
+    plan, result = _one_ok(long_text)
+    assert "…" in render_execution(plan, result)  # truncated in clean
+    verbose = render_execution(plan, result, verbose=True)
+    assert "…" not in verbose
+    assert long_text in verbose
+
+
+def test_execution_error_and_skipped_and_missing() -> None:
+    arxiv = _app(app_id="arxiv-papers", name="ArXiv Paper Guide")
+    fb = _app(app_id="web-search", name="Web Search (fallback)", fb=True)
+    subs = (_sub("t1", app=arxiv), _sub("t2", app=fb), _sub("t3", ("t1", "t2")))
+    plan = _plan(subs)
+    results = (
+        _result("t1", "arxiv-papers", "ArXiv Paper Guide", "error", error="retry: boom"),
+        _result("t2", "web-search", "Web Search (fallback)", "skipped", error="deferred"),
+        # no result for t3 -> "(no result)" branch
     )
-    out = render_execution(PlanResult("t", "i", (skipped,)))
-    assert "-> SKIP" in out
-    assert "deferred" in out
+    out = render_execution(plan, PlanResult(plan.task, plan.intent, results))
+    assert "Step 1 (parallel):" in out  # t1 + t2 independent
+    assert "(needs t1, t2)" in out  # t3 dependency
+    assert "[fallback]" in out  # t2 is the fallback app
+    assert "could not complete: retry: boom" in out
+    assert "(not executed — deferred)" in out
+    assert "(no result)" in out  # t3 has no result
 
 
-def test_render_execution_previews_long_and_nonstring_output() -> None:
-    long_text = "x" * 500
-    out = render_execution(PlanResult("t", "i", (_result("ok", output=long_text),)))
-    assert "…" in out  # truncated preview
-    dict_out = render_execution(PlanResult("t", "i", (_result("ok", output={"k": "v"}),)))
-    assert '{"k": "v"}' in dict_out  # non-string output rendered as JSON
+def test_execution_ok_without_source_omits_source_line() -> None:
+    sub = _sub("t1")
+    plan = _plan((sub,))
+    res = _result("t1", sub.app.app_id, sub.app.app_name, "ok", output="hi", source=None)
+    out = render_execution(plan, PlanResult(plan.task, plan.intent, (res,)))
+    assert "source:" not in out

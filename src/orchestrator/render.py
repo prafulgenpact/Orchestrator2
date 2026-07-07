@@ -14,7 +14,6 @@ from typing import Any
 from orchestrator.models import Plan, PlanResult, Subtask
 
 DRY_RUN_BANNER = "DRY RUN — no apps were invoked."
-_STATUS_BADGE = {"ok": "OK", "error": "ERROR", "skipped": "SKIP"}
 
 
 def compute_waves(subtasks: tuple[Subtask, ...]) -> list[list[Subtask]]:
@@ -66,33 +65,67 @@ def render_human(plan: Plan) -> str:
     return "\n".join(lines)
 
 
-def _preview(data: Any, limit: int = 400) -> str:
+def _preview(data: Any, limit: int = 500) -> str:
     """A one-line, length-bounded preview of an app's real output."""
     text = data if isinstance(data, str) else json.dumps(data, default=str)
     text = " ".join(text.split())
     return text if len(text) <= limit else text[:limit] + "…"
 
 
-def render_execution(result: PlanResult) -> str:
-    """A readable report of an executed plan: which app ran, its real output, its source."""
-    ok = sum(1 for r in result.results if r.status == "ok")
+def _full(data: Any) -> str:
+    """The app's full output, untruncated (verbose mode)."""
+    return data if isinstance(data, str) else json.dumps(data, indent=2, default=str)
+
+
+def _indent(text: str, prefix: str = "       ") -> str:
+    return "\n".join(prefix + line for line in text.splitlines())
+
+
+def render_execution(plan: Plan, result: PlanResult, *, verbose: bool = False) -> str:
+    """Clean three-part view of an executed plan: input, decomposition, output.
+
+    By default this shows only what the user needs to judge the run: the task + intent
+    (input), how it was decomposed with the chosen app / confidence / rationale
+    (decomposition), and each subtask's grounded result + source (output). Operational
+    detail — operation name, status, timing, and the full payload — appears only with
+    ``verbose``.
+    """
+    waves = compute_waves(plan.subtasks)
     lines: list[str] = [
-        f"Task:   {result.task}",
-        f"Intent: {result.intent}",
+        f"Task: {plan.task}",
         "",
-        f"Executed {len(result.results)} subtask(s): {ok} ok",
+        f"Intent: {plan.intent}",
+        "",
+        f"Plan — {len(plan.subtasks)} subtask(s) in {len(waves)} step(s):",
     ]
-    for r in result.results:
-        badge = _STATUS_BADGE.get(r.status, r.status)
-        lines.append(
-            f"  [{r.subtask_id}] {r.app_name} :: {r.operation or '-'}  "
-            f"-> {badge}  ({r.duration_s:.2f}s)"
-        )
+    for step, wave in enumerate(waves, start=1):
+        lines.append(f"  Step {step}" + (" (parallel)" if len(wave) > 1 else "") + ":")
+        for sub in wave:
+            deps = f"  (needs {', '.join(sub.depends_on)})" if sub.depends_on else ""
+            fallback = "  [fallback]" if sub.app.fallback else ""
+            lines.append(f"    [{sub.id}] {sub.title}{deps}")
+            lines.append(
+                f"         -> {sub.app.app_name}  (confidence {sub.app.confidence:.2f}){fallback}"
+            )
+            lines.append(f"         why: {sub.app.rationale}")
+
+    lines.append("")
+    lines.append("Results:")
+    by_id = {r.subtask_id: r for r in result.results}
+    for sub in plan.subtasks:
+        r = by_id.get(sub.id)
+        lines.append(f"  [{sub.id}] {r.app_name if r else sub.app.app_name}")
+        if r is None:
+            lines.append("       (no result)")
+            continue
         if r.status == "ok":
-            lines.append(f"       source: {r.source}")
-            lines.append(f"       result: {_preview(r.output)}")
-        elif r.status == "error":
-            lines.append(f"       error: {r.error}")
+            lines.append(_indent(_full(r.output) if verbose else _preview(r.output)))
+            if r.source:
+                lines.append(f"       source: {r.source}")
+        elif r.status == "skipped":
+            lines.append(f"       (not executed — {r.error})")
         else:
-            lines.append(f"       {r.error}")
+            lines.append(f"       could not complete: {r.error}")
+        if verbose:
+            lines.append(f"       [op={r.operation}  status={r.status}  {r.duration_s:.2f}s]")
     return "\n".join(lines)

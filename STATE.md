@@ -1,9 +1,10 @@
 # Project State — A multi agent orchestrator system calling relevant apps basis intent recognition
 
-Last updated: 2026-07-07 (slice1-live-call task)
+Last updated: 2026-07-07 (execute-clean-output task)
 
 ## Done (most recent first)
 
+- 2026-07-07 execute-clean-output (Phase 2, UX): `--execute` now prints a clean three-part view — input (task + intent), decomposition (subtasks in steps, each with chosen app + confidence + rationale), and output (grounded result + source). Operational detail (operation, status, timing, full payload) moved behind a new `--verbose` flag. 201 unit tests, 100% coverage; make verify PASS.
 - 2026-07-07 slice1-live-call (Phase 2, thinnest end-to-end): `python -m orchestrator --execute "<task>"` now runs the full loop — plan → per-subtask operation+args selection (grounded LLM call) → real HTTP call via the app-caller (health-check + block-B deadline/retry/circuit-breaker) → grounded result with source URL. New app_caller.py, selector.py, executor.py; PlanResult/SubtaskResult; render_execution; `--execute` (dry-run stays default); httpx dependency. VERIFIED LIVE against the running arXiv app (real MoE paper returned in ~3s). 198 unit tests, 100% coverage; e2e replay unchanged. make verify PASS.
 - 2026-07-07 resilience-primitives (Phase 2, B1-B4): new `resilience.py` — `run_with_deadline` (hard wall-clock cap via asyncio.wait_for = the AC-2 anti-hang guarantee), `classify_error` (retry/fatal/auth, duck-types HTTP status), `backoff_delay` (exponential + jitter), `retry_async` (bounded, transient-only, injectable sleep), and `CircuitBreaker`. Decoupled from the registry (plain numbers, not RetrySpec). 40 new unit tests, 100% coverage. make verify PASS.
 - 2026-07-07 app-contracts-registry (Phase 2, A1+A2): the registry now carries a real, source-derived HTTP call-spec per non-fallback app — `port`, `health`, and `operations` (method/path/timeout/retry/destructive/idempotency/request_fields). Contracts for all 11 apps (44 operations) were derived from each backend + the live launcher, not guessed; `to_prompt_dict` is unchanged so the Phase-1 e2e fixture still replays. make verify PASS (118 unit tests, 100% coverage).
