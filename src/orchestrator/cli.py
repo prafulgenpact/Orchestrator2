@@ -11,16 +11,21 @@ Exit codes: 0 success, 2 usage (argparse), 3 config/registry/credential error,
 from __future__ import annotations
 
 import argparse
+import asyncio
 import os
 import sys
 from pathlib import Path
 
+import httpx
+
+from orchestrator.executor import execute_plan
 from orchestrator.llm import VALID_MODES, get_client
 from orchestrator.llm.base import LLMClient, LLMError
 from orchestrator.llm.foundry import resolve_model
+from orchestrator.models import Plan, PlanResult
 from orchestrator.planner import PlannerError, plan_task
-from orchestrator.registry import RegistryError, load_registry
-from orchestrator.render import render_human, render_json
+from orchestrator.registry import Registry, RegistryError, load_registry
+from orchestrator.render import render_execution, render_human, render_json
 
 
 def _parse_args(argv: list[str] | None) -> argparse.Namespace:
@@ -32,6 +37,11 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
         ),
     )
     parser.add_argument("task", help="the natural-language task to plan")
+    parser.add_argument(
+        "--execute",
+        action="store_true",
+        help="actually invoke the selected apps and show their real results (default: dry run)",
+    )
     parser.add_argument("--json", action="store_true", help="emit the plan as JSON")
     parser.add_argument("--model", help="override the model id")
     parser.add_argument("--registry", help="path to a registry apps.json (default: bundled)")
@@ -73,5 +83,21 @@ def main(argv: list[str] | None = None, *, client: LLMClient | None = None) -> i
         print(f"error: {exc}", file=sys.stderr)
         return 4
 
+    if args.execute:
+        try:
+            result = asyncio.run(_execute(plan, registry, client, model))
+        except LLMError as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 4
+        print(render_execution(result))
+        return 0
+
     print(render_json(plan) if args.json else render_human(plan))
     return 0
+
+
+async def _execute(plan: Plan, registry: Registry, client: LLMClient, model: str) -> PlanResult:
+    async with httpx.AsyncClient() as http_client:
+        return await execute_plan(
+            plan, registry, llm_client=client, http_client=http_client, model=model
+        )

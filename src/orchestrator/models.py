@@ -117,3 +117,52 @@ class Plan:
             prompt_version=data["prompt_version"],
             schema_version=int(data.get("schema_version", SCHEMA_VERSION)),
         )
+
+
+@dataclass(frozen=True)
+class SubtaskResult:
+    """The outcome of executing one subtask against its chosen app.
+
+    ``status`` is "ok" (app returned a result), "error" (call/selection failed), or
+    "skipped" (not executed — e.g. the web-search fallback, deferred). ``output`` is the
+    app's real response; ``source`` is the URL it came from (provenance for grounding).
+    """
+
+    subtask_id: str
+    app_id: str
+    app_name: str
+    status: str
+    operation: str | None
+    output: Any
+    source: str | None
+    error: str | None
+    duration_s: float
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "subtask_id": self.subtask_id,
+            "app_id": self.app_id,
+            "app_name": self.app_name,
+            "status": self.status,
+            "operation": self.operation,
+            "output": self.output,
+            "source": self.source,
+            "error": self.error,
+            "duration_s": round(self.duration_s, 3),
+        }
+
+
+@dataclass(frozen=True)
+class PlanResult:
+    """The result of executing a Plan: the app output for each subtask, with provenance."""
+
+    task: str
+    intent: str
+    results: tuple[SubtaskResult, ...]
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "task": self.task,
+            "intent": self.intent,
+            "results": [r.to_dict() for r in self.results],
+        }

@@ -6,8 +6,14 @@ import json
 
 import pytest
 
-from orchestrator.models import AppSelection, Plan, Subtask
-from orchestrator.render import DRY_RUN_BANNER, compute_waves, render_human, render_json
+from orchestrator.models import AppSelection, Plan, PlanResult, Subtask, SubtaskResult
+from orchestrator.render import (
+    DRY_RUN_BANNER,
+    compute_waves,
+    render_execution,
+    render_human,
+    render_json,
+)
 
 
 def _app(
@@ -93,3 +99,61 @@ def test_human_marks_fallback() -> None:
 
 def test_banner_constant_used() -> None:
     assert DRY_RUN_BANNER in render_human(_plan((_sub("t1"),)))
+
+
+# --- render_execution --------------------------------------------------------
+
+
+def _result(status: str, output: object = None, error: str | None = None) -> SubtaskResult:
+    return SubtaskResult(
+        subtask_id="t1",
+        app_id="arxiv-papers",
+        app_name="ArXiv Paper Guide",
+        status=status,
+        operation="search_papers_by_query",
+        output=output,
+        source="http://127.0.0.1:8002/api/papers/search",
+        error=error,
+        duration_s=1.23,
+    )
+
+
+def test_render_execution_ok() -> None:
+    pr = PlanResult("t", "i", (_result("ok", output={"papers": ["a"]}),))
+    out = render_execution(pr)
+    assert "Executed 1 subtask(s): 1 ok" in out
+    assert "ArXiv Paper Guide :: search_papers_by_query" in out
+    assert "-> OK" in out
+    assert "source: http://127.0.0.1:8002/api/papers/search" in out
+    assert '"papers"' in out  # real output shown
+
+
+def test_render_execution_error() -> None:
+    out = render_execution(PlanResult("t", "i", (_result("error", error="retry: boom"),)))
+    assert "-> ERROR" in out
+    assert "error: retry: boom" in out
+
+
+def test_render_execution_skipped() -> None:
+    skipped = SubtaskResult(
+        "t1",
+        "web-search",
+        "Web Search (fallback)",
+        "skipped",
+        None,
+        None,
+        None,
+        "web-search fallback not executed yet (deferred)",
+        0.0,
+    )
+    out = render_execution(PlanResult("t", "i", (skipped,)))
+    assert "-> SKIP" in out
+    assert "deferred" in out
+
+
+def test_render_execution_previews_long_and_nonstring_output() -> None:
+    long_text = "x" * 500
+    out = render_execution(PlanResult("t", "i", (_result("ok", output=long_text),)))
+    assert "…" in out  # truncated preview
+    dict_out = render_execution(PlanResult("t", "i", (_result("ok", output={"k": "v"}),)))
+    assert '{"k": "v"}' in dict_out  # non-string output rendered as JSON

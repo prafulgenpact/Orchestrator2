@@ -1,0 +1,398 @@
+"""Unit tests for the app-caller — hermetic via httpx.MockTransport (no real network)."""
+
+from __future__ import annotations
+
+import asyncio
+from collections.abc import Callable
+
+import httpx
+
+from orchestrator.app_caller import CallResult, call_operation
+from orchestrator.registry import AppEntry, AppOperation, RetrySpec, load_registry
+from orchestrator.resilience import CircuitBreaker
+
+Handler = Callable[[httpx.Request], httpx.Response]
+
+REG = load_registry()
+
+
+def _client(handler: Handler) -> httpx.AsyncClient:
+    return httpx.AsyncClient(transport=httpx.MockTransport(handler))
+
+
+def _arxiv() -> tuple[AppEntry, AppOperation]:
+    app = REG.get("arxiv-papers")
+    assert app is not None
+    op = app.operation("search_papers_by_query")
+    assert op is not None
+    return app, op
+
+
+def _apps_ok(port: int = 8002) -> httpx.Response:
+    return httpx.Response(200, json={"apps": [{"id": "arxiv-papers", "backend_port": port}]})
+
+
+def test_call_success() -> None:
+    app, op = _arxiv()
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        p = req.url.path
+        if p == "/api/apps":
+            return _apps_ok()
+        if p == "/api/health":
+            return httpx.Response(200, json={"status": "ok"})
+        if p == "/api/papers/search":
+            return httpx.Response(200, json={"papers": [{"title": "MoE survey"}]})
+        return httpx.Response(404)
+
+    async def go() -> CallResult:
+        async with _client(handler) as c:
+            return await call_operation(app, op, {"query": "moe", "max_results": 5}, client=c)
+
+    res = asyncio.run(go())
+    assert res.ok is True
+    assert res.status_code == 200
+    assert res.data == {"papers": [{"title": "MoE survey"}]}
+    assert res.url.endswith("/api/papers/search")
+    assert res.error is None
+
+
+def test_post_sends_body() -> None:
+    app, op = _arxiv()
+    seen: dict[str, str] = {}
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        p = req.url.path
+        if p == "/api/apps":
+            return _apps_ok()
+        if p == "/api/health":
+            return httpx.Response(200, json={"ok": True})
+        seen["body"] = req.content.decode()
+        return httpx.Response(200, json={"papers": []})
+
+    async def go() -> CallResult:
+        async with _client(handler) as c:
+            return await call_operation(app, op, {"query": "attention", "max_results": 3}, client=c)
+
+    res = asyncio.run(go())
+    assert res.ok is True
+    assert "attention" in seen["body"]
+
+
+def test_get_path_param_and_query() -> None:
+    app = REG.get("coding-playground")
+    assert app is not None
+    op = app.operation("preview_dataset")
+    assert op is not None
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        p = req.url.path
+        if p == "/api/apps":
+            return httpx.Response(
+                200, json={"apps": [{"id": "coding-playground", "backend_port": 8003}]}
+            )
+        if p == "/health":
+            return httpx.Response(200, json={"status": "healthy"})
+        if p == "/api/datasets/iris/preview":
+            return httpx.Response(200, json={"rows": int(req.url.params["n_rows"])})
+        return httpx.Response(404)
+
+    async def go() -> CallResult:
+        async with _client(handler) as c:
+            return await call_operation(app, op, {"dataset_id": "iris", "n_rows": 10}, client=c)
+
+    res = asyncio.run(go())
+    assert res.ok is True
+    assert res.url.endswith("/api/datasets/iris/preview")
+    assert res.data == {"rows": 10}
+
+
+def test_text_body_fallback() -> None:
+    app = REG.get("stats-teacher")
+    assert app is not None
+    op = app.operation("ask_question")
+    assert op is not None
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        p = req.url.path
+        if p == "/api/apps":
+            return httpx.Response(
+                200, json={"apps": [{"id": "stats-teacher", "backend_port": 8007}]}
+            )
+        if p == "/api/health":
+            return httpx.Response(200, json={"ok": True})
+        return httpx.Response(200, text="a streamed plain-text answer")
+
+    async def go() -> CallResult:
+        async with _client(handler) as c:
+            return await call_operation(app, op, {"question": "what is a p-value?"}, client=c)
+
+    res = asyncio.run(go())
+    assert res.ok is True
+    assert res.data == "a streamed plain-text answer"
+
+
+def test_health_failure_is_reported() -> None:
+    app, op = _arxiv()
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        if req.url.path == "/api/apps":
+            return _apps_ok()
+        return httpx.Response(500)  # health (and anything else) unhealthy
+
+    async def go() -> CallResult:
+        async with _client(handler) as c:
+            return await call_operation(app, op, {"query": "x"}, client=c)
+
+    res = asyncio.run(go())
+    assert res.ok is False
+    assert "health check failed" in (res.error or "")
+
+
+class _HangTransport(httpx.AsyncBaseTransport):
+    """Serves launcher/health quickly but hangs on the operation call."""
+
+    async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/api/apps":
+            return _apps_ok()
+        if request.url.path == "/api/health":
+            return httpx.Response(200, json={"ok": True})
+        await asyncio.sleep(1.0)  # hang past the deadline
+        return httpx.Response(200, json={})
+
+
+def test_deadline_on_hang() -> None:
+    app, _ = _arxiv()
+    slow = AppOperation(
+        name="slow",
+        description="d",
+        method="GET",
+        path="/api/slow",
+        timeout_s=0.05,
+        destructive=False,
+        idempotency="none",
+        retry=RetrySpec(0, 0.0),
+    )
+
+    async def go() -> CallResult:
+        async with httpx.AsyncClient(transport=_HangTransport()) as c:
+            return await call_operation(app, slow, {}, client=c)
+
+    res = asyncio.run(go())
+    assert res.ok is False
+    assert "deadline" in (res.error or "")
+
+
+def test_retry_then_success() -> None:
+    app, _ = _arxiv()
+    flaky = AppOperation(
+        name="flaky",
+        description="d",
+        method="GET",
+        path="/api/flaky",
+        timeout_s=2.0,
+        destructive=False,
+        idempotency="supported",
+        retry=RetrySpec(2, 0.01),
+    )
+    calls = {"n": 0}
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        if req.url.path == "/api/apps":
+            return _apps_ok()
+        if req.url.path == "/api/health":
+            return httpx.Response(200, json={"ok": True})
+        calls["n"] += 1
+        if calls["n"] < 3:
+            return httpx.Response(503)  # transient -> retried
+        return httpx.Response(200, json={"ok": True})
+
+    async def go() -> CallResult:
+        async with _client(handler) as c:
+            return await call_operation(app, flaky, {}, client=c)
+
+    res = asyncio.run(go())
+    assert res.ok is True
+    assert calls["n"] == 3
+
+
+def test_4xx_is_fatal_not_retried() -> None:
+    app, _ = _arxiv()
+    op = AppOperation(
+        name="missing",
+        description="d",
+        method="GET",
+        path="/api/missing",
+        timeout_s=2.0,
+        destructive=False,
+        idempotency="supported",
+        retry=RetrySpec(2, 0.01),
+    )
+    calls = {"n": 0}
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        if req.url.path == "/api/apps":
+            return _apps_ok()
+        if req.url.path == "/api/health":
+            return httpx.Response(200, json={"ok": True})
+        calls["n"] += 1
+        return httpx.Response(404)
+
+    async def go() -> CallResult:
+        async with _client(handler) as c:
+            return await call_operation(app, op, {}, client=c)
+
+    res = asyncio.run(go())
+    assert res.ok is False
+    assert res.status_code == 404
+    assert calls["n"] == 1  # fatal -> not retried
+
+
+def test_circuit_open_skips_call() -> None:
+    app, op = _arxiv()
+    breaker = CircuitBreaker(threshold=1)
+    breaker.record_failure(app.id)  # already open
+
+    def handler(_req: httpx.Request) -> httpx.Response:
+        raise AssertionError("must not be called when circuit is open")
+
+    async def go() -> CallResult:
+        async with _client(handler) as c:
+            return await call_operation(app, op, {"query": "x"}, client=c, breaker=breaker)
+
+    res = asyncio.run(go())
+    assert res.ok is False
+    assert "circuit open" in (res.error or "")
+
+
+def test_launcher_unreachable_falls_back_to_registry_port() -> None:
+    app, op = _arxiv()
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        if req.url.path == "/api/apps":
+            return httpx.Response(500)  # launcher down -> fall back to registry port (8002)
+        if req.url.path == "/api/health":
+            return httpx.Response(200, json={"ok": True})
+        if req.url.path == "/api/papers/search":
+            return httpx.Response(200, json={"papers": []})
+        return httpx.Response(404)
+
+    async def go() -> CallResult:
+        async with _client(handler) as c:
+            return await call_operation(app, op, {"query": "x"}, client=c)
+
+    res = asyncio.run(go())
+    assert res.ok is True
+    assert res.url.startswith("http://127.0.0.1:8002")
+
+
+def test_app_without_port_errors() -> None:
+    op = AppOperation(
+        name="op",
+        description="d",
+        method="GET",
+        path="/x",
+        timeout_s=1.0,
+        destructive=False,
+        idempotency="supported",
+        retry=RetrySpec(0, 0.0),
+    )
+    portless = AppEntry(
+        "ghost", "Ghost", "d", (), (), False, port=None, health=None, operations=(op,)
+    )
+
+    def handler(_req: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json={"apps": []})  # not found in launcher
+
+    async def go() -> CallResult:
+        async with _client(handler) as c:
+            return await call_operation(portless, op, {}, client=c)
+
+    res = asyncio.run(go())
+    assert res.ok is False
+    assert "no port" in (res.error or "")
+
+
+def test_call_result_to_dict_rounds_duration() -> None:
+    r = CallResult("arxiv-papers", "search", "http://x", True, 200, {"a": 1}, None, 1.2345)
+    d = r.to_dict()
+    assert d["app_id"] == "arxiv-papers"
+    assert d["ok"] is True
+    assert d["duration_s"] == 1.234
+
+
+def test_launcher_picks_matching_entry_among_others() -> None:
+    app, op = _arxiv()
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        if req.url.path == "/api/apps":
+            return httpx.Response(
+                200,
+                json={
+                    "apps": [
+                        {"id": "other", "backend_port": 9999},
+                        {"id": "arxiv-papers", "backend_port": 8002},
+                    ]
+                },
+            )
+        if req.url.path == "/api/health":
+            return httpx.Response(200, json={"ok": True})
+        if req.url.path == "/api/papers/search":
+            return httpx.Response(200, json={"papers": []})
+        return httpx.Response(404)
+
+    async def go() -> CallResult:
+        async with _client(handler) as c:
+            return await call_operation(app, op, {"query": "x"}, client=c)
+
+    res = asyncio.run(go())
+    assert res.ok is True
+    assert res.url.startswith("http://127.0.0.1:8002")
+
+
+def test_no_health_path_skips_health_check() -> None:
+    op = AppOperation(
+        name="ping",
+        description="d",
+        method="GET",
+        path="/ping",
+        timeout_s=2.0,
+        destructive=False,
+        idempotency="supported",
+        retry=RetrySpec(0, 0.0),
+    )
+    app = AppEntry(
+        "nohealth", "NoHealth", "d", (), (), False, port=8080, health=None, operations=(op,)
+    )
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        if req.url.path == "/api/apps":
+            return httpx.Response(500)  # fall back to the registry port
+        if req.url.path == "/ping":
+            return httpx.Response(200, json={"pong": True})
+        return httpx.Response(404)
+
+    async def go() -> CallResult:
+        async with _client(handler) as c:
+            return await call_operation(app, op, {}, client=c)
+
+    res = asyncio.run(go())
+    assert res.ok is True
+    assert res.data == {"pong": True}
+
+
+def test_health_check_exception_is_unhealthy() -> None:
+    app, op = _arxiv()
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        if req.url.path == "/api/apps":
+            return _apps_ok()
+        raise RuntimeError("connection dropped")  # health GET raises
+
+    async def go() -> CallResult:
+        async with _client(handler) as c:
+            return await call_operation(app, op, {"query": "x"}, client=c)
+
+    res = asyncio.run(go())
+    assert res.ok is False
+    assert "health check failed" in (res.error or "")

@@ -4,11 +4,14 @@ from __future__ import annotations
 
 import importlib
 import json
+from typing import Any
 
 import pytest
 from conftest import FakeLLM
 
+from orchestrator.app_caller import CallResult
 from orchestrator.cli import main
+from orchestrator.llm.base import LLMError, LLMRequest
 
 
 def _valid_response() -> str:
@@ -94,3 +97,101 @@ def test_missing_task_is_usage_error() -> None:
 def test_entry_point_module_imports() -> None:
     # importing __main__ must not raise (guarded run block is skipped on import)
     assert importlib.import_module("orchestrator.__main__") is not None
+
+
+# --- --execute (real invocation path; HTTP call stubbed, no network) ---------
+
+
+def _arxiv_plan_response() -> str:
+    return json.dumps(
+        {
+            "intent": "find MoE papers",
+            "subtasks": [
+                {
+                    "id": "t1",
+                    "title": "Find MoE papers",
+                    "description": "recent moe",
+                    "depends_on": [],
+                    "app": {
+                        "app_id": "arxiv-papers",
+                        "rationale": "searches arxiv",
+                        "confidence": 0.95,
+                    },
+                }
+            ],
+        }
+    )
+
+
+_SELECTOR_RESPONSE = '{"operation": "search_papers_by_query", "arguments": {"query": "moe"}}'
+
+
+def test_execute_success(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    async def _call(app: Any, op: Any, _args: Any, **_kw: Any) -> CallResult:
+        return CallResult(
+            app.id,
+            op.name,
+            "http://127.0.0.1:8002/api/papers/search",
+            True,
+            200,
+            {"papers": ["MoE survey"]},
+            None,
+            0.5,
+        )
+
+    monkeypatch.setattr("orchestrator.executor.call_operation", _call)
+    client = FakeLLM([_arxiv_plan_response(), _SELECTOR_RESPONSE])
+    rc = main(["find moe papers", "--execute"], client=client)
+    out = capsys.readouterr().out
+    assert rc == 0
+    assert "-> OK" in out
+    assert "ArXiv Paper Guide" in out
+    assert "papers" in out
+    assert "no apps were invoked" not in out  # NOT the dry-run banner
+
+
+def test_execute_fallback_skipped(capsys: pytest.CaptureFixture[str]) -> None:
+    resp = json.dumps(
+        {
+            "intent": "obscure",
+            "subtasks": [
+                {
+                    "id": "t1",
+                    "title": "do it",
+                    "description": "no app fits",
+                    "depends_on": [],
+                    "app": {
+                        "app_id": "web-search",
+                        "rationale": "no specialized app",
+                        "confidence": 0.4,
+                    },
+                }
+            ],
+        }
+    )
+    rc = main(["something obscure", "--execute"], client=FakeLLM([resp]))
+    out = capsys.readouterr().out
+    assert rc == 0
+    assert "-> SKIP" in out
+
+
+class _PlanThenLLMError:
+    """Returns a valid plan on the first call, then fails (simulates a mid-execution LLM error)."""
+
+    def __init__(self, planner_response: str) -> None:
+        self._planner = planner_response
+        self._calls = 0
+
+    def complete(self, _request: LLMRequest) -> str:
+        self._calls += 1
+        if self._calls == 1:
+            return self._planner
+        raise LLMError("selector call failed")
+
+
+def test_execute_llm_error_returns_4(capsys: pytest.CaptureFixture[str]) -> None:
+    rc = main(["find moe papers", "--execute"], client=_PlanThenLLMError(_arxiv_plan_response()))
+    assert rc == 4
+    assert "error:" in capsys.readouterr().err

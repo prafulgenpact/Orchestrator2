@@ -9,10 +9,12 @@ Nothing here runs an app; the output always ends with the dry-run banner.
 from __future__ import annotations
 
 import json
+from typing import Any
 
-from orchestrator.models import Plan, Subtask
+from orchestrator.models import Plan, PlanResult, Subtask
 
 DRY_RUN_BANNER = "DRY RUN — no apps were invoked."
+_STATUS_BADGE = {"ok": "OK", "error": "ERROR", "skipped": "SKIP"}
 
 
 def compute_waves(subtasks: tuple[Subtask, ...]) -> list[list[Subtask]]:
@@ -61,4 +63,36 @@ def render_human(plan: Plan) -> str:
             lines.append(f"          rationale: {sub.app.rationale}")
     lines.append("")
     lines.append(f"{DRY_RUN_BANNER}  model={plan.model}  prompt=v{plan.prompt_version}")
+    return "\n".join(lines)
+
+
+def _preview(data: Any, limit: int = 400) -> str:
+    """A one-line, length-bounded preview of an app's real output."""
+    text = data if isinstance(data, str) else json.dumps(data, default=str)
+    text = " ".join(text.split())
+    return text if len(text) <= limit else text[:limit] + "…"
+
+
+def render_execution(result: PlanResult) -> str:
+    """A readable report of an executed plan: which app ran, its real output, its source."""
+    ok = sum(1 for r in result.results if r.status == "ok")
+    lines: list[str] = [
+        f"Task:   {result.task}",
+        f"Intent: {result.intent}",
+        "",
+        f"Executed {len(result.results)} subtask(s): {ok} ok",
+    ]
+    for r in result.results:
+        badge = _STATUS_BADGE.get(r.status, r.status)
+        lines.append(
+            f"  [{r.subtask_id}] {r.app_name} :: {r.operation or '-'}  "
+            f"-> {badge}  ({r.duration_s:.2f}s)"
+        )
+        if r.status == "ok":
+            lines.append(f"       source: {r.source}")
+            lines.append(f"       result: {_preview(r.output)}")
+        elif r.status == "error":
+            lines.append(f"       error: {r.error}")
+        else:
+            lines.append(f"       {r.error}")
     return "\n".join(lines)

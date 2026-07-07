@@ -6,7 +6,14 @@ import dataclasses
 
 import pytest
 
-from orchestrator.models import SCHEMA_VERSION, AppSelection, Plan, Subtask
+from orchestrator.models import (
+    SCHEMA_VERSION,
+    AppSelection,
+    Plan,
+    PlanResult,
+    Subtask,
+    SubtaskResult,
+)
 
 
 def _app() -> AppSelection:
@@ -91,3 +98,37 @@ def test_from_dict_coerces_scalar_types() -> None:
     restored = AppSelection.from_dict(data)
     assert restored.confidence == 0.5
     assert restored.fallback is True
+
+
+def _subtask_result(status: str = "ok") -> SubtaskResult:
+    return SubtaskResult(
+        subtask_id="t1",
+        app_id="arxiv-papers",
+        app_name="ArXiv Paper Guide",
+        status=status,
+        operation="search_papers_by_query",
+        output={"papers": []},
+        source="http://127.0.0.1:8002/api/papers/search",
+        error=None,
+        duration_s=1.2345,
+    )
+
+
+def test_subtask_result_to_dict_rounds_duration() -> None:
+    d = _subtask_result().to_dict()
+    assert d["app_id"] == "arxiv-papers"
+    assert d["status"] == "ok"
+    assert d["operation"] == "search_papers_by_query"
+    assert d["duration_s"] == 1.234  # rounded to 3 dp
+
+
+def test_plan_result_to_dict_nests_results() -> None:
+    pr = PlanResult(task="t", intent="i", results=(_subtask_result("ok"), _subtask_result("error")))
+    d = pr.to_dict()
+    assert d["task"] == "t"
+    assert [r["status"] for r in d["results"]] == ["ok", "error"]
+
+
+def test_result_models_are_frozen() -> None:
+    with pytest.raises(dataclasses.FrozenInstanceError):
+        _subtask_result().status = "error"  # type: ignore[misc]
