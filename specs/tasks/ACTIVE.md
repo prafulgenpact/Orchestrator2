@@ -1,1 +1,1 @@
-20260707-app-contracts-registry.md
+20260707-resilience-primitives.md
