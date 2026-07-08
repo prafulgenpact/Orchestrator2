@@ -143,7 +143,16 @@ async def call_operation(
 
         async def attempt() -> httpx.Response:
             resp = await run_with_deadline(
-                client.request(op.method, url, params=params or None, json=body or None),
+                # timeout=op.timeout_s: httpx's own per-read timeout must match the operation's
+                # budget, else its 5s default fires first on slow (e.g. LLM-backed) calls. The
+                # run_with_deadline wrapper remains the HARD total cap (the anti-hang guarantee).
+                client.request(
+                    op.method,
+                    url,
+                    params=params or None,
+                    json=body or None,
+                    timeout=op.timeout_s,
+                ),
                 op.timeout_s,
             )
             resp.raise_for_status()
@@ -165,6 +174,9 @@ async def call_operation(
         )
     except Exception as exc:
         cb.record_failure(key)
+        # Fall back to the exception type when its message is empty (e.g. httpx.ReadTimeout('')),
+        # so the error is never a bare "fatal:" with no detail.
+        detail = str(exc) or type(exc).__name__
         return CallResult(
             app.id,
             op.name,
@@ -172,6 +184,6 @@ async def call_operation(
             False,
             _status_of(exc),
             None,
-            f"{classify_error(exc)}: {exc}",
+            f"{classify_error(exc)}: {detail}",
             time.monotonic() - start,
         )

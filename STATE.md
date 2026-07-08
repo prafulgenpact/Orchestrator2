@@ -1,9 +1,18 @@
 # Project State — A multi agent orchestrator system calling relevant apps basis intent recognition
 
-Last updated: 2026-07-08 (depth-data-flow task)
+Last updated: 2026-07-08 (app-caller-timeout task)
 
 ## Done (most recent first)
 
+- 2026-07-08 app-caller-timeout (Phase 2, bugfix — serves AC-2; unblocks the depth demo): long,
+  legitimately-slow app operations (e.g. arXiv `analyze_paper`, LLM-backed, 90s registry budget)
+  were failing after ~5s with a bare `fatal:`. Root cause: `call_operation` set a 90s HARD outer
+  deadline via `run_with_deadline` but never passed a per-read `timeout` to httpx, so httpx's 5s
+  default fired first (`ReadTimeout('')`). Fix: pass `timeout=op.timeout_s` to the httpx request
+  (outer deadline stays the hard anti-hang cap); and render `type(exc).__name__` when the
+  exception message is empty. Failing-test-first: 2 new regression tests in test_app_caller.py.
+  make verify PASS. VERIFIED LIVE: the MoE demo now runs end-to-end — step 2 analyzes step 1's
+  paper (2402.14800) and returns real takeaways.
 - 2026-07-08 depth-data-flow (Phase 2, depth — plan-depth-orchestration.md Task 1): the executor
   now threads data **between** steps. Each subtask's operation+arguments are selected WITH the
   outputs of the subtasks it depends on (only successful upstream flows forward), so step 2 can
@@ -22,8 +31,9 @@ Last updated: 2026-07-08 (depth-data-flow task)
 
 ## In progress
 
-- (nothing — depth-data-flow sealed; next is plan-depth-orchestration.md Task 2: synthesis + your
-  voice — a final step that combines all step results into ONE grounded answer)
+- (nothing — depth-data-flow + app-caller-timeout sealed; the MoE depth demo runs end-to-end. Next
+  is plan-depth-orchestration.md Task 2: synthesis + your voice — a final step that combines all
+  step results into ONE grounded answer)
 
 ## Next up
 
@@ -31,9 +41,12 @@ Last updated: 2026-07-08 (depth-data-flow task)
 
 ## Known issues / parked
 
-- app_caller error polish (small): a failed call with an empty exception string renders as
-  "fatal: " (no detail) — include the exception type. Also a transient warm-up failure was
-  classified "fatal" (not retried) — review classification for empty/ambiguous errors.
+- (fixed 2026-07-08) empty-exception-string rendering ("fatal: " with no detail) — now falls back
+  to the exception type name (app-caller-timeout task).
+- error classification review (parked): `httpx.ReadTimeout`/timeout exceptions are classed "fatal"
+  (not retried) because they are not Python `TimeoutError` subclasses and carry an empty message.
+  The per-read-timeout fix makes this moot on the happy path; a broader `classify_error` review
+  (treat httpx timeout types as transient) is a separate task if warm-up flakiness resurfaces.
 
 ## Key decisions
 

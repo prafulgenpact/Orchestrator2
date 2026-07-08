@@ -396,3 +396,70 @@ def test_health_check_exception_is_unhealthy() -> None:
     res = asyncio.run(go())
     assert res.ok is False
     assert "health check failed" in (res.error or "")
+
+
+# --- bugfix: per-operation timeout + non-empty error rendering (app-caller-timeout task) ---
+
+
+def _slow_op(timeout_s: float) -> AppOperation:
+    return AppOperation(
+        name="analyze",
+        description="LLM-backed, legitimately slow",
+        method="POST",
+        path="/api/ai/analyze",
+        timeout_s=timeout_s,
+        destructive=False,
+        idempotency="none",
+        retry=RetrySpec(0, 0.0),
+    )
+
+
+def test_operation_timeout_is_passed_to_httpx() -> None:
+    # Regression: httpx's 5s default must NOT shadow the operation's own (larger) budget.
+    app, _ = _arxiv()
+    op = _slow_op(90.0)
+    seen: dict[str, object] = {}
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        p = req.url.path
+        if p == "/api/apps":
+            return _apps_ok()
+        if p == "/api/health":
+            return httpx.Response(200, json={"ok": True})
+        seen["timeout"] = req.extensions.get("timeout")
+        return httpx.Response(200, json={"ok": True})
+
+    async def go() -> CallResult:
+        async with _client(handler) as c:
+            return await call_operation(app, op, {"arxiv_id": "x", "mode": "takeaways"}, client=c)
+
+    res = asyncio.run(go())
+    assert res.ok is True
+    assert isinstance(seen["timeout"], dict)
+    assert seen["timeout"]["read"] == 90.0  # the op's budget, not httpx's 5s default
+
+
+class _EmptyErrorTransport(httpx.AsyncBaseTransport):
+    """Serves launcher/health, then raises an empty-message error on the operation call."""
+
+    async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/api/apps":
+            return _apps_ok()
+        if request.url.path == "/api/health":
+            return httpx.Response(200, json={"ok": True})
+        raise httpx.ReadTimeout("")  # empty message, like a real per-read timeout
+
+
+def test_empty_error_message_includes_exception_type() -> None:
+    # Regression: a blank exception string must not render as a bare "fatal:".
+    app, _ = _arxiv()
+    op = _slow_op(1.0)
+
+    async def go() -> CallResult:
+        async with httpx.AsyncClient(transport=_EmptyErrorTransport()) as c:
+            return await call_operation(app, op, {}, client=c)
+
+    res = asyncio.run(go())
+    assert res.ok is False
+    assert (res.error or "").strip() != "fatal:"
+    assert "ReadTimeout" in (res.error or "")
