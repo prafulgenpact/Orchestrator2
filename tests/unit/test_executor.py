@@ -58,9 +58,14 @@ def _run(plan: Plan, client: FakeLLM) -> PlanResult:
     return asyncio.run(go())
 
 
+_SELECT = '{"operation": "search_papers_by_query", "arguments": {"query": "moe"}}'
+_RELEVANT = '{"relevant": true, "reason": "on topic"}'
+_IRRELEVANT = '{"relevant": false, "reason": "off-topic keyword match"}'
+
+
 def test_execute_success(monkeypatch: pytest.MonkeyPatch, fake_llm: MakeLLM) -> None:
     monkeypatch.setattr("orchestrator.executor.call_operation", _stub_call())
-    client = fake_llm(['{"operation": "search_papers_by_query", "arguments": {"query": "moe"}}'])
+    client = fake_llm([_SELECT, _RELEVANT])  # selector, then relevance guard
     result = _run(_plan(_sub("arxiv-papers", "ArXiv Paper Guide")), client)
     assert len(result.results) == 1
     r = result.results[0]
@@ -68,6 +73,18 @@ def test_execute_success(monkeypatch: pytest.MonkeyPatch, fake_llm: MakeLLM) -> 
     assert r.operation == "search_papers_by_query"
     assert r.output == {"echo": {"query": "moe"}}
     assert r.source is not None
+
+
+def test_execute_irrelevant_becomes_no_match(
+    monkeypatch: pytest.MonkeyPatch, fake_llm: MakeLLM
+) -> None:
+    monkeypatch.setattr("orchestrator.executor.call_operation", _stub_call())
+    client = fake_llm([_SELECT, _IRRELEVANT])  # selector, then relevance says NO
+    result = _run(_plan(_sub("arxiv-papers", "ArXiv Paper Guide")), client)
+    r = result.results[0]
+    assert r.status == "no_match"
+    assert r.output is None  # raw (irrelevant) output suppressed
+    assert "off-topic" in (r.error or "")
 
 
 def test_execute_skips_fallback(fake_llm: MakeLLM) -> None:

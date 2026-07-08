@@ -81,6 +81,25 @@ def _indent(text: str, prefix: str = "       ") -> str:
     return "\n".join(prefix + line for line in text.splitlines())
 
 
+def _one_line(text: str, limit: int = 120) -> str:
+    text = " ".join(text.split())
+    return text if len(text) <= limit else text[:limit] + "…"
+
+
+def _list_lines(items: list[Any], top: int = 5) -> list[str]:
+    """Numbered top-N titles for a list result (clean mode)."""
+    out: list[str] = []
+    for i, item in enumerate(items[:top], start=1):
+        if isinstance(item, dict):
+            label = item.get("title") or item.get("name") or item.get("id") or json.dumps(item)
+        else:
+            label = item
+        out.append(f"       {i}. {_one_line(str(label))}")
+    if len(items) > top:
+        out.append(f"       … ({len(items) - top} more)")
+    return out
+
+
 def render_execution(plan: Plan, result: PlanResult, *, verbose: bool = False) -> str:
     """Clean three-part view of an executed plan: input, decomposition, output.
 
@@ -114,14 +133,24 @@ def render_execution(plan: Plan, result: PlanResult, *, verbose: bool = False) -
     by_id = {r.subtask_id: r for r in result.results}
     for sub in plan.subtasks:
         r = by_id.get(sub.id)
-        lines.append(f"  [{sub.id}] {r.app_name if r else sub.app.app_name}")
+        header = f"  [{sub.id}] {r.app_name if r else sub.app.app_name}"
+        if r is not None and r.status == "ok" and isinstance(r.output, list) and not verbose:
+            header += f"  — {len(r.output)} result(s)"
+        lines.append(header)
         if r is None:
             lines.append("       (no result)")
             continue
         if r.status == "ok":
-            lines.append(_indent(_full(r.output) if verbose else _preview(r.output)))
+            if verbose:
+                lines.append(_indent(_full(r.output)))
+            elif isinstance(r.output, list):
+                lines.extend(_list_lines(r.output))
+            else:
+                lines.append(_indent(_preview(r.output)))
             if r.source:
                 lines.append(f"       source: {r.source}")
+        elif r.status == "no_match":
+            lines.append(f"       no relevant results found — {r.error}")
         elif r.status == "skipped":
             lines.append(f"       (not executed — {r.error})")
         else:

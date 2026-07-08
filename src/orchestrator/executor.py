@@ -11,6 +11,7 @@ from __future__ import annotations
 import httpx
 
 from orchestrator.app_caller import call_operation
+from orchestrator.grounding import check_relevance
 from orchestrator.llm.base import LLMClient
 from orchestrator.models import Plan, PlanResult, Subtask, SubtaskResult
 from orchestrator.registry import Registry
@@ -76,14 +77,34 @@ async def _run_subtask(
         return SubtaskResult(sub.id, app.id, app.name, "error", None, None, None, str(exc), 0.0)
 
     result = await call_operation(app, op, args, client=http_client, breaker=breaker)
+    source = result.url or None
+    if not result.ok:
+        return SubtaskResult(
+            sub.id,
+            app.id,
+            app.name,
+            "error",
+            op.name,
+            None,
+            source,
+            result.error,
+            result.duration_s,
+        )
+
+    # Grounding guard: the app returned data, but is it actually relevant to the task?
+    relevant, reason = check_relevance(llm_client, sub, result.data, model=model)
+    if not relevant:
+        return SubtaskResult(
+            sub.id,
+            app.id,
+            app.name,
+            "no_match",
+            op.name,
+            None,
+            source,
+            reason or "results did not match the task",
+            result.duration_s,
+        )
     return SubtaskResult(
-        subtask_id=sub.id,
-        app_id=app.id,
-        app_name=app.name,
-        status="ok" if result.ok else "error",
-        operation=op.name,
-        output=result.data,
-        source=result.url or None,
-        error=result.error,
-        duration_s=result.duration_s,
+        sub.id, app.id, app.name, "ok", op.name, result.data, source, None, result.duration_s
     )

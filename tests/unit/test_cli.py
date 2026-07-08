@@ -124,6 +124,7 @@ def _arxiv_plan_response() -> str:
 
 
 _SELECTOR_RESPONSE = '{"operation": "search_papers_by_query", "arguments": {"query": "moe"}}'
+_RELEVANT_RESPONSE = '{"relevant": true, "reason": "on topic"}'
 
 
 def test_execute_success(
@@ -142,7 +143,7 @@ def test_execute_success(
         )
 
     monkeypatch.setattr("orchestrator.executor.call_operation", _call)
-    client = FakeLLM([_arxiv_plan_response(), _SELECTOR_RESPONSE])
+    client = FakeLLM([_arxiv_plan_response(), _SELECTOR_RESPONSE, _RELEVANT_RESPONSE])
     rc = main(["find moe papers", "--execute"], client=client)
     out = capsys.readouterr().out
     assert rc == 0
@@ -196,7 +197,7 @@ def test_execute_verbose_shows_operational_detail(
         )
 
     monkeypatch.setattr("orchestrator.executor.call_operation", _call)
-    client = FakeLLM([_arxiv_plan_response(), _SELECTOR_RESPONSE])
+    client = FakeLLM([_arxiv_plan_response(), _SELECTOR_RESPONSE, _RELEVANT_RESPONSE])
     rc = main(["find moe papers", "--execute", "--verbose"], client=client)
     out = capsys.readouterr().out
     assert rc == 0

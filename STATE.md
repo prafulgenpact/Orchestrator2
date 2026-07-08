@@ -1,9 +1,10 @@
 # Project State — A multi agent orchestrator system calling relevant apps basis intent recognition
 
-Last updated: 2026-07-07 (execute-clean-output task)
+Last updated: 2026-07-08 (relevance-and-list task)
 
 ## Done (most recent first)
 
+- 2026-07-08 relevance-and-list (Phase 2, accuracy): `--execute` now (1) lists all results (count + top titles; full payload behind `--verbose`) and (2) runs a relevance guard (`grounding.check_relevance`, one LLM call) after each successful call — irrelevant results become "no relevant results found — <reason>" with the raw output suppressed. New grounding.py + relevance_system.md; executor + render updated. 217 unit tests, 100% coverage; make verify PASS. Live-verified (MoE lists papers; junk topics filtered/flagged).
 - 2026-07-07 execute-clean-output (Phase 2, UX): `--execute` now prints a clean three-part view — input (task + intent), decomposition (subtasks in steps, each with chosen app + confidence + rationale), and output (grounded result + source). Operational detail (operation, status, timing, full payload) moved behind a new `--verbose` flag. 201 unit tests, 100% coverage; make verify PASS.
 - 2026-07-07 slice1-live-call (Phase 2, thinnest end-to-end): `python -m orchestrator --execute "<task>"` now runs the full loop — plan → per-subtask operation+args selection (grounded LLM call) → real HTTP call via the app-caller (health-check + block-B deadline/retry/circuit-breaker) → grounded result with source URL. New app_caller.py, selector.py, executor.py; PlanResult/SubtaskResult; render_execution; `--execute` (dry-run stays default); httpx dependency. VERIFIED LIVE against the running arXiv app (real MoE paper returned in ~3s). 198 unit tests, 100% coverage; e2e replay unchanged. make verify PASS.
 - 2026-07-07 resilience-primitives (Phase 2, B1-B4): new `resilience.py` — `run_with_deadline` (hard wall-clock cap via asyncio.wait_for = the AC-2 anti-hang guarantee), `classify_error` (retry/fatal/auth, duck-types HTTP status), `backoff_delay` (exponential + jitter), `retry_async` (bounded, transient-only, injectable sleep), and `CircuitBreaker`. Decoupled from the registry (plain numbers, not RetrySpec). 40 new unit tests, 100% coverage. make verify PASS.
@@ -22,7 +23,9 @@ Last updated: 2026-07-07 (execute-clean-output task)
 
 ## Known issues / parked
 
-- (none)
+- app_caller error polish (small): a failed call with an empty exception string renders as
+  "fatal: " (no detail) — include the exception type. Also a transient warm-up failure was
+  classified "fatal" (not retried) — review classification for empty/ambiguous errors.
 
 ## Key decisions
 

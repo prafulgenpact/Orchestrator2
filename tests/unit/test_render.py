@@ -198,3 +198,40 @@ def test_execution_ok_without_source_omits_source_line() -> None:
     res = _result("t1", sub.app.app_id, sub.app.app_name, "ok", output="hi", source=None)
     out = render_execution(plan, PlanResult(plan.task, plan.intent, (res,)))
     assert "source:" not in out
+
+
+def test_execution_lists_results() -> None:
+    papers = [{"title": f"Paper {i}"} for i in range(6)]
+    plan, result = _one_ok(papers)
+    out = render_execution(plan, result)
+    assert "— 6 result(s)" in out
+    assert "1. Paper 0" in out
+    assert "5. Paper 4" in out
+    assert "… (1 more)" in out  # top 5 shown, 1 more summarized
+
+
+def test_execution_no_match() -> None:
+    sub = _sub("t1")
+    plan = _plan((sub,))
+    res = _result(
+        "t1", sub.app.app_id, sub.app.app_name, "no_match", error="arXiv has nothing on this"
+    )
+    out = render_execution(plan, PlanResult(plan.task, plan.intent, (res,)))
+    assert "no relevant results found — arXiv has nothing on this" in out
+
+
+def test_execution_list_truncates_titles_and_omits_more_for_short_lists() -> None:
+    items = [{"title": "T" * 200}, {"title": "short"}]  # 2 items, one very long
+    plan, result = _one_ok(items)
+    out = render_execution(plan, result)
+    assert "— 2 result(s)" in out
+    assert "…" in out  # long title truncated by _one_line
+    assert "more)" not in out  # only 2 items -> no "(N more)" line
+
+
+def test_execution_list_of_scalars() -> None:
+    plan, result = _one_ok(["alpha", "beta"])  # non-dict list items
+    out = render_execution(plan, result)
+    assert "— 2 result(s)" in out
+    assert "1. alpha" in out
+    assert "2. beta" in out
