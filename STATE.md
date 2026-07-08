@@ -1,9 +1,16 @@
 # Project State — A multi agent orchestrator system calling relevant apps basis intent recognition
 
-Last updated: 2026-07-08 (relevance-and-list task)
+Last updated: 2026-07-08 (depth-data-flow task)
 
 ## Done (most recent first)
 
+- 2026-07-08 depth-data-flow (Phase 2, depth — plan-depth-orchestration.md Task 1): the executor
+  now threads data **between** steps. Each subtask's operation+arguments are selected WITH the
+  outputs of the subtasks it depends on (only successful upstream flows forward), so step 2 can
+  lift an id (e.g. an arXiv id) out of step 1's result. `select_operation`/`build_select_message`
+  gained an `upstream` param that renders an "UPSTREAM RESULTS" block preserving ids;
+  operation_select prompt bumped to v2. This is the leap from N independent calls to a real chain.
+  New unit tests in test_selector.py + test_executor.py; make verify PASS (e2e replay unchanged).
 - 2026-07-08 relevance-and-list (Phase 2, accuracy): `--execute` now (1) lists all results (count + top titles; full payload behind `--verbose`) and (2) runs a relevance guard (`grounding.check_relevance`, one LLM call) after each successful call — irrelevant results become "no relevant results found — <reason>" with the raw output suppressed. New grounding.py + relevance_system.md; executor + render updated. 217 unit tests, 100% coverage; make verify PASS. Live-verified (MoE lists papers; junk topics filtered/flagged).
 - 2026-07-07 execute-clean-output (Phase 2, UX): `--execute` now prints a clean three-part view — input (task + intent), decomposition (subtasks in steps, each with chosen app + confidence + rationale), and output (grounded result + source). Operational detail (operation, status, timing, full payload) moved behind a new `--verbose` flag. 201 unit tests, 100% coverage; make verify PASS.
 - 2026-07-07 slice1-live-call (Phase 2, thinnest end-to-end): `python -m orchestrator --execute "<task>"` now runs the full loop — plan → per-subtask operation+args selection (grounded LLM call) → real HTTP call via the app-caller (health-check + block-B deadline/retry/circuit-breaker) → grounded result with source URL. New app_caller.py, selector.py, executor.py; PlanResult/SubtaskResult; render_execution; `--execute` (dry-run stays default); httpx dependency. VERIFIED LIVE against the running arXiv app (real MoE paper returned in ~3s). 198 unit tests, 100% coverage; e2e replay unchanged. make verify PASS.
@@ -15,7 +22,8 @@ Last updated: 2026-07-08 (relevance-and-list task)
 
 ## In progress
 
-- (nothing yet)
+- (nothing — depth-data-flow sealed; next is plan-depth-orchestration.md Task 2: synthesis + your
+  voice — a final step that combines all step results into ONE grounded answer)
 
 ## Next up
 

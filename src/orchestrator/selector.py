@@ -8,15 +8,17 @@ Endpoints are never invented — they come from the registry.
 from __future__ import annotations
 
 import json
+from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
 from orchestrator.llm.base import LLMClient, LLMRequest
-from orchestrator.models import Subtask
+from orchestrator.models import Subtask, SubtaskResult
 from orchestrator.registry import AppEntry, AppOperation
 
 _PROMPT_PATH = Path(__file__).resolve().parent / "prompts" / "operation_select_system.md"
 _MAX_TOKENS = 1000
+_UPSTREAM_LIMIT = 2000  # chars per upstream result — enough to keep ids, bounded for tokens
 
 
 class SelectionError(ValueError):
@@ -39,17 +41,41 @@ def _operations_view(app: AppEntry) -> list[dict[str, Any]]:
     ]
 
 
-def build_select_message(app: AppEntry, subtask: Subtask) -> str:
+def _summarize_output(output: Any, limit: int = _UPSTREAM_LIMIT) -> str:
+    """A compact, length-bounded view of one upstream result that PRESERVES ids.
+
+    Unlike the relevance guard's title-only summary, this keeps concrete field values (an
+    ``arxiv_id``, a url, …) so a downstream step can lift the value it needs out of it. Long
+    lists are capped to their first items rather than truncated mid-field.
+    """
+    if isinstance(output, list):
+        output = output[:5]
+    text = output if isinstance(output, str) else json.dumps(output, default=str)
+    text = " ".join(text.split())
+    return text if len(text) <= limit else text[:limit] + "…"
+
+
+def _upstream_block(upstream: Sequence[SubtaskResult]) -> str:
+    lines = [f"- [{r.subtask_id}] {r.app_name}: {_summarize_output(r.output)}" for r in upstream]
+    return "UPSTREAM RESULTS (outputs of the steps this subtask depends on):\n" + "\n".join(lines)
+
+
+def build_select_message(
+    app: AppEntry, subtask: Subtask, upstream: Sequence[SubtaskResult] = ()
+) -> str:
     view = json.dumps(
         {"app": app.name, "operations": _operations_view(app)},
         sort_keys=True,
         separators=(",", ":"),
     )
-    return (
-        f"APP OPERATIONS (JSON):\n{view}\n\n"
-        f"SUBTASK:\n{subtask.title}: {subtask.description}\n\n"
+    parts = [f"APP OPERATIONS (JSON):\n{view}"]
+    if upstream:
+        parts.append(_upstream_block(upstream))
+    parts.append(f"SUBTASK:\n{subtask.title}: {subtask.description}")
+    parts.append(
         'Return one raw JSON object: {"operation": "<name>", "arguments": {<field>: <value>}}.'
     )
+    return "\n\n".join(parts)
 
 
 def _strip_fences(text: str) -> str:
@@ -63,13 +89,22 @@ def _strip_fences(text: str) -> str:
 
 
 def select_operation(
-    client: LLMClient, app: AppEntry, subtask: Subtask, *, model: str
+    client: LLMClient,
+    app: AppEntry,
+    subtask: Subtask,
+    *,
+    model: str,
+    upstream: Sequence[SubtaskResult] = (),
 ) -> tuple[AppOperation, dict[str, Any]]:
-    """Choose an operation + arguments for ``subtask`` on ``app``. Raises SelectionError."""
+    """Choose an operation + arguments for ``subtask`` on ``app``. Raises SelectionError.
+
+    ``upstream`` carries the results of the subtasks this one depends on, so their concrete
+    values (an id returned by an earlier step) are available to fill this step's arguments.
+    """
     request = LLMRequest(
         model=model,
         system=load_system_prompt(),
-        messages=({"role": "user", "content": build_select_message(app, subtask)},),
+        messages=({"role": "user", "content": build_select_message(app, subtask, upstream)},),
         max_tokens=_MAX_TOKENS,
     )
     raw = client.complete(request)

@@ -7,9 +7,9 @@ from collections.abc import Callable, Sequence
 import pytest
 from conftest import FakeLLM
 
-from orchestrator.models import AppSelection, Subtask
+from orchestrator.models import AppSelection, Subtask, SubtaskResult
 from orchestrator.registry import AppEntry, AppOperation, RetrySpec, load_registry
-from orchestrator.selector import SelectionError, select_operation
+from orchestrator.selector import SelectionError, build_select_message, select_operation
 
 REG = load_registry()
 MakeLLM = Callable[[Sequence[str]], FakeLLM]
@@ -24,6 +24,20 @@ def _arxiv() -> AppEntry:
 def _subtask() -> Subtask:
     app = AppSelection("arxiv-papers", "ArXiv Paper Guide", "searches arxiv", 0.9, False)
     return Subtask("t1", "Find papers", "find recent MoE papers", (), app)
+
+
+def _upstream_result(output: object) -> SubtaskResult:
+    return SubtaskResult(
+        "t1",
+        "arxiv-papers",
+        "ArXiv Paper Guide",
+        "ok",
+        "search_papers_by_query",
+        output,
+        "http://arxiv/x",
+        None,
+        0.01,
+    )
 
 
 def test_select_success(fake_llm: MakeLLM) -> None:
@@ -104,3 +118,37 @@ def test_select_bad_arguments_type_raises(fake_llm: MakeLLM) -> None:
     client = fake_llm(['{"operation": "search_papers_by_query", "arguments": "nope"}'])
     with pytest.raises(SelectionError, match="'arguments' must be an object"):
         select_operation(client, _arxiv(), _subtask(), model="m")
+
+
+# --- data flow between steps (Task 1: upstream results reach the selector) ---
+
+
+def test_message_has_no_upstream_section_when_none() -> None:
+    # backward compatible: without dependencies, no UPSTREAM block is emitted
+    message = build_select_message(_arxiv(), _subtask())
+    assert "UPSTREAM" not in message
+
+
+def test_message_includes_upstream_list_with_ids() -> None:
+    # a downstream step must be able to see the arxiv_id an earlier step returned
+    upstream = (_upstream_result([{"arxiv_id": "2401.12345", "title": "MoE paper"}]),)
+    message = build_select_message(_arxiv(), _subtask(), upstream)
+    assert "UPSTREAM RESULTS" in message
+    assert "[t1]" in message  # provenance: which step produced it
+    assert "2401.12345" in message  # the concrete id survives the summary
+
+
+def test_upstream_output_is_truncated_when_long() -> None:
+    upstream = (_upstream_result("x" * 5000),)
+    message = build_select_message(_arxiv(), _subtask(), upstream)
+    assert "…" in message  # long output is bounded, not dumped whole
+
+
+def test_select_can_use_upstream_id_as_argument(fake_llm: MakeLLM) -> None:
+    # end-to-end through select_operation: the model picks the id it saw upstream
+    upstream = (_upstream_result([{"arxiv_id": "2401.12345"}]),)
+    client = fake_llm(['{"operation": "get_paper_by_id", "arguments": {"arxiv_id": "2401.12345"}}'])
+    op, args = select_operation(client, _arxiv(), _subtask(), model="m", upstream=upstream)
+    assert op.name == "get_paper_by_id"
+    assert args == {"arxiv_id": "2401.12345"}
+    assert "2401.12345" in client.requests[0].messages[0]["content"]

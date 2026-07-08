@@ -29,13 +29,27 @@ async def execute_plan(
     model: str,
     breaker: CircuitBreaker | None = None,
 ) -> PlanResult:
-    """Run every subtask in dependency order and collect a PlanResult."""
+    """Run every subtask in dependency order and collect a PlanResult.
+
+    Results are indexed by subtask id as they complete so that a subtask can be given the outputs
+    of the subtasks it depends on (data flow between steps). compute_waves guarantees every
+    dependency has already run by the time a subtask starts.
+    """
     cb = breaker or CircuitBreaker()
     results: list[SubtaskResult] = []
+    by_id: dict[str, SubtaskResult] = {}
     for wave in compute_waves(plan.subtasks):
         for sub in wave:
-            results.append(await _run_subtask(sub, registry, llm_client, http_client, model, cb))
+            upstream = _upstream_for(sub, by_id)
+            result = await _run_subtask(sub, registry, llm_client, http_client, model, cb, upstream)
+            results.append(result)
+            by_id[sub.id] = result
     return PlanResult(task=plan.task, intent=plan.intent, results=tuple(results))
+
+
+def _upstream_for(sub: Subtask, by_id: dict[str, SubtaskResult]) -> tuple[SubtaskResult, ...]:
+    """The successful results of the subtasks ``sub`` depends on (feeds the selector)."""
+    return tuple(by_id[dep] for dep in sub.depends_on if dep in by_id and by_id[dep].status == "ok")
 
 
 async def _run_subtask(
@@ -45,6 +59,7 @@ async def _run_subtask(
     http_client: httpx.AsyncClient,
     model: str,
     breaker: CircuitBreaker,
+    upstream: tuple[SubtaskResult, ...] = (),
 ) -> SubtaskResult:
     app = registry.get(sub.app.app_id)
     if app is None:  # validated upstream; defensive
@@ -72,7 +87,7 @@ async def _run_subtask(
             0.0,
         )
     try:
-        op, args = select_operation(llm_client, app, sub, model=model)
+        op, args = select_operation(llm_client, app, sub, model=model, upstream=upstream)
     except SelectionError as exc:
         return SubtaskResult(sub.id, app.id, app.name, "error", None, None, None, str(exc), 0.0)
 

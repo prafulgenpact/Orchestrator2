@@ -24,6 +24,11 @@ def _sub(app_id: str, app_name: str, fallback: bool = False) -> Subtask:
     return Subtask("t1", "Find papers", "find recent MoE papers", (), app)
 
 
+def _sub_id(sub_id: str, depends_on: tuple[str, ...] = ()) -> Subtask:
+    app = AppSelection("arxiv-papers", "ArXiv Paper Guide", "because", 0.9, False)
+    return Subtask(sub_id, f"step {sub_id}", f"work for {sub_id}", depends_on, app)
+
+
 def _plan(*subs: Subtask) -> Plan:
     return Plan("task", "intent", subs, "claude-opus-4-8", "1")
 
@@ -118,3 +123,36 @@ def test_execute_call_failure_recorded(monkeypatch: pytest.MonkeyPatch, fake_llm
     result = _run(_plan(_sub("arxiv-papers", "ArXiv Paper Guide")), client)
     assert result.results[0].status == "error"
     assert result.results[0].error == "retry: boom"
+
+
+def test_execute_threads_upstream_output_into_downstream_selection(
+    monkeypatch: pytest.MonkeyPatch, fake_llm: MakeLLM
+) -> None:
+    """Data flow: step 2's operation is selected WITH step 1's result in the prompt."""
+    monkeypatch.setattr("orchestrator.executor.call_operation", _stub_call())
+    # LLM call order: t1 select, t1 relevance, t2 select, t2 relevance
+    client = fake_llm([_SELECT, _RELEVANT, _SELECT, _RELEVANT])
+    plan = _plan(_sub_id("t1"), _sub_id("t2", depends_on=("t1",)))
+    result = _run(plan, client)
+
+    assert [r.status for r in result.results] == ["ok", "ok"]
+    messages = [r.messages[0]["content"] for r in client.requests]
+    assert "UPSTREAM" not in messages[0]  # t1 has no dependencies
+    t2_selection = messages[2]  # third LLM call is t2's operation selection
+    assert "UPSTREAM" in t2_selection
+    assert "moe" in t2_selection  # t1's echoed output reached t2's selection prompt
+
+
+def test_execute_skips_failed_upstream(monkeypatch: pytest.MonkeyPatch, fake_llm: MakeLLM) -> None:
+    """A failed dependency is NOT fed downstream (only successful outputs flow forward)."""
+    monkeypatch.setattr(
+        "orchestrator.executor.call_operation", _stub_call(ok=False, error="retry: boom")
+    )
+    # both calls fail, so each subtask returns after selection (no relevance check): 2 LLM calls
+    client = fake_llm([_SELECT, _SELECT])
+    plan = _plan(_sub_id("t1"), _sub_id("t2", depends_on=("t1",)))
+    result = _run(plan, client)
+
+    assert result.results[0].status == "error"
+    messages = [r.messages[0]["content"] for r in client.requests]
+    assert "UPSTREAM" not in messages[1]  # t2's selection has no failed upstream
