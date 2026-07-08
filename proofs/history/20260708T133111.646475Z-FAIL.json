@@ -1,8 +1,10 @@
 {
   "schema": "proof/v1",
-  "created_utc": "2026-07-08T13:31:57+00:00",
-  "result": "PASS",
-  "failed_checks": [],
+  "created_utc": "2026-07-08T13:31:10+00:00",
+  "result": "FAIL",
+  "failed_checks": [
+    "py-format"
+  ],
   "missing_required_checks": [],
   "required_checks": [
     "py-lint",
@@ -12,7 +14,7 @@
     "e2e",
     "secrets"
   ],
-  "fingerprint": "ead2014ab0b1b2c2022e45cbbb71d45987cb80f7e7ae64bf3b15b3b35a6692a9",
+  "fingerprint": "b55c5ae09aad5c6896fe188392248913ff613366bf0bb8850ef214d3b894aaf8",
   "git": {
     "commit": "da1dcaedb1af5e362c0d2a5306a8e9aeb4b3f11d",
     "branch": "Orchestrator2",
@@ -22,19 +24,19 @@
     {
       "name": "py-lint",
       "status": "pass",
-      "duration_s": 0,
+      "duration_s": 1,
       "evidence": "reports/py-lint.log"
     },
     {
       "name": "py-format",
-      "status": "pass",
+      "status": "fail",
       "duration_s": 0,
       "evidence": "reports/py-format.log"
     },
     {
       "name": "py-types",
       "status": "pass",
-      "duration_s": 2,
+      "duration_s": 3,
       "evidence": "reports/py-types.log"
     },
     {
@@ -58,19 +60,19 @@
     {
       "name": "secrets-gitleaks",
       "status": "pass",
-      "duration_s": 0,
+      "duration_s": 1,
       "evidence": "reports/secrets-gitleaks.log"
     },
     {
       "name": "dep-audit",
       "status": "pass",
-      "duration_s": 20,
+      "duration_s": 21,
       "evidence": "reports/dep-audit.log"
     },
     {
       "name": "diff-cover",
       "status": "pass",
-      "duration_s": 1,
+      "duration_s": 0,
       "evidence": "reports/diff-cover.log"
     }
   ],
@@ -80,14 +82,14 @@
       "failures": 0,
       "errors": 0,
       "skipped": 0,
-      "time_s": 1.45
+      "time_s": 0.96
     },
     "e2e": {
       "tests": 2,
       "failures": 0,
       "errors": 0,
       "skipped": 0,
-      "time_s": 0.69
+      "time_s": 0.58
     },
     "web_e2e": null,
     "coverage_pct": 100.0
@@ -99,5 +101,5 @@
     "pytest": "pytest 8.3.2",
     "os": "Darwin 25.5.0"
   },
-  "content_hash": "5abd52c3d04ee60ea019bf8746b3bbbd7b9781993c7bb78315c8256a404310cf"
+  "content_hash": "65213d799737dbf043b00754517ffd45bd44610a273b97d6c9e1dc1480310e32"
 }
