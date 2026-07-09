@@ -26,6 +26,7 @@ from orchestrator.models import Plan, PlanResult
 from orchestrator.planner import PlannerError, plan_task
 from orchestrator.registry import Registry, RegistryError, load_registry
 from orchestrator.render import render_execution, render_human, render_json
+from orchestrator.synthesis import synthesize
 
 
 def _parse_args(argv: list[str] | None) -> argparse.Namespace:
@@ -91,10 +92,11 @@ def main(argv: list[str] | None = None, *, client: LLMClient | None = None) -> i
     if args.execute:
         try:
             result = asyncio.run(_execute(plan, registry, client, model))
+            synthesis = synthesize(client, result, model=model)
         except LLMError as exc:
             print(f"error: {exc}", file=sys.stderr)
             return 4
-        print(render_execution(plan, result, verbose=args.verbose))
+        print(render_execution(plan, result, synthesis, verbose=args.verbose))
         return 0
 
     print(render_json(plan) if args.json else render_human(plan))

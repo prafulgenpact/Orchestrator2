@@ -14,6 +14,7 @@ from orchestrator.render import (
     render_human,
     render_json,
 )
+from orchestrator.synthesis import Synthesis
 
 
 def _app(
@@ -235,3 +236,39 @@ def test_execution_list_of_scalars() -> None:
     assert "— 2 result(s)" in out
     assert "1. alpha" in out
     assert "2. beta" in out
+
+
+# --- render_execution with a synthesis (the Answer section) ------------------
+
+
+def test_execution_renders_answer_section() -> None:
+    plan, result = _one_ok({"reply": "hi"})
+    synthesis = Synthesis(
+        answer="Mixture-of-experts routes tokens to specialized sub-networks.",
+        mode="synthesized",
+        sources=("http://127.0.0.1:8002/paper/1", "http://127.0.0.1:8002/paper/2"),
+    )
+    out = render_execution(plan, result, synthesis)
+    # the answer leads, above the plan/results
+    assert out.index("Answer:") < out.index("Plan —") < out.index("Results:")
+    assert "Mixture-of-experts routes tokens" in out
+    assert "  Sources:" in out
+    assert "    - http://127.0.0.1:8002/paper/1" in out
+    assert "    - http://127.0.0.1:8002/paper/2" in out
+    # per-step detail still present below the answer
+    assert "-> Stanford LLM Course  (confidence 0.90)" in out
+
+
+def test_execution_answer_multiline_and_no_sources() -> None:
+    plan, result = _one_ok("hi")
+    synthesis = Synthesis(answer="line one\nline two", mode="verbatim", sources=())
+    out = render_execution(plan, result, synthesis)
+    assert "  line one" in out
+    assert "  line two" in out
+    assert "Sources:" not in out  # no sources -> no Sources block
+
+
+def test_execution_without_synthesis_has_no_answer() -> None:
+    plan, result = _one_ok({"reply": "hi"})
+    out = render_execution(plan, result)  # synthesis omitted (backward compatible)
+    assert "Answer:" not in out

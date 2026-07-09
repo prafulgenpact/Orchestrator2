@@ -1,1 +1,1 @@
-20260709-env-local-resolution.md
+20260709-synthesis-voice.md

@@ -125,6 +125,8 @@ def _arxiv_plan_response() -> str:
 
 _SELECTOR_RESPONSE = '{"operation": "search_papers_by_query", "arguments": {"query": "moe"}}'
 _RELEVANT_RESPONSE = '{"relevant": true, "reason": "on topic"}'
+# A structured (non-prose) single result is synthesized -> one final synthesis LLM call.
+_SYNTHESIS_RESPONSE = "Recent work surveys mixture-of-experts routing."
 
 
 def test_execute_success(
@@ -143,10 +145,14 @@ def test_execute_success(
         )
 
     monkeypatch.setattr("orchestrator.executor.call_operation", _call)
-    client = FakeLLM([_arxiv_plan_response(), _SELECTOR_RESPONSE, _RELEVANT_RESPONSE])
+    client = FakeLLM(
+        [_arxiv_plan_response(), _SELECTOR_RESPONSE, _RELEVANT_RESPONSE, _SYNTHESIS_RESPONSE]
+    )
     rc = main(["find moe papers", "--execute"], client=client)
     out = capsys.readouterr().out
     assert rc == 0
+    assert "Answer:" in out  # the grounded answer leads
+    assert "Recent work surveys mixture-of-experts routing." in out
     assert "Plan — 1 subtask(s)" in out
     assert "ArXiv Paper Guide  (confidence 0.95)" in out
     assert "why: searches arxiv" in out
@@ -179,6 +185,9 @@ def test_execute_fallback_skipped(capsys: pytest.CaptureFixture[str]) -> None:
     assert rc == 0
     assert "Web Search (fallback)" in out
     assert "not executed" in out
+    # no app produced a grounded result -> the Answer says so, with no synthesis LLM call
+    assert "Answer:" in out
+    assert "No app returned a grounded result" in out
 
 
 def test_execute_verbose_shows_operational_detail(
@@ -197,7 +206,9 @@ def test_execute_verbose_shows_operational_detail(
         )
 
     monkeypatch.setattr("orchestrator.executor.call_operation", _call)
-    client = FakeLLM([_arxiv_plan_response(), _SELECTOR_RESPONSE, _RELEVANT_RESPONSE])
+    client = FakeLLM(
+        [_arxiv_plan_response(), _SELECTOR_RESPONSE, _RELEVANT_RESPONSE, _SYNTHESIS_RESPONSE]
+    )
     rc = main(["find moe papers", "--execute", "--verbose"], client=client)
     out = capsys.readouterr().out
     assert rc == 0

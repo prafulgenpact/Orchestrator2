@@ -1,9 +1,18 @@
 # Project State — A multi agent orchestrator system calling relevant apps basis intent recognition
 
-Last updated: 2026-07-09 (env-local-resolution task)
+Last updated: 2026-07-09 (synthesis-voice task)
 
 ## Done (most recent first)
 
+- 2026-07-09 synthesis-voice (Phase 2, depth — plan-depth-orchestration.md Task 2; serves AC-4):
+  `--execute` now ends with ONE grounded answer on top (an "Answer" section) instead of only a
+  list of per-app blobs. New `synthesis.py` + `synthesis_system.md`: collects the successful
+  results and either (a) passes a lone prose answer through VERBATIM — preserving the app's own
+  voice tuning, no LLM call — or (b) fuses several results into one answer via a single grounded
+  LLM call that uses ONLY those results. Sources are collected in code (never from the model), so
+  provenance holds. `render_execution` grew an optional `synthesis` arg (Answer + Sources above the
+  plan/results); the CLI calls `synthesize` after `execute_plan`. New test_synthesis.py + render/cli
+  tests; 239 unit tests, 100% coverage; make verify PASS.
 - 2026-07-09 env-local-resolution (Phase 2, tooling — enables live `--execute`): credentials now
   auto-resolve from a project-local `.env` at the repo root (gitignored), so live runs work with no
   `ORCHESTRATOR_FALLBACK_ENV` export. Precedence: process env → project `.env` → sibling
@@ -37,9 +46,9 @@ Last updated: 2026-07-09 (env-local-resolution task)
 
 ## In progress
 
-- (nothing — depth-data-flow + app-caller-timeout sealed; the MoE depth demo runs end-to-end. Next
-  is plan-depth-orchestration.md Task 2: synthesis + your voice — a final step that combines all
-  step results into ONE grounded answer)
+- (nothing — synthesis-voice sealed; the MoE depth demo now returns ONE grounded answer. Next is
+  plan-depth-orchestration.md Task 3: a hermetic replay e2e for a 2-step dependent task (records
+  the app-HTTP + synthesis calls), so the whole `--execute` loop is proven offline in CI)
 
 ## Next up
 

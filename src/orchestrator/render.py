@@ -12,6 +12,7 @@ import json
 from typing import Any
 
 from orchestrator.models import Plan, PlanResult, Subtask
+from orchestrator.synthesis import Synthesis
 
 DRY_RUN_BANNER = "DRY RUN — no apps were invoked."
 
@@ -100,13 +101,19 @@ def _list_lines(items: list[Any], top: int = 5) -> list[str]:
     return out
 
 
-def render_execution(plan: Plan, result: PlanResult, *, verbose: bool = False) -> str:
-    """Clean three-part view of an executed plan: input, decomposition, output.
+def render_execution(
+    plan: Plan,
+    result: PlanResult,
+    synthesis: Synthesis | None = None,
+    *,
+    verbose: bool = False,
+) -> str:
+    """Clean view of an executed plan: the Answer on top, then input, decomposition, output.
 
-    By default this shows only what the user needs to judge the run: the task + intent
-    (input), how it was decomposed with the chosen app / confidence / rationale
-    (decomposition), and each subtask's grounded result + source (output). Operational
-    detail — operation name, status, timing, and the full payload — appears only with
+    When ``synthesis`` is given, its grounded answer (and sources) leads — it is what the user
+    reads first. Below it: the task + intent (input), how it was decomposed with the chosen app /
+    confidence / rationale (decomposition), and each subtask's grounded result + source (output).
+    Operational detail — operation name, status, timing, and the full payload — appears only with
     ``verbose``.
     """
     waves = compute_waves(plan.subtasks)
@@ -115,8 +122,15 @@ def render_execution(plan: Plan, result: PlanResult, *, verbose: bool = False) -
         "",
         f"Intent: {plan.intent}",
         "",
-        f"Plan — {len(plan.subtasks)} subtask(s) in {len(waves)} step(s):",
     ]
+    if synthesis is not None:
+        lines.append("Answer:")
+        lines.extend(f"  {line}" for line in (synthesis.answer.splitlines() or [""]))
+        if synthesis.sources:
+            lines.append("  Sources:")
+            lines.extend(f"    - {src}" for src in synthesis.sources)
+        lines.append("")
+    lines.append(f"Plan — {len(plan.subtasks)} subtask(s) in {len(waves)} step(s):")
     for step, wave in enumerate(waves, start=1):
         lines.append(f"  Step {step}" + (" (parallel)" if len(wave) > 1 else "") + ":")
         for sub in wave:
