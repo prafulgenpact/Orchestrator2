@@ -1,6 +1,6 @@
 {
   "schema": "proof/v1",
-  "created_utc": "2026-07-09T06:32:34+00:00",
+  "created_utc": "2026-07-09T06:30:29+00:00",
   "result": "PASS",
   "failed_checks": [],
   "missing_required_checks": [],
@@ -14,7 +14,7 @@
   ],
   "fingerprint": "ca11d571d4718ed0df1342cf0a6da7ee8d63efae2034af1a77bd7f9e1934827a",
   "git": {
-    "commit": "364fc8e9b6b9282c7f18c40ab9aec44032c4d476",
+    "commit": "c13dd58395641638e1c5a985fabb66dadad8b6b2",
     "branch": "Orchestrator2",
     "dirty_tracked_files": true
   },
@@ -64,13 +64,13 @@
     {
       "name": "dep-audit",
       "status": "pass",
-      "duration_s": 29,
+      "duration_s": 26,
       "evidence": "reports/dep-audit.log"
     },
     {
       "name": "diff-cover",
       "status": "pass",
-      "duration_s": 0,
+      "duration_s": 1,
       "evidence": "reports/diff-cover.log"
     }
   ],
@@ -80,14 +80,14 @@
       "failures": 0,
       "errors": 0,
       "skipped": 0,
-      "time_s": 1.88
+      "time_s": 1.92
     },
     "e2e": {
       "tests": 2,
       "failures": 0,
       "errors": 0,
       "skipped": 0,
-      "time_s": 0.94
+      "time_s": 0.92
     },
     "web_e2e": null,
     "coverage_pct": 100.0
@@ -99,5 +99,5 @@
     "pytest": "pytest 8.3.2",
     "os": "Darwin 25.5.0"
   },
-  "content_hash": "21d0113b8cacd91381c24144ef8baed0ca296f759a04163c6917ebca89d7fef5"
+  "content_hash": "fe8621f47eb4862a1bc2a6c7d540164f49996323670f67cb08121ba1040fe9a6"
 }
