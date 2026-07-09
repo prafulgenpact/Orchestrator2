@@ -19,8 +19,12 @@ from typing import Any
 from orchestrator.llm.base import LLMError, LLMRequest
 
 DEFAULT_MODEL = "claude-opus-4-6"
-# Sibling app whose backend/.env carries the shared Foundry credentials. Overridable
-# via ORCHESTRATOR_FALLBACK_ENV (tests always point this at a controlled file).
+# The orchestrator's own .env at the repo root — the first file consulted after the process
+# environment, so `python -m orchestrator --execute ...` works with no exports (gitignored).
+PROJECT_ENV = Path(__file__).resolve().parents[3] / ".env"
+# Sibling app whose backend/.env carries the shared Foundry credentials — the last-resort fallback
+# so this project shares the other apps' setup even without a local .env. Overridable via
+# ORCHESTRATOR_FALLBACK_ENV (tests always point this at a controlled file).
 DEFAULT_FALLBACK_ENV = Path(__file__).resolve().parents[5] / "Blogs Playground" / "backend" / ".env"
 
 
@@ -58,16 +62,25 @@ def _parse_env_file(path: Path) -> dict[str, str]:
 
 
 def resolve_credentials() -> FoundryCredentials:
-    """Resolve Foundry endpoint credentials: process env wins, then the fallback .env.
+    """Resolve Foundry endpoint credentials.
+
+    Precedence, highest first: the process environment, then the project-local ``.env`` (repo
+    root), then the shared sibling-app ``.env`` (``DEFAULT_FALLBACK_ENV``). Setting
+    ``ORCHESTRATOR_FALLBACK_ENV`` overrides the file chain entirely — that one file becomes the
+    sole fallback, which is how the tests isolate from any real ``.env`` on disk.
 
     Raises LLMError if the API key or base URL cannot be found.
     """
-    fallback_override = os.environ.get("ORCHESTRATOR_FALLBACK_ENV")
-    fallback_path = Path(fallback_override) if fallback_override else DEFAULT_FALLBACK_ENV
-    fallback = _parse_env_file(fallback_path)
+    override = os.environ.get("ORCHESTRATOR_FALLBACK_ENV")
+    fallback_files = [Path(override)] if override else [PROJECT_ENV, DEFAULT_FALLBACK_ENV]
+
+    # Merge so an earlier-listed file wins: load lowest-priority first, let higher ones overwrite.
+    merged: dict[str, str] = {}
+    for path in reversed(fallback_files):
+        merged.update(_parse_env_file(path))
 
     def pick(key: str) -> str | None:
-        return os.environ.get(key) or fallback.get(key)
+        return os.environ.get(key) or merged.get(key)
 
     api_key = pick("ANTHROPIC_FOUNDRY_API_KEY")
     base_url = pick("ANTHROPIC_FOUNDRY_BASE_URL")

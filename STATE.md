@@ -1,9 +1,15 @@
 # Project State — A multi agent orchestrator system calling relevant apps basis intent recognition
 
-Last updated: 2026-07-08 (app-caller-timeout task)
+Last updated: 2026-07-09 (env-local-resolution task)
 
 ## Done (most recent first)
 
+- 2026-07-09 env-local-resolution (Phase 2, tooling — enables live `--execute`): credentials now
+  auto-resolve from a project-local `.env` at the repo root (gitignored), so live runs work with no
+  `ORCHESTRATOR_FALLBACK_ENV` export. Precedence: process env → project `.env` → sibling
+  `Blogs Playground/backend/.env`. An explicit `ORCHESTRATOR_FALLBACK_ENV` still wins and stays the
+  sole fallback (opt-out preserved), so all prior tests (which set it) are unaffected. 3 new
+  regression tests in test_foundry.py; make verify PASS.
 - 2026-07-08 app-caller-timeout (Phase 2, bugfix — serves AC-2; unblocks the depth demo): long,
   legitimately-slow app operations (e.g. arXiv `analyze_paper`, LLM-backed, 90s registry budget)
   were failing after ~5s with a bare `fatal:`. Root cause: `call_operation` set a 90s HARD outer

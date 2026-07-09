@@ -80,6 +80,52 @@ def test_resolve_from_fallback_file(monkeypatch: pytest.MonkeyPatch, tmp_path: P
     assert creds.base_url == "https://file/api"
 
 
+def test_resolve_from_project_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    # With no explicit override, the project-local .env is consulted automatically.
+    monkeypatch.delenv("ORCHESTRATOR_FALLBACK_ENV", raising=False)
+    project = tmp_path / "project.env"
+    project.write_text(
+        "ANTHROPIC_FOUNDRY_API_KEY=proj-key\n" "ANTHROPIC_FOUNDRY_BASE_URL=https://proj/api\n"
+    )
+    monkeypatch.setattr("orchestrator.llm.foundry.PROJECT_ENV", project)
+    monkeypatch.setattr("orchestrator.llm.foundry.DEFAULT_FALLBACK_ENV", tmp_path / "absent.env")
+    creds = resolve_credentials()
+    assert creds.api_key == "proj-key"
+    assert creds.base_url == "https://proj/api"
+
+
+def test_project_env_beats_sibling_default(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    # Project .env outranks the sibling fallback on a key both define.
+    monkeypatch.delenv("ORCHESTRATOR_FALLBACK_ENV", raising=False)
+    project = tmp_path / "project.env"
+    project.write_text(
+        "ANTHROPIC_FOUNDRY_API_KEY=proj\n" "ANTHROPIC_FOUNDRY_BASE_URL=https://proj/api\n"
+    )
+    sibling = tmp_path / "sibling.env"
+    sibling.write_text(
+        "ANTHROPIC_FOUNDRY_API_KEY=sib\n" "ANTHROPIC_FOUNDRY_BASE_URL=https://sib/api\n"
+    )
+    monkeypatch.setattr("orchestrator.llm.foundry.PROJECT_ENV", project)
+    monkeypatch.setattr("orchestrator.llm.foundry.DEFAULT_FALLBACK_ENV", sibling)
+    creds = resolve_credentials()
+    assert creds.api_key == "proj"  # project wins over sibling
+    assert creds.base_url == "https://proj/api"
+
+
+def test_explicit_override_ignores_project_env(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    # An explicit ORCHESTRATOR_FALLBACK_ENV is the SOLE fallback — the project .env is skipped.
+    project = tmp_path / "project.env"
+    project.write_text(
+        "ANTHROPIC_FOUNDRY_API_KEY=proj\n" "ANTHROPIC_FOUNDRY_BASE_URL=https://proj/api\n"
+    )
+    monkeypatch.setattr("orchestrator.llm.foundry.PROJECT_ENV", project)
+    monkeypatch.setenv("ORCHESTRATOR_FALLBACK_ENV", str(tmp_path / "absent.env"))
+    with pytest.raises(LLMError, match="missing Foundry credentials"):
+        resolve_credentials()
+
+
 def test_resolve_model_precedence(monkeypatch: pytest.MonkeyPatch) -> None:
     assert resolve_model() == DEFAULT_MODEL
     assert resolve_model("explicit") == "explicit"
