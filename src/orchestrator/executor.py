@@ -80,6 +80,27 @@ async def _run_subtask(
         )
     if app.fallback:
         return await _run_web_fallback(app, sub, http_client)
+    result = await _run_app_op(app, sub, llm_client, http_client, model, breaker, upstream)
+    if result.status == "ok":
+        return result
+    # Safety net: the chosen app could not ground this subtask (skip/error/no_match). Rather than
+    # give up, answer it from the web — so "give it any task" holds even when the routed app can't
+    # deliver. Keep the original failure if the web can't help either (never mask it with worse).
+    fallback_app = next(entry for entry in registry.apps if entry.fallback)
+    web = await _run_web_fallback(fallback_app, sub, http_client)
+    return web if web.status == "ok" else result
+
+
+async def _run_app_op(
+    app: AppEntry,
+    sub: Subtask,
+    llm_client: LLMClient,
+    http_client: httpx.AsyncClient,
+    model: str,
+    breaker: CircuitBreaker,
+    upstream: tuple[SubtaskResult, ...],
+) -> SubtaskResult:
+    """Run one non-fallback app operation: select -> required-field skip -> call -> relevance."""
     try:
         op, args = select_operation(llm_client, app, sub, model=model, upstream=upstream)
     except SelectionError as exc:

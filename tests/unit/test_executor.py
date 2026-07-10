@@ -20,6 +20,13 @@ REG = load_registry()
 MakeLLM = Callable[[Sequence[str]], FakeLLM]
 
 
+@pytest.fixture(autouse=True)
+def _web_safety_net_offline(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Keep executor unit tests offline: the web safety net is disabled unless a test opts in
+    (by monkeypatching resolve_search_key back to a key). So a non-ok app result surfaces as-is."""
+    monkeypatch.setattr("orchestrator.executor.resolve_search_key", lambda: None)
+
+
 def _sub(app_id: str, app_name: str, fallback: bool = False) -> Subtask:
     app = AppSelection(app_id, app_name, "because", 0.9, fallback)
     return Subtask("t1", "Find papers", "find recent MoE papers", (), app)
@@ -245,3 +252,61 @@ def test_execute_skips_failed_upstream(monkeypatch: pytest.MonkeyPatch, fake_llm
     assert result.results[0].status == "error"
     messages = [r.messages[0]["content"] for r in client.requests]
     assert "UPSTREAM" not in messages[1]  # t2's selection has no failed upstream
+
+
+# --- web safety net: fall back to the web when the CHOSEN app can't ground it ------------------
+
+
+def _web_ok(monkeypatch: pytest.MonkeyPatch, answer: str = "Web answer.") -> None:
+    monkeypatch.setattr("orchestrator.executor.resolve_search_key", lambda: "k")
+
+    async def _search(_query: str, **_kw: Any) -> WebResult:
+        return WebResult(answer=answer, citations=("http://w",))
+
+    monkeypatch.setattr("orchestrator.executor.search_web", _search)
+
+
+def test_web_safety_net_on_skip(monkeypatch: pytest.MonkeyPatch, fake_llm: MakeLLM) -> None:
+    _web_ok(monkeypatch, "Web answer for p-value.")
+    # _STATS_SUB with a blank module -> primary skips -> safety net -> web answers
+    r = _run(_plan(_STATS_SUB), fake_llm([_STATS_SELECT_BLANK])).results[0]
+    assert r.status == "ok"
+    assert r.app_name == "Web Search (fallback)"  # transparently attributed to the web
+    assert r.output == {"answer": "Web answer for p-value.", "citations": ["http://w"]}
+    assert r.source == "http://w"
+
+
+def test_web_safety_net_on_error(monkeypatch: pytest.MonkeyPatch, fake_llm: MakeLLM) -> None:
+    _web_ok(monkeypatch)
+    monkeypatch.setattr(
+        "orchestrator.executor.call_operation", _stub_call(ok=False, error="retry: boom")
+    )
+    r = _run(_plan(_sub("arxiv-papers", "ArXiv Paper Guide")), fake_llm([_SELECT])).results[0]
+    assert r.status == "ok"
+    assert r.app_name == "Web Search (fallback)"
+
+
+def test_web_safety_net_on_no_match(monkeypatch: pytest.MonkeyPatch, fake_llm: MakeLLM) -> None:
+    _web_ok(monkeypatch)
+    monkeypatch.setattr("orchestrator.executor.call_operation", _stub_call())
+    # call ok, but relevance guard rejects -> no_match -> safety net -> web
+    r = _run(_plan(_sub("arxiv-papers", "ArXiv Paper Guide")), fake_llm([_SELECT, _IRRELEVANT]))
+    assert r.results[0].status == "ok"
+    assert r.results[0].app_name == "Web Search (fallback)"
+
+
+def test_web_safety_net_keeps_original_failure_when_web_fails(
+    monkeypatch: pytest.MonkeyPatch, fake_llm: MakeLLM
+) -> None:
+    monkeypatch.setattr("orchestrator.executor.resolve_search_key", lambda: "k")
+
+    async def _boom(_query: str, **_kw: Any) -> WebResult:
+        raise WebSearchError("down")
+
+    monkeypatch.setattr("orchestrator.executor.search_web", _boom)
+    monkeypatch.setattr(
+        "orchestrator.executor.call_operation", _stub_call(ok=False, error="retry: boom")
+    )
+    r = _run(_plan(_sub("arxiv-papers", "ArXiv Paper Guide")), fake_llm([_SELECT])).results[0]
+    assert r.status == "error"  # web also failed -> original failure preserved, not masked
+    assert "retry: boom" in (r.error or "")

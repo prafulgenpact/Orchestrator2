@@ -1,8 +1,18 @@
 # Project State — A multi agent orchestrator system calling relevant apps basis intent recognition
 
-Last updated: 2026-07-10 (web-search-fallback task)
+Last updated: 2026-07-10 (web-safety-net task)
 
 ## Done (most recent first)
+
+- 2026-07-10 web-safety-net (Phase 2, completes the web fallback; serves the "give it any task ->
+  answer" goal). When the app the planner chose can't ground a subtask — it skips (missing input),
+  errors (down/failed), or returns an irrelevant result (no_match) — the executor now auto-retries
+  that subtask via the web fallback (Tavily) and uses the web answer if it succeeds, else preserves
+  the original failure (never masked). Refactored the primary app path into `_run_app_op`; the web
+  attempt is attributed to the fallback app so Results transparently shows "Web Search (fallback)"
+  even though Plan shows the chosen app. VERIFIED LIVE: bare "what is a p-value?" (routes to
+  Statistics Teacher, which skips) now returns a grounded, cited web answer. Unit tests offline by
+  default (autouse disables the net) + 4 opt-in safety-net tests. make verify PASS.
 
 - 2026-07-10 web-search-fallback (Phase 2, plan-depth Task 4; serves the objective's "no app ->
   fetch from the web"). New `web_search.py`: `search_web` calls Tavily `/search` (include_answer)
