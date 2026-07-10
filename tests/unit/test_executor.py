@@ -103,7 +103,8 @@ def test_execute_selection_error_is_isolated(
     monkeypatch: pytest.MonkeyPatch, fake_llm: MakeLLM
 ) -> None:
     monkeypatch.setattr("orchestrator.executor.call_operation", _stub_call())
-    client = fake_llm(["this is not valid json"])
+    # the selector retries malformed JSON (default budget 2 -> 3 attempts); all bad -> error
+    client = fake_llm(["not json", "still not json", "nope"])
     result = _run(_plan(_sub("arxiv-papers", "ArXiv Paper Guide")), client)
     assert result.results[0].status == "error"
     assert "JSON" in (result.results[0].error or "")

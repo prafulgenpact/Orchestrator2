@@ -1,8 +1,19 @@
 # Project State — A multi agent orchestrator system calling relevant apps basis intent recognition
 
-Last updated: 2026-07-10 (phase1-app-fixes task)
+Last updated: 2026-07-10 (selector-retry task)
 
 ## Done (most recent first)
+
+- 2026-07-10 selector-retry (Phase 2, robustness — serves AC-1). The operation selector now
+  self-corrects on malformed JSON, mirroring the planner's bounded retry. Before: `select_operation`
+  made ONE call and died on the first bad response — so a task needing code (e.g. execute_code)
+  crashed with "operation selection was not valid JSON" when the model emitted multi-line Python
+  with raw newlines inside a JSON string value. Now: on a parse/validation error the selector
+  re-prompts with the concrete error + an escape hint (\n / \") up to `max_retries` (default 2),
+  preserving the original SelectionError if all attempts fail; per-call token budget raised
+  1000->2000 so long code args aren't truncated. New `_parse_selection` helper; 2 new selector
+  tests; single-shot error tests pin `max_retries=0`. make verify PASS; verified live (a
+  statistics-code task now selects + executes cleanly).
 
 - 2026-07-10 phase1-app-fixes (Phase 2, all-11-apps plan — Phase 0 recon + Phase 1 hardening;
   serves AC-1/AC-2). Parallel recon (8 agents) confirmed ALL 11 app registry contracts match their

@@ -17,7 +17,7 @@ from orchestrator.models import Subtask, SubtaskResult
 from orchestrator.registry import AppEntry, AppOperation
 
 _PROMPT_PATH = Path(__file__).resolve().parent / "prompts" / "operation_select_system.md"
-_MAX_TOKENS = 1000
+_MAX_TOKENS = 2000  # headroom for arguments that embed code, so JSON isn't truncated mid-string
 _UPSTREAM_LIMIT = 2000  # chars per upstream result — enough to keep ids, bounded for tokens
 
 
@@ -88,26 +88,8 @@ def _strip_fences(text: str) -> str:
     return "\n".join(lines).strip()
 
 
-def select_operation(
-    client: LLMClient,
-    app: AppEntry,
-    subtask: Subtask,
-    *,
-    model: str,
-    upstream: Sequence[SubtaskResult] = (),
-) -> tuple[AppOperation, dict[str, Any]]:
-    """Choose an operation + arguments for ``subtask`` on ``app``. Raises SelectionError.
-
-    ``upstream`` carries the results of the subtasks this one depends on, so their concrete
-    values (an id returned by an earlier step) are available to fill this step's arguments.
-    """
-    request = LLMRequest(
-        model=model,
-        system=load_system_prompt(),
-        messages=({"role": "user", "content": build_select_message(app, subtask, upstream)},),
-        max_tokens=_MAX_TOKENS,
-    )
-    raw = client.complete(request)
+def _parse_selection(raw: str, app: AppEntry) -> tuple[AppOperation, dict[str, Any]]:
+    """Parse and ground one selection response. Raises SelectionError on any problem."""
     try:
         payload = json.loads(_strip_fences(raw))
     except json.JSONDecodeError as exc:
@@ -132,3 +114,50 @@ def select_operation(
         {k: v for k, v in raw_args.items() if k in allowed} if allowed else dict(raw_args)
     )
     return op, args
+
+
+def select_operation(
+    client: LLMClient,
+    app: AppEntry,
+    subtask: Subtask,
+    *,
+    model: str,
+    upstream: Sequence[SubtaskResult] = (),
+    max_retries: int = 2,
+) -> tuple[AppOperation, dict[str, Any]]:
+    """Choose an operation + arguments for ``subtask`` on ``app``. Raises SelectionError.
+
+    ``upstream`` carries the results of the subtasks this one depends on, so their concrete
+    values (an id returned by an earlier step) are available to fill this step's arguments.
+
+    Like the planner, an invalid response is fed back to the model with the concrete error for up
+    to ``max_retries`` corrections — models routinely emit multi-line code with raw newlines inside
+    a JSON string value, which is invalid JSON; re-prompting with an escape hint recovers it. The
+    original SelectionError is preserved if every attempt fails.
+    """
+    system = load_system_prompt()
+    messages: list[dict[str, str]] = [
+        {"role": "user", "content": build_select_message(app, subtask, upstream)}
+    ]
+    last_error: SelectionError | None = None
+    for _attempt in range(max_retries + 1):
+        raw = client.complete(
+            LLMRequest(model=model, system=system, messages=tuple(messages), max_tokens=_MAX_TOKENS)
+        )
+        try:
+            return _parse_selection(raw, app)
+        except SelectionError as exc:
+            last_error = exc
+            messages.append({"role": "assistant", "content": raw})
+            messages.append(
+                {
+                    "role": "user",
+                    "content": (
+                        f"That response was invalid: {exc}. Return ONE raw JSON object only — no "
+                        "prose, no code fences. If a value contains code or newlines, escape them "
+                        'so the JSON parses (use \\n for newlines, \\" for quotes).'
+                    ),
+                }
+            )
+    assert last_error is not None  # loop runs >=1 time; a success would have returned
+    raise last_error

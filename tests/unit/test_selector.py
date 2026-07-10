@@ -93,31 +93,53 @@ def test_select_keeps_all_args_when_no_request_fields(fake_llm: MakeLLM) -> None
 def test_select_unknown_operation_raises(fake_llm: MakeLLM) -> None:
     client = fake_llm(['{"operation": "does_not_exist", "arguments": {}}'])
     with pytest.raises(SelectionError, match="has no operation"):
-        select_operation(client, _arxiv(), _subtask(), model="m")
+        select_operation(client, _arxiv(), _subtask(), model="m", max_retries=0)
 
 
 def test_select_bad_json_raises(fake_llm: MakeLLM) -> None:
     client = fake_llm(["not json at all"])
     with pytest.raises(SelectionError, match="not valid JSON"):
-        select_operation(client, _arxiv(), _subtask(), model="m")
+        select_operation(client, _arxiv(), _subtask(), model="m", max_retries=0)
 
 
 def test_select_non_object_raises(fake_llm: MakeLLM) -> None:
     client = fake_llm(["[1, 2, 3]"])
     with pytest.raises(SelectionError, match="must be a JSON object"):
-        select_operation(client, _arxiv(), _subtask(), model="m")
+        select_operation(client, _arxiv(), _subtask(), model="m", max_retries=0)
 
 
 def test_select_missing_operation_name_raises(fake_llm: MakeLLM) -> None:
     client = fake_llm(['{"arguments": {"query": "x"}}'])
     with pytest.raises(SelectionError, match="missing a valid 'operation'"):
-        select_operation(client, _arxiv(), _subtask(), model="m")
+        select_operation(client, _arxiv(), _subtask(), model="m", max_retries=0)
 
 
 def test_select_bad_arguments_type_raises(fake_llm: MakeLLM) -> None:
     client = fake_llm(['{"operation": "search_papers_by_query", "arguments": "nope"}'])
     with pytest.raises(SelectionError, match="'arguments' must be an object"):
-        select_operation(client, _arxiv(), _subtask(), model="m")
+        select_operation(client, _arxiv(), _subtask(), model="m", max_retries=0)
+
+
+# --- retry on malformed JSON (self-correction, mirrors the planner) ----------
+
+
+def test_select_retries_then_succeeds(fake_llm: MakeLLM) -> None:
+    # first reply is invalid JSON (a raw newline inside a string value); the retry recovers
+    bad = '{"operation": "search_papers_by_query", "arguments": {"query": "line1\nline2"'
+    good = '{"operation": "search_papers_by_query", "arguments": {"query": "moe"}}'
+    client = fake_llm([bad, good])
+    op, args = select_operation(client, _arxiv(), _subtask(), model="m", max_retries=1)
+    assert op.name == "search_papers_by_query"
+    assert args == {"query": "moe"}
+    assert len(client.requests) == 2  # it took a second attempt
+    assert "invalid" in client.requests[1].messages[-1]["content"]  # error fed back to the model
+
+
+def test_select_exhausts_retries(fake_llm: MakeLLM) -> None:
+    client = fake_llm(["nope", "still bad"])  # 2 responses = 2 attempts (max_retries=1)
+    with pytest.raises(SelectionError, match="not valid JSON"):
+        select_operation(client, _arxiv(), _subtask(), model="m", max_retries=1)
+    assert len(client.requests) == 2  # both attempts consumed, original error re-raised
 
 
 # --- data flow between steps (Task 1: upstream results reach the selector) ---
