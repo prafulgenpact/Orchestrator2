@@ -161,7 +161,11 @@ def test_execute_success(
     assert "no apps were invoked" not in out  # NOT the dry-run banner
 
 
-def test_execute_fallback_skipped(capsys: pytest.CaptureFixture[str]) -> None:
+def test_execute_fallback_skipped(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # no search key -> the web fallback skips cleanly (and makes no network call in this test)
+    monkeypatch.setattr("orchestrator.executor.resolve_search_key", lambda: None)
     resp = json.dumps(
         {
             "intent": "obscure",

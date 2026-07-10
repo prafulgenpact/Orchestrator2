@@ -1,8 +1,19 @@
 # Project State — A multi agent orchestrator system calling relevant apps basis intent recognition
 
-Last updated: 2026-07-10 (selector-retry task)
+Last updated: 2026-07-10 (web-search-fallback task)
 
 ## Done (most recent first)
+
+- 2026-07-10 web-search-fallback (Phase 2, plan-depth Task 4; serves the objective's "no app ->
+  fetch from the web"). New `web_search.py`: `search_web` calls Tavily `/search` (include_answer)
+  reusing the shared TAVILY_API_KEY, returning a grounded answer + citation URLs; `resolve_search_key`
+  reads the key (process env > project .env > sibling). The executor's fallback branch now runs a
+  real web search (was: skipped) under the hard deadline — ok with answer+citation, "skipped" if no
+  key, "error" on failure. VERIFIED LIVE: "who won the 2022 FIFA World Cup?" routes to Web Search
+  (fallback) and returns a cited answer. New test_web_search.py + executor/cli tests; make verify PASS.
+  KNOWN GAP (next): the fallback only fires when the planner routes TO it — a task like "what is a
+  p-value?" routes to Statistics Teacher (which then skips), so it still gets no answer. Needs a
+  safety-net: fall back to web when the CHOSEN app can't ground the subtask (skip/error/no_match).
 
 - 2026-07-10 selector-retry (Phase 2, robustness — serves AC-1). The operation selector now
   self-corrects on malformed JSON, mirroring the planner's bounded retry. Before: `select_operation`

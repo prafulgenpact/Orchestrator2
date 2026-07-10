@@ -1,12 +1,15 @@
 """Execute a validated Plan: call the real app per subtask, collect grounded results.
 
 Thin slice: subtasks run in dependency order (waves); for each, the selector picks the operation
-+ arguments and the app-caller invokes it under the block-B safety layer. The web-search fallback
-is not executed yet (recorded as skipped). A per-run circuit breaker isolates a repeatedly-failing
-app, and one subtask's failure never aborts the rest.
++ arguments and the app-caller invokes it under the block-B safety layer. Subtasks that route to
+the web-search fallback are answered from the web (Tavily) with citations, grounded and bounded by
+the same hard deadline. A per-run circuit breaker isolates a repeatedly-failing app, and one
+subtask's failure never aborts the rest.
 """
 
 from __future__ import annotations
+
+import time
 
 import httpx
 
@@ -14,10 +17,11 @@ from orchestrator.app_caller import call_operation
 from orchestrator.grounding import check_relevance
 from orchestrator.llm.base import LLMClient
 from orchestrator.models import Plan, PlanResult, Subtask, SubtaskResult
-from orchestrator.registry import Registry
+from orchestrator.registry import AppEntry, Registry
 from orchestrator.render import compute_waves
-from orchestrator.resilience import CircuitBreaker
+from orchestrator.resilience import CircuitBreaker, run_with_deadline
 from orchestrator.selector import SelectionError, select_operation
+from orchestrator.web_search import DEFAULT_TIMEOUT_S, resolve_search_key, search_web
 
 
 async def execute_plan(
@@ -75,17 +79,7 @@ async def _run_subtask(
             0.0,
         )
     if app.fallback:
-        return SubtaskResult(
-            sub.id,
-            app.id,
-            app.name,
-            "skipped",
-            None,
-            None,
-            None,
-            "web-search fallback not executed yet (deferred)",
-            0.0,
-        )
+        return await _run_web_fallback(app, sub, http_client)
     try:
         op, args = select_operation(llm_client, app, sub, model=model, upstream=upstream)
     except SelectionError as exc:
@@ -133,4 +127,58 @@ async def _run_subtask(
         )
     return SubtaskResult(
         sub.id, app.id, app.name, "ok", op.name, result.data, source, None, result.duration_s
+    )
+
+
+async def _run_web_fallback(
+    app: AppEntry, sub: Subtask, http_client: httpx.AsyncClient
+) -> SubtaskResult:
+    """Answer a no-app subtask from the web (Tavily), grounded with citations.
+
+    Degrades cleanly: no key -> "skipped"; a failed search -> "error". Bounded by the same hard
+    deadline as app calls, so the fallback can never hang the run (AC-2).
+    """
+    key = resolve_search_key()
+    if not key:
+        return SubtaskResult(
+            sub.id,
+            app.id,
+            app.name,
+            "skipped",
+            "web_search",
+            None,
+            None,
+            "web search unavailable: set TAVILY_API_KEY to enable the web fallback",
+            0.0,
+        )
+    start = time.monotonic()
+    query = f"{sub.title}: {sub.description}"
+    try:
+        web = await run_with_deadline(
+            search_web(query, client=http_client, api_key=key), DEFAULT_TIMEOUT_S
+        )
+    except Exception as exc:  # any failure becomes a recorded error, never raised
+        detail = str(exc) or type(exc).__name__
+        return SubtaskResult(
+            sub.id,
+            app.id,
+            app.name,
+            "error",
+            "web_search",
+            None,
+            None,
+            f"web search failed: {detail}",
+            time.monotonic() - start,
+        )
+    source = web.citations[0] if web.citations else None
+    return SubtaskResult(
+        sub.id,
+        app.id,
+        app.name,
+        "ok",
+        "web_search",
+        web.to_dict(),
+        source,
+        None,
+        time.monotonic() - start,
     )

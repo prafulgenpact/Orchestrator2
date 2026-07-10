@@ -14,6 +14,7 @@ from orchestrator.app_caller import CallResult
 from orchestrator.executor import execute_plan
 from orchestrator.models import AppSelection, Plan, PlanResult, Subtask
 from orchestrator.registry import AppEntry, AppOperation, load_registry
+from orchestrator.web_search import WebResult, WebSearchError
 
 REG = load_registry()
 MakeLLM = Callable[[Sequence[str]], FakeLLM]
@@ -92,11 +93,56 @@ def test_execute_irrelevant_becomes_no_match(
     assert "off-topic" in (r.error or "")
 
 
-def test_execute_skips_fallback(fake_llm: MakeLLM) -> None:
-    # no LLM response needed: the fallback subtask is skipped before any selector call
-    result = _run(_plan(_sub("web-search", "Web Search (fallback)", fallback=True)), fake_llm([]))
-    assert result.results[0].status == "skipped"
-    assert "fallback" in (result.results[0].error or "")
+def _fallback_plan() -> Plan:
+    return _plan(_sub("web-search", "Web Search (fallback)", fallback=True))
+
+
+def test_web_fallback_success(monkeypatch: pytest.MonkeyPatch, fake_llm: MakeLLM) -> None:
+    monkeypatch.setattr("orchestrator.executor.resolve_search_key", lambda: "k")
+
+    async def _search(_query: str, **_kw: Any) -> WebResult:
+        return WebResult(answer="Grounded web answer.", citations=("http://a", "http://b"))
+
+    monkeypatch.setattr("orchestrator.executor.search_web", _search)
+    result = _run(_fallback_plan(), fake_llm([]))  # no LLM/selector call on the fallback path
+    r = result.results[0]
+    assert r.status == "ok"
+    assert r.operation == "web_search"
+    assert r.output == {"answer": "Grounded web answer.", "citations": ["http://a", "http://b"]}
+    assert r.source == "http://a"  # first citation surfaces as provenance
+
+
+def test_web_fallback_no_citations_has_no_source(
+    monkeypatch: pytest.MonkeyPatch, fake_llm: MakeLLM
+) -> None:
+    monkeypatch.setattr("orchestrator.executor.resolve_search_key", lambda: "k")
+
+    async def _search(_query: str, **_kw: Any) -> WebResult:
+        return WebResult(answer="Answer with no citations.", citations=())
+
+    monkeypatch.setattr("orchestrator.executor.search_web", _search)
+    r = _run(_fallback_plan(), fake_llm([])).results[0]
+    assert r.status == "ok"
+    assert r.source is None
+
+
+def test_web_fallback_no_key(monkeypatch: pytest.MonkeyPatch, fake_llm: MakeLLM) -> None:
+    monkeypatch.setattr("orchestrator.executor.resolve_search_key", lambda: None)
+    r = _run(_fallback_plan(), fake_llm([])).results[0]
+    assert r.status == "skipped"
+    assert "TAVILY_API_KEY" in (r.error or "")
+
+
+def test_web_fallback_error(monkeypatch: pytest.MonkeyPatch, fake_llm: MakeLLM) -> None:
+    monkeypatch.setattr("orchestrator.executor.resolve_search_key", lambda: "k")
+
+    async def _boom(_query: str, **_kw: Any) -> WebResult:
+        raise WebSearchError("provider down")
+
+    monkeypatch.setattr("orchestrator.executor.search_web", _boom)
+    r = _run(_fallback_plan(), fake_llm([])).results[0]
+    assert r.status == "error"
+    assert "web search failed" in (r.error or "")
 
 
 def test_execute_selection_error_is_isolated(
