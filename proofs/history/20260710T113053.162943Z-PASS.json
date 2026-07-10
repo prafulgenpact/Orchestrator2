@@ -1,6 +1,6 @@
 {
   "schema": "proof/v1",
-  "created_utc": "2026-07-10T11:32:28+00:00",
+  "created_utc": "2026-07-10T11:30:50+00:00",
   "result": "PASS",
   "failed_checks": [],
   "missing_required_checks": [],
@@ -14,7 +14,7 @@
   ],
   "fingerprint": "c08a41c227a4a5cc07c2567d68f17e66ecd96b5e9ed01067c30ef86c5ea7830c",
   "git": {
-    "commit": "244502051f23072963fcd1ea4ae91cc68ce51775",
+    "commit": "714ba425918da0ad615ac3e84e80f930705d141d",
     "branch": "Orchestrator2",
     "dirty_tracked_files": true
   },
@@ -28,25 +28,25 @@
     {
       "name": "py-format",
       "status": "pass",
-      "duration_s": 1,
+      "duration_s": 0,
       "evidence": "reports/py-format.log"
     },
     {
       "name": "py-types",
       "status": "pass",
-      "duration_s": 2,
+      "duration_s": 3,
       "evidence": "reports/py-types.log"
     },
     {
       "name": "py-unit",
       "status": "pass",
-      "duration_s": 4,
+      "duration_s": 3,
       "evidence": "reports/py-unit.log"
     },
     {
       "name": "e2e",
       "status": "pass",
-      "duration_s": 2,
+      "duration_s": 3,
       "evidence": "reports/e2e.log"
     },
     {
@@ -58,13 +58,13 @@
     {
       "name": "secrets-gitleaks",
       "status": "pass",
-      "duration_s": 1,
+      "duration_s": 0,
       "evidence": "reports/secrets-gitleaks.log"
     },
     {
       "name": "dep-audit",
       "status": "pass",
-      "duration_s": 20,
+      "duration_s": 23,
       "evidence": "reports/dep-audit.log"
     },
     {
@@ -80,14 +80,14 @@
       "failures": 0,
       "errors": 0,
       "skipped": 0,
-      "time_s": 2.26
+      "time_s": 1.59
     },
     "e2e": {
       "tests": 2,
       "failures": 0,
       "errors": 0,
       "skipped": 0,
-      "time_s": 1.29
+      "time_s": 1.01
     },
     "web_e2e": null,
     "coverage_pct": 100.0
@@ -99,5 +99,5 @@
     "pytest": "pytest 8.3.2",
     "os": "Darwin 25.5.0"
   },
-  "content_hash": "27df5cf79951dddb2a20e22b539aa9f419ea1d63d1b0ceb61540f8c17a11099e"
+  "content_hash": "d551814aa23250565e7c809e9d490065fbc275c82fa0e0899073e0105d674ee9"
 }
