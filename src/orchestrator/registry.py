@@ -62,6 +62,7 @@ class AppOperation:
     idempotency: str
     retry: RetrySpec = field(default_factory=RetrySpec)
     request_fields: tuple[str, ...] = ()
+    required_fields: tuple[str, ...] = ()
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -74,6 +75,7 @@ class AppOperation:
             "idempotency": self.idempotency,
             "retry": self.retry.to_dict(),
             "request_fields": list(self.request_fields),
+            "required_fields": list(self.required_fields),
         }
 
 
@@ -212,6 +214,9 @@ def _parse_operation(raw: Any, app_id: str, index: int) -> AppOperation:
         idempotency=idempotency,
         retry=_parse_retry(raw.get("retry"), f"{where} ({name})"),
         request_fields=_str_list(raw.get("request_fields", []), f"{where} ({name}) request_fields"),
+        required_fields=_str_list(
+            raw.get("required_fields", []), f"{where} ({name}) required_fields"
+        ),
     )
 
 

@@ -91,6 +91,17 @@ async def _run_subtask(
     except SelectionError as exc:
         return SubtaskResult(sub.id, app.id, app.name, "error", None, None, None, str(exc), 0.0)
 
+    # Skip a doomed call: if the op needs inputs the selector could not ground (e.g. a course
+    # module id this task never mentioned), don't fire a request that would only 422 — skip
+    # cleanly. Accuracy over a wrong answer; the anti-hang guarantee holds trivially (no call).
+    missing = [f for f in op.required_fields if f not in args or args[f] in (None, "")]
+    if missing:
+        reason = (
+            f"missing required input: {', '.join(missing)} — this app needs context "
+            "the task did not provide"
+        )
+        return SubtaskResult(sub.id, app.id, app.name, "skipped", op.name, None, None, reason, 0.0)
+
     result = await call_operation(app, op, args, client=http_client, breaker=breaker)
     source = result.url or None
     if not result.ok:

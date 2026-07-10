@@ -133,6 +133,43 @@ def test_operation_fields_parsed(tmp_path: Path) -> None:
     assert app.operation("missing") is None
 
 
+def test_operation_required_fields_parsed(tmp_path: Path) -> None:
+    op = {**VALID_OP, "required_fields": ["title"]}
+    app = {**VALID_APP, "operations": [op]}
+    reg = load_registry(_write(tmp_path, _registry([app, FALLBACK_APP])))
+    parsed = reg.get("teach-me").operation("start_topic")  # type: ignore[union-attr]
+    assert parsed is not None
+    assert parsed.required_fields == ("title",)
+
+
+def test_operation_required_fields_default_empty(tmp_path: Path) -> None:
+    reg = load_registry(_write(tmp_path, _registry([VALID_APP, FALLBACK_APP])))
+    parsed = reg.get("teach-me").operation("start_topic")  # type: ignore[union-attr]
+    assert parsed is not None
+    assert parsed.required_fields == ()
+
+
+def test_stats_requires_module_context() -> None:
+    """Stats Teacher answers within a specific module — those fields are marked required so the
+    executor skips (not 422s) a free-form question that supplies no module."""
+    op = load_registry().get("stats-teacher").operation("ask_question")  # type: ignore[union-attr]
+    assert op is not None
+    assert set(op.required_fields) == {"module_id", "module_title", "module_part"}
+
+
+def test_coding_playground_is_rest_only() -> None:
+    """Coding Playground's REST surface is kernel-control + datasets; it must NOT advertise running
+    code (execution is WebSocket-only), so code tasks route to Simulated Learning instead."""
+    cp = load_registry().get("coding-playground")
+    assert cp is not None
+    blob = " ".join((*cp.capabilities, *cp.example_tasks, cp.description)).lower()
+    assert "execute python" not in blob
+    assert "prototype" not in blob
+    assert "train a model" not in blob
+    assert any("dataset" in c.lower() for c in cp.capabilities)  # real capabilities kept
+    assert any("kernel" in c.lower() for c in cp.capabilities)
+
+
 def test_fallback_has_no_call_spec(tmp_path: Path) -> None:
     reg = load_registry(_write(tmp_path, _registry([VALID_APP, FALLBACK_APP])))
     fb = reg.get("web-search")

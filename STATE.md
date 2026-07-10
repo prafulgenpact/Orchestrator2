@@ -1,8 +1,22 @@
 # Project State — A multi agent orchestrator system calling relevant apps basis intent recognition
 
-Last updated: 2026-07-09 (synthesis-voice task)
+Last updated: 2026-07-10 (phase1-app-fixes task)
 
 ## Done (most recent first)
+
+- 2026-07-10 phase1-app-fixes (Phase 2, all-11-apps plan — Phase 0 recon + Phase 1 hardening;
+  serves AC-1/AC-2). Parallel recon (8 agents) confirmed ALL 11 app registry contracts match their
+  live APIs — zero contract changes needed. End-to-end verification (7-app parallel workflow) found
+  and fixed two accuracy issues, both additive: (1) code-execution tasks misrouted to Coding
+  Playground (no REST execute op — WS-only, Phase 3); trimmed its capabilities/description to its
+  real REST surface so code routes to Simulated Learning. (2) New optional `required_fields` on an
+  operation contract; the executor now SKIPS a call (no HTTP) when the selector can't ground a
+  required input — Statistics Teacher (`ask_question` needs module_id/title/part, no discovery
+  endpoint) now skips cleanly instead of HTTP 422 (accuracy-safe; never invents a module). Verified
+  working end-to-end via the orchestrator: ArXiv, AI Intelligence Deck, Stanford LLM, Teach Me,
+  Github Learnings, Simulated Learning (6); plus Blogs/Research (async-poll) and Coding (WS) mapped
+  for Phase 2/3, and Social Media contract-verified. Re-recorded the dry-run e2e fixture (registry
+  prompt changed). make verify PASS.
 
 - 2026-07-09 synthesis-voice (Phase 2, depth — plan-depth-orchestration.md Task 2; serves AC-4):
   `--execute` now ends with ONE grounded answer on top (an "Answer" section) instead of only a

@@ -143,6 +143,48 @@ def test_execute_threads_upstream_output_into_downstream_selection(
     assert "moe" in t2_selection  # t1's echoed output reached t2's selection prompt
 
 
+# required_fields: skip a doomed call when the selector can't ground a required input.
+_STATS_SUB = Subtask(
+    "t1",
+    "Ask stats",
+    "what is a p-value?",
+    (),
+    AppSelection("stats-teacher", "Statistics Teacher", "because", 0.9, False),
+)
+_STATS_SELECT_BLANK = (
+    '{"operation": "ask_question", "arguments": {"question": "q", "module_id": ""}}'
+)
+_STATS_SELECT_FULL = (
+    '{"operation": "ask_question", "arguments": '
+    '{"question": "q", "module_id": 1, "module_title": "HT", "module_part": "P1"}}'
+)
+
+
+def test_skips_when_required_field_missing(
+    monkeypatch: pytest.MonkeyPatch, fake_llm: MakeLLM
+) -> None:
+    async def _boom(*_a: Any, **_kw: Any) -> Any:
+        raise AssertionError("call_operation must not run when a required field is missing")
+
+    monkeypatch.setattr("orchestrator.executor.call_operation", _boom)
+    # module_id blank + module_title/module_part absent -> all three flagged, no HTTP call
+    result = _run(_plan(_STATS_SUB), fake_llm([_STATS_SELECT_BLANK]))
+    r = result.results[0]
+    assert r.status == "skipped"
+    assert r.operation == "ask_question"
+    assert "module_id" in (r.error or "") and "module_title" in (r.error or "")
+
+
+def test_proceeds_when_required_fields_present(
+    monkeypatch: pytest.MonkeyPatch, fake_llm: MakeLLM
+) -> None:
+    monkeypatch.setattr("orchestrator.executor.call_operation", _stub_call())
+    result = _run(_plan(_STATS_SUB), fake_llm([_STATS_SELECT_FULL, _RELEVANT]))
+    r = result.results[0]
+    assert r.status == "ok"  # all required fields present -> the call goes through
+    assert r.operation == "ask_question"
+
+
 def test_execute_skips_failed_upstream(monkeypatch: pytest.MonkeyPatch, fake_llm: MakeLLM) -> None:
     """A failed dependency is NOT fed downstream (only successful outputs flow forward)."""
     monkeypatch.setattr(

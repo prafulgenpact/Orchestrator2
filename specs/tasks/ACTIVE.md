@@ -1,1 +1,1 @@
-20260709-synthesis-voice.md
+20260710-phase1-app-fixes.md
