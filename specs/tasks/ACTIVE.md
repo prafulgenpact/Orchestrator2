@@ -1,1 +1,1 @@
-20260713-announce-fallbacks.md
+20260713-auto-start-apps.md

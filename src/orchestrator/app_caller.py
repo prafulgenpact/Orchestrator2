@@ -14,6 +14,7 @@ from typing import Any
 
 import httpx
 
+from orchestrator.launcher import ensure_started
 from orchestrator.registry import AppEntry, AppOperation
 from orchestrator.resilience import (
     CircuitBreaker,
@@ -138,7 +139,10 @@ async def call_operation(
     try:
         base_url = await _resolve_base_url(app, client, launcher_url)
         if not await _is_healthy(base_url, app, client):
-            raise ConnectionError(f"health check failed for {app.id} at {base_url}{app.health}")
+            # Auto-start the app if we know how, then re-check — the user never starts apps by hand.
+            await ensure_started(app, client)
+            if not await _is_healthy(base_url, app, client):
+                raise ConnectionError(f"health check failed for {app.id} at {base_url}{app.health}")
         url, params, body = _build_request(base_url, op, args)
 
         async def attempt() -> httpx.Response:

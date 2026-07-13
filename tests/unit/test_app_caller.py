@@ -6,6 +6,7 @@ import asyncio
 from collections.abc import Callable
 
 import httpx
+import pytest
 
 from orchestrator.app_caller import CallResult, call_operation
 from orchestrator.registry import AppEntry, AppOperation, RetrySpec, load_registry
@@ -14,6 +15,16 @@ from orchestrator.resilience import CircuitBreaker
 Handler = Callable[[httpx.Request], httpx.Response]
 
 REG = load_registry()
+
+
+@pytest.fixture(autouse=True)
+def _autostart_offline(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Never spawn a real backend in unit tests: auto-start is a no-op unless a test opts in."""
+
+    async def _off(*_a: object, **_kw: object) -> bool:
+        return False
+
+    monkeypatch.setattr("orchestrator.app_caller.ensure_started", _off)
 
 
 def _client(handler: Handler) -> httpx.AsyncClient:
@@ -463,3 +474,53 @@ def test_empty_error_message_includes_exception_type() -> None:
     assert res.ok is False
     assert (res.error or "").strip() != "fatal:"
     assert "ReadTimeout" in (res.error or "")
+
+
+# --- auto-start a down app (the user never starts apps by hand) ---------------
+
+
+def test_call_auto_starts_down_app(monkeypatch: pytest.MonkeyPatch) -> None:
+    app, op = _arxiv()
+    state = {"up": False}  # the app is down until "started"
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        p = req.url.path
+        if p == "/api/apps":
+            return _apps_ok()
+        if p == "/api/health":
+            return httpx.Response(200 if state["up"] else 500)
+        if p == "/api/papers/search":
+            return httpx.Response(200, json={"papers": []})
+        return httpx.Response(404)
+
+    async def _fake_ensure(_app: object, _client: object, **_kw: object) -> bool:
+        state["up"] = True  # "starting" the backend makes the next health check pass
+        return True
+
+    monkeypatch.setattr("orchestrator.app_caller.ensure_started", _fake_ensure)
+
+    async def go() -> CallResult:
+        async with _client(handler) as c:
+            return await call_operation(app, op, {"query": "x"}, client=c)
+
+    res = asyncio.run(go())
+    assert res.ok is True  # down app was auto-started, then the call succeeded
+    assert res.data == {"papers": []}
+
+
+def test_call_errors_when_autostart_fails() -> None:
+    # autouse _autostart_offline keeps ensure_started False; health stays down -> clean error
+    app, op = _arxiv()
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        if req.url.path == "/api/apps":
+            return _apps_ok()
+        return httpx.Response(500)  # health never comes up
+
+    async def go() -> CallResult:
+        async with _client(handler) as c:
+            return await call_operation(app, op, {"query": "x"}, client=c)
+
+    res = asyncio.run(go())
+    assert res.ok is False
+    assert "health check failed" in (res.error or "")

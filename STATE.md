@@ -1,8 +1,21 @@
 # Project State — A multi agent orchestrator system calling relevant apps basis intent recognition
 
-Last updated: 2026-07-13 (announce-fallbacks task)
+Last updated: 2026-07-13 (auto-start-apps task)
 
 ## Done (most recent first)
+
+- 2026-07-13 auto-start-apps (Phase 2, mini-task T2 of the 3 user asks). The orchestrator now
+  starts an app's backend itself when it is needed but not running — the user never launches apps by
+  hand. New `launcher.py`: `LAUNCH_SPECS` (all 11 apps: sibling folder, uvicorn entrypoint, extra
+  env) + `ensure_started(app, client)` which spawns the backend detached (survives the CLI, reused
+  next run) on the registry port and polls health until ready or a bounded timeout. `call_operation`
+  calls it when the first health check fails, then re-checks; if there is no spec or the start
+  fails, behavior is unchanged (clean error, no hang). Injected spawn+clock keep it unit-testable
+  (real spawn is the only pragma-no-cover line). New test_launcher.py + app_caller auto-start tests
+  (autouse fixture keeps spawns offline by default). VERIFIED LIVE: stopped Simulated Learning
+  (8001), asked for a Fibonacci computation — the orchestrator started 8001 and returned 610.
+  make verify PASS. NEXT: T3 (make chosen app answer; web only when no app fits — Stats default
+  module); T4 (Blogs/Research async).
 
 - 2026-07-13 announce-fallbacks (Phase 2, transparency — mini-task T1 of the 3 user asks). Every
   web-fallback substitution is now announced explicitly, never silent. `SubtaskResult` gained an
