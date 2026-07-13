@@ -44,6 +44,35 @@ class RetrySpec:
 
 
 @dataclass(frozen=True)
+class AsyncSpec:
+    """How to drive a start-then-poll async operation to completion.
+
+    The start op returns a run id (``run_id_field``); the executor then polls ``poll_op`` (passing
+    the id as ``run_id_arg``) until ``status_path`` reaches a terminal value, and reads the final
+    content from ``result_path``. Paths are dotted and may index lists (e.g. ``versions.-1.text``).
+    """
+
+    poll_op: str
+    run_id_field: str
+    run_id_arg: str
+    status_path: str
+    done_values: tuple[str, ...]
+    failed_values: tuple[str, ...]
+    result_path: str
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "poll_op": self.poll_op,
+            "run_id_field": self.run_id_field,
+            "run_id_arg": self.run_id_arg,
+            "status_path": self.status_path,
+            "done_values": list(self.done_values),
+            "failed_values": list(self.failed_values),
+            "result_path": self.result_path,
+        }
+
+
+@dataclass(frozen=True)
 class AppOperation:
     """One callable HTTP operation on an app, as the executor will invoke it.
 
@@ -64,6 +93,7 @@ class AppOperation:
     request_fields: tuple[str, ...] = ()
     required_fields: tuple[str, ...] = ()
     defaults: dict[str, Any] = field(default_factory=dict)  # values the selector fills if absent
+    poll: AsyncSpec | None = None  # present for start-then-poll async operations
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -78,6 +108,7 @@ class AppOperation:
             "request_fields": list(self.request_fields),
             "required_fields": list(self.required_fields),
             "defaults": dict(self.defaults),
+            "poll": self.poll.to_dict() if self.poll else None,
         }
 
 
@@ -191,6 +222,22 @@ def _parse_defaults(raw: Any, where: str) -> dict[str, Any]:
     return dict(raw)
 
 
+def _parse_async_spec(raw: Any, where: str) -> AsyncSpec | None:
+    if raw is None:
+        return None
+    if not isinstance(raw, dict):
+        raise RegistryError(f"{where} poll must be an object")
+    return AsyncSpec(
+        poll_op=_require_str(raw.get("poll_op"), f"{where} poll.poll_op"),
+        run_id_field=_require_str(raw.get("run_id_field"), f"{where} poll.run_id_field"),
+        run_id_arg=_require_str(raw.get("run_id_arg"), f"{where} poll.run_id_arg"),
+        status_path=_require_str(raw.get("status_path"), f"{where} poll.status_path"),
+        done_values=_str_list(raw.get("done_values", []), f"{where} poll.done_values"),
+        failed_values=_str_list(raw.get("failed_values", []), f"{where} poll.failed_values"),
+        result_path=_require_str(raw.get("result_path"), f"{where} poll.result_path"),
+    )
+
+
 def _parse_operation(raw: Any, app_id: str, index: int) -> AppOperation:
     where = f"app '{app_id}' operation #{index}"
     if not isinstance(raw, dict):
@@ -226,6 +273,7 @@ def _parse_operation(raw: Any, app_id: str, index: int) -> AppOperation:
             raw.get("required_fields", []), f"{where} ({name}) required_fields"
         ),
         defaults=_parse_defaults(raw.get("defaults", {}), f"{where} ({name})"),
+        poll=_parse_async_spec(raw.get("poll"), f"{where} ({name})"),
     )
 
 

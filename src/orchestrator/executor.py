@@ -9,20 +9,26 @@ subtask's failure never aborts the rest.
 
 from __future__ import annotations
 
+import asyncio
 import time
+from collections.abc import Awaitable, Callable
 from dataclasses import replace
+from typing import Any
 
 import httpx
 
-from orchestrator.app_caller import call_operation
+from orchestrator.app_caller import CallResult, call_operation
 from orchestrator.grounding import check_relevance
 from orchestrator.llm.base import LLMClient
 from orchestrator.models import Plan, PlanResult, Subtask, SubtaskResult
-from orchestrator.registry import AppEntry, Registry
+from orchestrator.registry import AppEntry, AppOperation, Registry
 from orchestrator.render import compute_waves
 from orchestrator.resilience import CircuitBreaker, run_with_deadline
 from orchestrator.selector import SelectionError, select_operation
 from orchestrator.web_search import DEFAULT_TIMEOUT_S, resolve_search_key, search_web
+
+_ASYNC_MAX_WAIT_S = 300.0  # overall cap for a start-then-poll job — bounded so it can never hang
+_ASYNC_POLL_INTERVAL_S = 4.0
 
 
 async def execute_plan(
@@ -123,7 +129,10 @@ async def _run_app_op(
         )
         return SubtaskResult(sub.id, app.id, app.name, "skipped", op.name, None, None, reason, 0.0)
 
-    result = await call_operation(app, op, args, client=http_client, breaker=breaker)
+    if op.poll is not None:
+        result = await _run_async(app, op, args, http_client=http_client, breaker=breaker)
+    else:
+        result = await call_operation(app, op, args, client=http_client, breaker=breaker)
     source = result.url or None
     if not result.ok:
         return SubtaskResult(
@@ -154,6 +163,69 @@ async def _run_app_op(
         )
     return SubtaskResult(
         sub.id, app.id, app.name, "ok", op.name, result.data, source, None, result.duration_s
+    )
+
+
+def _dig(obj: Any, dotted_path: str) -> Any:
+    """Walk a dotted path through nested dicts/lists (int segments index lists). None if missing."""
+    for seg in dotted_path.split("."):
+        if isinstance(obj, list):
+            try:
+                obj = obj[int(seg)]
+            except (ValueError, IndexError):
+                return None
+        elif isinstance(obj, dict):
+            obj = obj.get(seg)
+        else:
+            return None
+    return obj
+
+
+async def _run_async(
+    app: AppEntry,
+    op: AppOperation,
+    args: dict[str, Any],
+    *,
+    http_client: httpx.AsyncClient,
+    breaker: CircuitBreaker,
+    sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
+) -> CallResult:
+    """Drive a start-then-poll async op to completion; return the final content as a CallResult.
+
+    Start the job, read its run id, then poll the run op until a terminal status — bounded by
+    ``_ASYNC_MAX_WAIT_S`` so it can never hang. A failed terminal status or a timeout is a clean
+    error (the caller then applies grounding / the web safety net).
+    """
+    spec = op.poll
+    assert spec is not None  # only called when op.poll is set
+    start = await call_operation(app, op, args, client=http_client, breaker=breaker)
+    if not start.ok:
+        return start
+    run_id = _dig(start.data, spec.run_id_field)
+    if run_id is None:
+        return replace(
+            start, ok=False, data=None, error=f"async start returned no '{spec.run_id_field}'"
+        )
+    poll_op = app.operation(spec.poll_op)
+    if poll_op is None:
+        return replace(start, ok=False, data=None, error=f"poll op {spec.poll_op!r} not found")
+    for _ in range(max(1, int(_ASYNC_MAX_WAIT_S / _ASYNC_POLL_INTERVAL_S))):
+        poll = await call_operation(
+            app, poll_op, {spec.run_id_arg: run_id}, client=http_client, breaker=breaker
+        )
+        if not poll.ok:
+            return poll
+        status = _dig(poll.data, spec.status_path)
+        if status in spec.done_values:
+            return replace(poll, data=_dig(poll.data, spec.result_path))
+        if status in spec.failed_values:
+            return replace(poll, ok=False, data=None, error=f"async run ended: {status}")
+        await sleep(_ASYNC_POLL_INTERVAL_S)
+    return replace(
+        start,
+        ok=False,
+        data=None,
+        error=f"async run did not finish within {int(_ASYNC_MAX_WAIT_S)}s",
     )
 
 

@@ -593,7 +593,16 @@
           "destructive": false,
           "idempotency": "none",
           "retry": { "transient_max": 0, "backoff_s": 0 },
-          "request_fields": ["topic", "model", "research", "research_depth", "thinking_depth", "verification", "word_count_target", "audience"]
+          "request_fields": ["topic", "model", "research", "research_depth", "thinking_depth", "verification", "word_count_target", "audience"],
+          "poll": {
+            "poll_op": "get_run",
+            "run_id_field": "run_id",
+            "run_id_arg": "run_id",
+            "status_path": "status",
+            "done_values": ["done"],
+            "failed_values": ["failed", "cancelled"],
+            "result_path": "result.content"
+          }
         },
         {
           "name": "iterate_blog_async",
@@ -604,7 +613,16 @@
           "destructive": false,
           "idempotency": "none",
           "retry": { "transient_max": 0, "backoff_s": 0 },
-          "request_fields": ["blog_id", "instruction", "model"]
+          "request_fields": ["blog_id", "instruction", "model"],
+          "poll": {
+            "poll_op": "get_run",
+            "run_id_field": "run_id",
+            "run_id_arg": "run_id",
+            "status_path": "status",
+            "done_values": ["done"],
+            "failed_values": ["failed", "cancelled"],
+            "result_path": "result.content"
+          }
         },
         {
           "name": "get_run",
@@ -646,7 +664,16 @@
           "destructive": false,
           "idempotency": "none",
           "retry": { "transient_max": 0, "backoff_s": 0 },
-          "request_fields": ["topic", "depth", "voice", "feedback", "feedback_tag", "feedback_span", "parent_run_id"]
+          "request_fields": ["topic", "depth", "voice", "feedback", "feedback_tag", "feedback_span", "parent_run_id"],
+          "poll": {
+            "poll_op": "get_run",
+            "run_id_field": "run_id",
+            "run_id_arg": "run_id",
+            "status_path": "run.status",
+            "done_values": ["complete"],
+            "failed_values": ["error", "cancelled"],
+            "result_path": "versions.-1.output_md"
+          }
         },
         {
           "name": "list_runs",

@@ -1,8 +1,19 @@
 # Project State — A multi agent orchestrator system calling relevant apps basis intent recognition
 
-Last updated: 2026-07-13 (chosen-app-answers task)
+Last updated: 2026-07-13 (async-poll task)
 
 ## Done (most recent first)
+
+- 2026-07-13 async-poll (Phase 2, mini-task T4). Start-then-poll async operations are now driven to
+  completion, so Blogs Playground writes the blog and Research Assistant runs the research instead
+  of returning a bare run id (then falling back to web). New `AsyncSpec` on an operation contract
+  (poll_op, run_id_field/arg, status_path, done/failed values, result_path — dotted paths that index
+  lists, e.g. `versions.-1.output_md`); executor `_run_async` starts the job, reads the run id, and
+  polls the run op until a terminal status, bounded by `_ASYNC_MAX_WAIT_S` (300s, no hang);
+  `_run_app_op` routes to it when `op.poll` is set. Blogs `generate_blog_async`/`iterate_blog_async`
+  and Research `start_research` got poll specs. `_dig` resolves the result paths. New registry +
+  executor tests (start/poll monkeypatched, interval→0). make verify PASS. All THREE user asks (T1
+  announce, T2 auto-start, T3 use-the-app) plus T4 async are now complete.
 
 - 2026-07-13 chosen-app-answers (Phase 2, mini-task T3 of the 3 user asks; user CONFIRMED "use the
   relevant app, web only when none fits"). Operations can now declare `defaults` — values the

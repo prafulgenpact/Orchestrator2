@@ -170,6 +170,52 @@ def test_operation_defaults_must_be_object(tmp_path: Path) -> None:
         load_registry(_write(tmp_path, _registry([bad, FALLBACK_APP])))
 
 
+_POLL = {
+    "poll_op": "get_run",
+    "run_id_field": "run_id",
+    "run_id_arg": "run_id",
+    "status_path": "status",
+    "done_values": ["done"],
+    "failed_values": ["failed"],
+    "result_path": "result.content",
+}
+
+
+def test_operation_poll_spec_parsed(tmp_path: Path) -> None:
+    app = {**VALID_APP, "operations": [{**VALID_OP, "poll": _POLL}]}
+    reg = load_registry(_write(tmp_path, _registry([app, FALLBACK_APP])))
+    op = reg.get("teach-me").operation("start_topic")  # type: ignore[union-attr]
+    assert op is not None and op.poll is not None
+    assert op.poll.poll_op == "get_run"
+    assert op.poll.done_values == ("done",)
+    assert op.poll.result_path == "result.content"
+    assert op.to_dict()["poll"]["poll_op"] == "get_run"
+
+
+def test_operation_poll_default_none(tmp_path: Path) -> None:
+    reg = load_registry(_write(tmp_path, _registry([VALID_APP, FALLBACK_APP])))
+    op = reg.get("teach-me").operation("start_topic")  # type: ignore[union-attr]
+    assert op is not None and op.poll is None
+    assert op.to_dict()["poll"] is None
+
+
+def test_operation_poll_must_be_object(tmp_path: Path) -> None:
+    bad = {**VALID_APP, "operations": [{**VALID_OP, "poll": "nope"}]}
+    with pytest.raises(RegistryError, match="poll must be an object"):
+        load_registry(_write(tmp_path, _registry([bad, FALLBACK_APP])))
+
+
+def test_async_specs_present() -> None:
+    reg = load_registry()
+    for app_id, op_name in [
+        ("blogs-playground", "generate_blog_async"),
+        ("blogs-playground", "iterate_blog_async"),
+        ("research-assistant", "start_research"),
+    ]:
+        op = reg.get(app_id).operation(op_name)  # type: ignore[union-attr]
+        assert op is not None and op.poll is not None, (app_id, op_name)
+
+
 def test_stats_has_module_defaults() -> None:
     """Stats Teacher needs a course module; a default one lets it answer plain questions (used
     instead of the web fallback)."""

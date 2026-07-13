@@ -11,9 +11,10 @@ import pytest
 from conftest import FakeLLM
 
 from orchestrator.app_caller import CallResult
-from orchestrator.executor import execute_plan
+from orchestrator.executor import _dig, _run_async, execute_plan
 from orchestrator.models import AppSelection, Plan, PlanResult, Subtask
-from orchestrator.registry import AppEntry, AppOperation, load_registry
+from orchestrator.registry import AppEntry, AppOperation, AsyncSpec, load_registry
+from orchestrator.resilience import CircuitBreaker
 from orchestrator.web_search import WebResult, WebSearchError
 
 REG = load_registry()
@@ -322,3 +323,144 @@ def test_web_safety_net_keeps_original_failure_when_web_fails(
     r = _run(_plan(_sub("arxiv-papers", "ArXiv Paper Guide")), fake_llm([_SELECT])).results[0]
     assert r.status == "error"  # web also failed -> original failure preserved, not masked
     assert "retry: boom" in (r.error or "")
+
+
+# --- async-poll: drive a start-then-poll job to completion --------------------
+
+
+async def _no_sleep(_s: float) -> None:
+    return None
+
+
+def _cr(data: Any, *, ok: bool = True, error: str | None = None) -> CallResult:
+    return CallResult("app", "op", "http://x", ok, 200 if ok else None, data, error, 0.1)
+
+
+def _fake_calls(*results: CallResult) -> Callable[..., Any]:
+    seq = list(results)
+
+    async def _call(_app: Any, _op: Any, _args: Any, **_kw: Any) -> CallResult:
+        return seq.pop(0)
+
+    return _call
+
+
+def _blogs_gen() -> tuple[AppEntry, AppOperation]:
+    app = REG.get("blogs-playground")
+    assert app is not None
+    op = app.operation("generate_blog_async")
+    assert op is not None
+    return app, op
+
+
+def _do_async(app: AppEntry, op: AppOperation) -> CallResult:
+    async def go() -> CallResult:
+        async with _dummy_client() as http:
+            return await _run_async(
+                app, op, {"topic": "x"}, http_client=http, breaker=CircuitBreaker(), sleep=_no_sleep
+            )
+
+    return asyncio.run(go())
+
+
+def test_dig_paths() -> None:
+    assert _dig({"a": {"b": 1}}, "a.b") == 1
+    assert _dig({"xs": [{"v": 9}]}, "xs.0.v") == 9
+    assert _dig({"xs": [1, 2, 3]}, "xs.-1") == 3  # negative index
+    assert _dig({"a": 1}, "a.b") is None  # descend into a scalar -> None
+    assert _dig({"xs": [1]}, "xs.5") is None  # index out of range
+    assert _dig({"xs": [1]}, "xs.k") is None  # non-int segment on a list
+    assert _dig({}, "missing") is None
+
+
+def test_async_runs_to_completion(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        "orchestrator.executor.call_operation",
+        _fake_calls(
+            _cr({"run_id": "r1"}),
+            _cr({"status": "running", "result": None}),
+            _cr({"status": "done", "result": {"content": "# Blog\ntext"}}),
+        ),
+    )
+    res = _do_async(*_blogs_gen())
+    assert res.ok is True
+    assert res.data == "# Blog\ntext"  # result.content extracted from the finished run
+
+
+def test_async_missing_run_id(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("orchestrator.executor.call_operation", _fake_calls(_cr({"nope": 1})))
+    res = _do_async(*_blogs_gen())
+    assert res.ok is False
+    assert "no 'run_id'" in (res.error or "")
+
+
+def test_async_failed_status(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        "orchestrator.executor.call_operation",
+        _fake_calls(_cr({"run_id": "r1"}), _cr({"status": "failed"})),
+    )
+    res = _do_async(*_blogs_gen())
+    assert res.ok is False
+    assert "failed" in (res.error or "")
+
+
+def test_async_start_fails(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        "orchestrator.executor.call_operation", _fake_calls(_cr(None, ok=False, error="down"))
+    )
+    res = _do_async(*_blogs_gen())
+    assert res.ok is False
+    assert "down" in (res.error or "")
+
+
+def test_async_poll_call_fails(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        "orchestrator.executor.call_operation",
+        _fake_calls(_cr({"run_id": "r1"}), _cr(None, ok=False, error="retry: boom")),
+    )
+    res = _do_async(*_blogs_gen())
+    assert res.ok is False
+    assert "boom" in (res.error or "")
+
+
+def test_async_poll_op_missing(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("orchestrator.executor.call_operation", _fake_calls(_cr({"run_id": "r1"})))
+    spec = AsyncSpec("ghost", "run_id", "run_id", "status", ("done",), (), "result")
+    op = AppOperation("start", "d", "POST", "/s", 30, False, "none", poll=spec)
+    app = AppEntry("custom", "Custom", "d", (), (), False, port=8099, health="/h", operations=(op,))
+    res = _do_async(app, op)
+    assert res.ok is False
+    assert "not found" in (res.error or "")
+
+
+def test_async_times_out(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("orchestrator.executor._ASYNC_MAX_WAIT_S", 0.05)
+    monkeypatch.setattr("orchestrator.executor._ASYNC_POLL_INTERVAL_S", 0.01)
+    monkeypatch.setattr(
+        "orchestrator.executor.call_operation",
+        _fake_calls(_cr({"run_id": "r1"}), *[_cr({"status": "running"}) for _ in range(10)]),
+    )
+    res = _do_async(*_blogs_gen())
+    assert res.ok is False
+    assert "did not finish" in (res.error or "")
+
+
+def test_execute_routes_async_op(monkeypatch: pytest.MonkeyPatch, fake_llm: MakeLLM) -> None:
+    # selecting an async op routes through the poller; the finished content becomes the result
+    monkeypatch.setattr(
+        "orchestrator.executor.call_operation",
+        _fake_calls(_cr({"run_id": "r1"}), _cr({"status": "done", "result": {"content": "blog!"}})),
+    )
+    sub = Subtask(
+        "t1",
+        "Write blog",
+        "write a blog about x",
+        (),
+        AppSelection("blogs-playground", "Blogs Playground", "because", 0.9, False),
+    )
+    client = fake_llm(
+        ['{"operation": "generate_blog_async", "arguments": {"topic": "x"}}', _RELEVANT]
+    )
+    r = _run(_plan(sub), client).results[0]
+    assert r.status == "ok"
+    assert r.output == "blog!"
