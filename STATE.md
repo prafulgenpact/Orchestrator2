@@ -1,8 +1,16 @@
 # Project State — A multi agent orchestrator system calling relevant apps basis intent recognition
 
-Last updated: 2026-07-13 (async-payload-fix task)
+Last updated: 2026-07-13 (async-wait-cap task)
 
 ## Done (most recent first)
+
+- 2026-07-13 async-wait-cap (Phase 2, follow-on). Raised `_ASYNC_MAX_WAIT_S` 300s→600s: real blog
+  jobs run longer than 300s (measured a real blog at 415s producing a genuine 6004-char article at
+  result.content, title "Zero Changed Everything…"), so they were timing out and disclosing a web
+  fallback. 600s lets them finish while staying bounded (no hang). Trade-off: a multi-minute
+  synchronous CLI wait; a fire-and-return-handle async UX is a later option for the human. Confirmed
+  result.content is the correct extraction path (the earlier "# Untitled Draft" was a degenerate
+  result for the vague "test zero" topic). make verify PASS.
 
 - 2026-07-13 async-payload-fix (Phase 2, follow-on to async-poll). Live blog test revealed the async
   START calls 422'd: the selector filled type-risky OPTIONAL fields with guessed values ("short

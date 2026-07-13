@@ -27,7 +27,8 @@ from orchestrator.resilience import CircuitBreaker, run_with_deadline
 from orchestrator.selector import SelectionError, select_operation
 from orchestrator.web_search import DEFAULT_TIMEOUT_S, resolve_search_key, search_web
 
-_ASYNC_MAX_WAIT_S = 300.0  # overall cap for a start-then-poll job — bounded so it can never hang
+_ASYNC_MAX_WAIT_S = 600.0  # overall cap for a start-then-poll job — bounded so it can never hang
+# (measured: a real blog run ~415s; 600s gives headroom while still guaranteeing termination)
 _ASYNC_POLL_INTERVAL_S = 4.0
 
 
