@@ -1,8 +1,18 @@
 # Project State — A multi agent orchestrator system calling relevant apps basis intent recognition
 
-Last updated: 2026-07-13 (auto-start-apps task)
+Last updated: 2026-07-13 (chosen-app-answers task)
 
 ## Done (most recent first)
+
+- 2026-07-13 chosen-app-answers (Phase 2, mini-task T3 of the 3 user asks; user CONFIRMED "use the
+  relevant app, web only when none fits"). Operations can now declare `defaults` — values the
+  selector fills for any request field the model omitted (never overriding a model-supplied value).
+  Statistics Teacher `ask_question` got a default general module, so a plain "what is a p-value?" is
+  now answered BY Statistics Teacher instead of skipping to the web. General/additive mechanism
+  (registry parse + to_dict + selector setdefault). New registry/selector tests; executor
+  required-field skip test adjusted (title/part now defaulted, blank module_id is the residual
+  skip). VERIFIED LIVE: "what is a p-value?" -> Statistics Teacher (source :8007/api/qa), no web
+  fallback. make verify PASS. REMAINING: T4 (Blogs/Research async-poll so those apps do the work).
 
 - 2026-07-13 auto-start-apps (Phase 2, mini-task T2 of the 3 user asks). The orchestrator now
   starts an app's backend itself when it is needed but not running — the user never launches apps by

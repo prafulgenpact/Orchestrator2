@@ -396,7 +396,8 @@
           "idempotency": "supported",
           "retry": { "transient_max": 2, "backoff_s": 5 },
           "request_fields": ["question", "module_id", "module_title", "module_part", "conversation_history"],
-          "required_fields": ["module_id", "module_title", "module_part"]
+          "required_fields": ["module_id", "module_title", "module_part"],
+          "defaults": { "module_id": 1, "module_title": "General Statistics", "module_part": "Overview" }
         }
       ]
     },

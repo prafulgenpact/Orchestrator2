@@ -113,6 +113,11 @@ def _parse_selection(raw: str, app: AppEntry) -> tuple[AppOperation, dict[str, A
     args: dict[str, Any] = (
         {k: v for k, v in raw_args.items() if k in allowed} if allowed else dict(raw_args)
     )
+    # Fill any request field the model omitted from the operation's declared defaults, so an app
+    # that needs standing context (e.g. a course module) is still usable — never overriding a value
+    # the model did provide.
+    for key, value in op.defaults.items():
+        args.setdefault(key, value)
     return op, args
 
 

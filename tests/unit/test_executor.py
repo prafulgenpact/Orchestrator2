@@ -221,12 +221,13 @@ def test_skips_when_required_field_missing(
         raise AssertionError("call_operation must not run when a required field is missing")
 
     monkeypatch.setattr("orchestrator.executor.call_operation", _boom)
-    # module_id blank + module_title/module_part absent -> all three flagged, no HTTP call
+    # module_id is blank; module_title/module_part are absent but get filled by the op defaults,
+    # so the residual missing required field is the blank module_id -> still skips, no HTTP call.
     result = _run(_plan(_STATS_SUB), fake_llm([_STATS_SELECT_BLANK]))
     r = result.results[0]
     assert r.status == "skipped"
     assert r.operation == "ask_question"
-    assert "module_id" in (r.error or "") and "module_title" in (r.error or "")
+    assert "module_id" in (r.error or "")
 
 
 def test_proceeds_when_required_fields_present(

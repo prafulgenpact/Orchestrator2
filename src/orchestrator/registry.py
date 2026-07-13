@@ -63,6 +63,7 @@ class AppOperation:
     retry: RetrySpec = field(default_factory=RetrySpec)
     request_fields: tuple[str, ...] = ()
     required_fields: tuple[str, ...] = ()
+    defaults: dict[str, Any] = field(default_factory=dict)  # values the selector fills if absent
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -76,6 +77,7 @@ class AppOperation:
             "retry": self.retry.to_dict(),
             "request_fields": list(self.request_fields),
             "required_fields": list(self.required_fields),
+            "defaults": dict(self.defaults),
         }
 
 
@@ -183,6 +185,12 @@ def _parse_retry(raw: Any, where: str) -> RetrySpec:
     return RetrySpec(transient_max=int(transient_max), backoff_s=float(backoff_s))
 
 
+def _parse_defaults(raw: Any, where: str) -> dict[str, Any]:
+    if not isinstance(raw, dict):
+        raise RegistryError(f"{where} defaults must be an object keyed by field name")
+    return dict(raw)
+
+
 def _parse_operation(raw: Any, app_id: str, index: int) -> AppOperation:
     where = f"app '{app_id}' operation #{index}"
     if not isinstance(raw, dict):
@@ -217,6 +225,7 @@ def _parse_operation(raw: Any, app_id: str, index: int) -> AppOperation:
         required_fields=_str_list(
             raw.get("required_fields", []), f"{where} ({name}) required_fields"
         ),
+        defaults=_parse_defaults(raw.get("defaults", {}), f"{where} ({name})"),
     )
 
 

@@ -120,6 +120,39 @@ def test_select_bad_arguments_type_raises(fake_llm: MakeLLM) -> None:
         select_operation(client, _arxiv(), _subtask(), model="m", max_retries=0)
 
 
+# --- defaults: fill a missing request field so the chosen app is usable ------
+
+
+def _op_with_defaults() -> tuple[AppEntry, str]:
+    op = AppOperation(
+        name="ask",
+        description="d",
+        method="POST",
+        path="/ask",
+        timeout_s=30,
+        destructive=False,
+        idempotency="none",
+        request_fields=("question", "module_id"),
+        defaults={"module_id": 1},
+    )
+    app = AppEntry("custom", "Custom", "d", (), (), False, port=8099, health="/h", operations=(op,))
+    return app, "ask"
+
+
+def test_select_applies_defaults(fake_llm: MakeLLM) -> None:
+    app, _ = _op_with_defaults()
+    client = fake_llm(['{"operation": "ask", "arguments": {"question": "q"}}'])  # module_id omitted
+    _, args = select_operation(client, app, _subtask(), model="m")
+    assert args == {"question": "q", "module_id": 1}  # default filled the missing field
+
+
+def test_select_defaults_do_not_override_model(fake_llm: MakeLLM) -> None:
+    app, _ = _op_with_defaults()
+    client = fake_llm(['{"operation": "ask", "arguments": {"question": "q", "module_id": 7}}'])
+    _, args = select_operation(client, app, _subtask(), model="m")
+    assert args["module_id"] == 7  # model-supplied value wins over the default
+
+
 # --- retry on malformed JSON (self-correction, mirrors the planner) ----------
 
 

@@ -149,6 +149,39 @@ def test_operation_required_fields_default_empty(tmp_path: Path) -> None:
     assert parsed.required_fields == ()
 
 
+def test_operation_defaults_parsed(tmp_path: Path) -> None:
+    op = {**VALID_OP, "defaults": {"title": "T"}}
+    app = {**VALID_APP, "operations": [op]}
+    reg = load_registry(_write(tmp_path, _registry([app, FALLBACK_APP])))
+    parsed = reg.get("teach-me").operation("start_topic")  # type: ignore[union-attr]
+    assert parsed is not None
+    assert parsed.defaults == {"title": "T"}
+    assert parsed.to_dict()["defaults"] == {"title": "T"}
+
+
+def test_operation_defaults_default_empty(tmp_path: Path) -> None:
+    reg = load_registry(_write(tmp_path, _registry([VALID_APP, FALLBACK_APP])))
+    assert reg.get("teach-me").operation("start_topic").defaults == {}  # type: ignore[union-attr]
+
+
+def test_operation_defaults_must_be_object(tmp_path: Path) -> None:
+    bad = {**VALID_APP, "operations": [{**VALID_OP, "defaults": [1, 2]}]}
+    with pytest.raises(RegistryError, match="defaults must be an object"):
+        load_registry(_write(tmp_path, _registry([bad, FALLBACK_APP])))
+
+
+def test_stats_has_module_defaults() -> None:
+    """Stats Teacher needs a course module; a default one lets it answer plain questions (used
+    instead of the web fallback)."""
+    op = load_registry().get("stats-teacher").operation("ask_question")  # type: ignore[union-attr]
+    assert op is not None
+    assert op.defaults == {
+        "module_id": 1,
+        "module_title": "General Statistics",
+        "module_part": "Overview",
+    }
+
+
 def test_stats_requires_module_context() -> None:
     """Stats Teacher answers within a specific module — those fields are marked required so the
     executor skips (not 422s) a free-form question that supplies no module."""
