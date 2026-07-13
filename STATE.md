@@ -1,8 +1,17 @@
 # Project State — A multi agent orchestrator system calling relevant apps basis intent recognition
 
-Last updated: 2026-07-13 (async-wait-cap task)
+Last updated: 2026-07-13 (synthesis-no-truncate task)
 
 ## Done (most recent first)
+
+- 2026-07-13 synthesis-no-truncate (Phase 2, fix a truncated multi-app answer found live). A 4-app
+  CLT run (explain+repos+code+blog) truncated mid-code because synthesis re-fused everything into a
+  1500-token answer. Two fixes: (1) `synthesize` now takes `subtask_deps` and, when there's a single
+  terminal step (nothing depends on it; it depends on other ok steps) with prose output, passes THAT
+  through (mode "final-step") — it already consumed the upstream, so re-fusing is redundant/lossy;
+  sources still come from all ok results. cli passes the deps. (2) `_MAX_TOKENS` 1500→4000 so genuine
+  fusions aren't cut. New synthesis tests (terminal pass-through / no-terminal fuse / non-prose /
+  consumed-nothing / budget). make verify PASS.
 
 - 2026-07-13 async-wait-cap (Phase 2, follow-on). Raised `_ASYNC_MAX_WAIT_S` 300s→600s: real blog
   jobs run longer than 300s (measured a real blog at 415s producing a genuine 6004-char article at

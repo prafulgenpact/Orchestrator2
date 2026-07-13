@@ -26,7 +26,7 @@ from orchestrator.llm.base import LLMClient, LLMRequest
 from orchestrator.models import PlanResult, SubtaskResult
 
 _PROMPT_PATH = Path(__file__).resolve().parent / "prompts" / "synthesis_system.md"
-_MAX_TOKENS = 1500
+_MAX_TOKENS = 4000  # headroom so a fused multi-result answer (with code/blog excerpts) isn't cut
 _RESULT_LIMIT = 3000  # chars per result fed to the synthesizer — bounded for tokens
 
 
@@ -34,9 +34,10 @@ _RESULT_LIMIT = 3000  # chars per result fed to the synthesizer — bounded for 
 class Synthesis:
     """The orchestrator's final answer for an executed plan.
 
-    ``mode`` is "verbatim" (one app's prose passed through untouched), "synthesized" (results
-    fused by one LLM call), or "none" (no app produced a grounded result). ``sources`` are the
-    provenance URLs of the results the answer is grounded in — collected in code, never invented.
+    ``mode`` is "verbatim" (a lone app's prose passed through untouched), "final-step" (a single
+    terminal step that already consumed the others, passed through), "synthesized" (results fused
+    by one LLM call), or "none" (no app produced a grounded result). ``sources`` are the provenance
+    URLs of the results the answer is grounded in — collected in code, never invented.
     """
 
     answer: str
@@ -104,8 +105,42 @@ def _synthesize_llm(
     return client.complete(request).strip()
 
 
-def synthesize(client: LLMClient, plan_result: PlanResult, *, model: str) -> Synthesis:
-    """Collapse an executed plan into one grounded answer (verbatim, synthesized, or none)."""
+def _dominant_terminal(
+    ok: Sequence[SubtaskResult], subtask_deps: dict[str, tuple[str, ...]] | None
+) -> SubtaskResult | None:
+    """The single terminal ok step that already consumed the others, if any.
+
+    A terminal step is one no other subtask depends on; it is "dominant" when it is the ONLY such
+    ok step and it depends on at least one other ok step (so its output already folds in the
+    upstream work). Its prose is the finished answer — re-fusing it would be redundant and lossy.
+    Returns None (fall back to fusing) when the dependency graph isn't known or has no clear sink.
+    """
+    if subtask_deps is None or len(ok) < 2:
+        return None
+    ok_ids = {r.subtask_id for r in ok}
+    depended_upon = {dep for deps in subtask_deps.values() for dep in deps}
+    terminals = [r for r in ok if r.subtask_id not in depended_upon]
+    if len(terminals) != 1:
+        return None
+    terminal = terminals[0]
+    if not any(dep in ok_ids for dep in subtask_deps.get(terminal.subtask_id, ())):
+        return None  # a lone step that consumed nothing is not a synthesis of the others
+    return terminal
+
+
+def synthesize(
+    client: LLMClient,
+    plan_result: PlanResult,
+    *,
+    model: str,
+    subtask_deps: dict[str, tuple[str, ...]] | None = None,
+) -> Synthesis:
+    """Collapse an executed plan into one grounded answer.
+
+    ``subtask_deps`` (subtask id -> its depends_on) lets a single terminal step that already
+    consumed the others be passed through verbatim instead of re-fused (avoids redundant,
+    truncating re-summarization of a long final result).
+    """
     ok = _ok_results(plan_result)
     sources = _sources(ok)
     if not ok:
@@ -114,6 +149,10 @@ def synthesize(client: LLMClient, plan_result: PlanResult, *, model: str) -> Syn
             mode="none",
             sources=(),
         )
+    terminal = _dominant_terminal(ok, subtask_deps)
+    if terminal is not None and isinstance(terminal.output, str) and terminal.output.strip():
+        # The final step already folded in the upstream results — pass it through, don't re-fuse.
+        return Synthesis(answer=terminal.output.strip(), mode="final-step", sources=sources)
     only = ok[0]
     if len(ok) == 1 and isinstance(only.output, str) and only.output.strip():
         # One app fully answered in prose — pass it through verbatim to keep its tuned voice.

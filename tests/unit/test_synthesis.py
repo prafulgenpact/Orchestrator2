@@ -115,6 +115,60 @@ def test_sources_collected_from_results(fake_llm: MakeLLM) -> None:
     assert s.sources == ("http://dup", "http://two")
 
 
+# --- dominant terminal step: pass through instead of re-fusing ---------------
+
+
+def test_dominant_terminal_passed_through(fake_llm: MakeLLM) -> None:
+    client = fake_llm([])  # pass-through must make NO LLM call
+    pr = _plan_result(
+        _res("t1", ["repoA"], source="http://a"),
+        _res("t2", "explanation text", source="http://b"),
+        _res("t3", "# Final Blog\nfull content", source="http://c"),
+    )
+    deps = {"t1": (), "t2": (), "t3": ("t1", "t2")}  # t3 is the sole terminal, consumed t1+t2
+    s = synthesize(client, pr, model="m", subtask_deps=deps)
+    assert s.mode == "final-step"
+    assert s.answer == "# Final Blog\nfull content"  # passed through, not re-fused/truncated
+    assert s.sources == ("http://a", "http://b", "http://c")  # sources from ALL ok results
+    assert client.requests == []
+
+
+def test_no_terminal_still_fuses(fake_llm: MakeLLM) -> None:
+    client = fake_llm(["fused answer"])
+    pr = _plan_result(_res("t1", "a", source="http://a"), _res("t2", "b", source="http://b"))
+    deps = {"t1": (), "t2": ()}  # two independent terminals -> no single sink -> fuse
+    s = synthesize(client, pr, model="m", subtask_deps=deps)
+    assert s.mode == "synthesized"
+    assert s.answer == "fused answer"
+
+
+def test_terminal_must_be_prose(fake_llm: MakeLLM) -> None:
+    client = fake_llm(["fused"])
+    pr = _plan_result(
+        _res("t1", "expl", source="http://a"),
+        _res("t2", {"data": 1}, source="http://b"),  # terminal sink but non-prose -> not passed
+    )
+    deps = {"t1": (), "t2": ("t1",)}
+    s = synthesize(client, pr, model="m", subtask_deps=deps)
+    assert s.mode == "synthesized"
+
+
+def test_single_terminal_that_consumed_nothing_falls_back_to_fuse(fake_llm: MakeLLM) -> None:
+    client = fake_llm(["fused"])
+    # t2 is depended-upon by a (failed, non-ok) t3, so it isn't a terminal; t1 is the lone terminal
+    # but depends on nothing -> it didn't consume the others -> fuse rather than pass t1 through.
+    pr = _plan_result(_res("t1", "a", source="http://a"), _res("t2", "b", source="http://b"))
+    deps = {"t1": (), "t2": (), "t3": ("t2",)}
+    s = synthesize(client, pr, model="m", subtask_deps=deps)
+    assert s.mode == "synthesized"
+
+
+def test_synthesis_budget_raised() -> None:
+    from orchestrator.synthesis import _MAX_TOKENS
+
+    assert _MAX_TOKENS >= 4000  # fused answers with code/blog excerpts must not truncate
+
+
 # --- helpers -----------------------------------------------------------------
 
 

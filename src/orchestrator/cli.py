@@ -92,7 +92,8 @@ def main(argv: list[str] | None = None, *, client: LLMClient | None = None) -> i
     if args.execute:
         try:
             result = asyncio.run(_execute(plan, registry, client, model))
-            synthesis = synthesize(client, result, model=model)
+            deps = {s.id: s.depends_on for s in plan.subtasks}
+            synthesis = synthesize(client, result, model=model, subtask_deps=deps)
         except LLMError as exc:
             print(f"error: {exc}", file=sys.stderr)
             return 4
