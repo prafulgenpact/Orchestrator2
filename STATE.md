@@ -1,8 +1,17 @@
 # Project State — A multi agent orchestrator system calling relevant apps basis intent recognition
 
-Last updated: 2026-07-13 (async-poll task)
+Last updated: 2026-07-13 (async-payload-fix task)
 
 ## Done (most recent first)
+
+- 2026-07-13 async-payload-fix (Phase 2, follow-on to async-poll). Live blog test revealed the async
+  START calls 422'd: the selector filled type-risky OPTIONAL fields with guessed values ("short
+  blog" → word_count_target="short" → 422 int_parsing). Confirmed minimal {topic} → 200. Fix: trim
+  the async start ops' request_fields to the safe minimal set (generate→[topic];
+  iterate→[blog_id,instruction]; start_research→[topic]); the app defaults the rest, so the start
+  succeeds and the T4 poller runs the app to completion. NOTE: T1 + web safety net worked perfectly
+  on that run (delivered a web blog AND disclosed the Blogs 422). make verify PASS. (Richer
+  type-validated optional passing is a later hardening.)
 
 - 2026-07-13 async-poll (Phase 2, mini-task T4). Start-then-poll async operations are now driven to
   completion, so Blogs Playground writes the blog and Research Assistant runs the research instead

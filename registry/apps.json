@@ -593,7 +593,7 @@
           "destructive": false,
           "idempotency": "none",
           "retry": { "transient_max": 0, "backoff_s": 0 },
-          "request_fields": ["topic", "model", "research", "research_depth", "thinking_depth", "verification", "word_count_target", "audience"],
+          "request_fields": ["topic"],
           "poll": {
             "poll_op": "get_run",
             "run_id_field": "run_id",
@@ -613,7 +613,7 @@
           "destructive": false,
           "idempotency": "none",
           "retry": { "transient_max": 0, "backoff_s": 0 },
-          "request_fields": ["blog_id", "instruction", "model"],
+          "request_fields": ["blog_id", "instruction"],
           "poll": {
             "poll_op": "get_run",
             "run_id_field": "run_id",
@@ -664,7 +664,7 @@
           "destructive": false,
           "idempotency": "none",
           "retry": { "transient_max": 0, "backoff_s": 0 },
-          "request_fields": ["topic", "depth", "voice", "feedback", "feedback_tag", "feedback_span", "parent_run_id"],
+          "request_fields": ["topic"],
           "poll": {
             "poll_op": "get_run",
             "run_id_field": "run_id",

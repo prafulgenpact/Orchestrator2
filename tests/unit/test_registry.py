@@ -205,6 +205,21 @@ def test_operation_poll_must_be_object(tmp_path: Path) -> None:
         load_registry(_write(tmp_path, _registry([bad, FALLBACK_APP])))
 
 
+def test_async_start_ops_have_minimal_request_fields() -> None:
+    """Async start calls expose only fields the selector can always fill correctly, so it can't
+    inject a type-risky optional (e.g. word_count_target='short') and 422 the start."""
+    reg = load_registry()
+    expected = {
+        ("blogs-playground", "generate_blog_async"): ("topic",),
+        ("blogs-playground", "iterate_blog_async"): ("blog_id", "instruction"),
+        ("research-assistant", "start_research"): ("topic",),
+    }
+    for (app_id, op_name), fields in expected.items():
+        op = reg.get(app_id).operation(op_name)  # type: ignore[union-attr]
+        assert op is not None
+        assert op.request_fields == fields, (app_id, op_name, op.request_fields)
+
+
 def test_async_specs_present() -> None:
     reg = load_registry()
     for app_id, op_name in [
