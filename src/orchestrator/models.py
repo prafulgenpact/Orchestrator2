@@ -137,6 +137,7 @@ class SubtaskResult:
     source: str | None
     error: str | None
     duration_s: float
+    note: str | None = None  # disclosure, e.g. "<app> couldn't answer; used web fallback"
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -149,6 +150,7 @@ class SubtaskResult:
             "source": self.source,
             "error": self.error,
             "duration_s": round(self.duration_s, 3),
+            "note": self.note,
         }
 
 

@@ -122,6 +122,23 @@ def test_subtask_result_to_dict_rounds_duration() -> None:
     assert d["duration_s"] == 1.234  # rounded to 3 dp
 
 
+def test_subtask_result_note_in_to_dict() -> None:
+    assert _subtask_result().to_dict()["note"] is None  # default: no note
+    noted = SubtaskResult(
+        subtask_id="t1",
+        app_id="web-search",
+        app_name="Web Search (fallback)",
+        status="ok",
+        operation="web_search",
+        output={},
+        source=None,
+        error=None,
+        duration_s=0.1,
+        note="'Stats' could not handle this; used web",
+    )
+    assert noted.to_dict()["note"] == "'Stats' could not handle this; used web"
+
+
 def test_plan_result_to_dict_nests_results() -> None:
     pr = PlanResult(task="t", intent="i", results=(_subtask_result("ok"), _subtask_result("error")))
     d = pr.to_dict()

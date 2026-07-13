@@ -276,6 +276,17 @@ def test_web_safety_net_on_skip(monkeypatch: pytest.MonkeyPatch, fake_llm: MakeL
     assert r.source == "http://w"
 
 
+def test_web_safety_net_sets_disclosure_note(
+    monkeypatch: pytest.MonkeyPatch, fake_llm: MakeLLM
+) -> None:
+    _web_ok(monkeypatch)
+    r = _run(_plan(_STATS_SUB), fake_llm([_STATS_SELECT_BLANK])).results[0]
+    assert r.status == "ok"
+    assert r.note is not None
+    assert "Statistics Teacher" in r.note  # names the app that was bypassed
+    assert "web search" in r.note.lower()
+
+
 def test_web_safety_net_on_error(monkeypatch: pytest.MonkeyPatch, fake_llm: MakeLLM) -> None:
     _web_ok(monkeypatch)
     monkeypatch.setattr(

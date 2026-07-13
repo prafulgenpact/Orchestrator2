@@ -10,6 +10,7 @@ subtask's failure never aborts the rest.
 from __future__ import annotations
 
 import time
+from dataclasses import replace
 
 import httpx
 
@@ -88,7 +89,12 @@ async def _run_subtask(
     # deliver. Keep the original failure if the web can't help either (never mask it with worse).
     fallback_app = next(entry for entry in registry.apps if entry.fallback)
     web = await _run_web_fallback(fallback_app, sub, http_client)
-    return web if web.status == "ok" else result
+    if web.status == "ok":
+        # Announce the substitution so it is never silent (traceability).
+        reason = result.error or result.status
+        note = f"'{app.name}' could not handle this ({reason}); answered via web search instead"
+        return replace(web, note=note)
+    return result
 
 
 async def _run_app_op(

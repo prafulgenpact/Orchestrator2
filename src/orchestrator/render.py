@@ -130,6 +130,12 @@ def render_execution(
             lines.append("  Sources:")
             lines.extend(f"    - {src}" for src in synthesis.sources)
         lines.append("")
+    # Announce any fallback up front — the user must never have to dig for it (traceability).
+    fallbacks = [r.note for r in result.results if r.note]
+    if fallbacks:
+        lines.append("⚠ Heads up — some apps were substituted:")
+        lines.extend(f"  - {note}" for note in fallbacks)
+        lines.append("")
     lines.append(f"Plan — {len(plan.subtasks)} subtask(s) in {len(waves)} step(s):")
     for step, wave in enumerate(waves, start=1):
         lines.append(f"  Step {step}" + (" (parallel)" if len(wave) > 1 else "") + ":")
@@ -169,6 +175,8 @@ def render_execution(
             lines.append(f"       (not executed — {r.error})")
         else:
             lines.append(f"       could not complete: {r.error}")
+        if r.note:
+            lines.append(f"       ⚠ {r.note}")
         if verbose:
             lines.append(f"       [op={r.operation}  status={r.status}  {r.duration_s:.2f}s]")
     return "\n".join(lines)

@@ -1,8 +1,18 @@
 # Project State — A multi agent orchestrator system calling relevant apps basis intent recognition
 
-Last updated: 2026-07-10 (web-safety-net task)
+Last updated: 2026-07-13 (announce-fallbacks task)
 
 ## Done (most recent first)
+
+- 2026-07-13 announce-fallbacks (Phase 2, transparency — mini-task T1 of the 3 user asks). Every
+  web-fallback substitution is now announced explicitly, never silent. `SubtaskResult` gained an
+  optional `note`; when the safety net answers a subtask via the web because the chosen app couldn't
+  (skip/error/no_match), the executor sets a note naming the bypassed app + reason, and
+  `render_execution` prints a "⚠ Heads up — some apps were substituted" block right under the Answer
+  (plus the note on the step). VERIFIED LIVE ("what is a p-value?" now shows the Stats-Teacher
+  substitution up front). make verify PASS. NEXT: T2 auto-start apps; T3 make the chosen app answer
+  (Stats default module; web only when no app fits — user CONFIRMED this reading); T4 Blogs/Research
+  async.
 
 - 2026-07-10 web-safety-net (Phase 2, completes the web fallback; serves the "give it any task ->
   answer" goal). When the app the planner chose can't ground a subtask — it skips (missing input),

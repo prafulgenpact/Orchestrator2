@@ -114,6 +114,7 @@ def _result(
     output: object = None,
     error: str | None = None,
     source: str | None = "http://127.0.0.1:8006/api/chat",
+    note: str | None = None,
 ) -> SubtaskResult:
     return SubtaskResult(
         subtask_id=sub_id,
@@ -125,6 +126,7 @@ def _result(
         source=source,
         error=error,
         duration_s=1.23,
+        note=note,
     )
 
 
@@ -272,3 +274,27 @@ def test_execution_without_synthesis_has_no_answer() -> None:
     plan, result = _one_ok({"reply": "hi"})
     out = render_execution(plan, result)  # synthesis omitted (backward compatible)
     assert "Answer:" not in out
+
+
+def test_execution_announces_fallback() -> None:
+    sub = _sub("t1")
+    plan = _plan((sub,))
+    res = _result(
+        "t1",
+        "web-search",
+        "Web Search (fallback)",
+        "ok",
+        output={"answer": "x"},
+        note="'Statistics Teacher' could not handle this; answered via web search instead",
+    )
+    synth = Synthesis(answer="A p-value is ...", mode="synthesized", sources=("http://w",))
+    out = render_execution(plan, PlanResult(plan.task, plan.intent, (res,)), synth)
+    assert "Heads up" in out  # explicit disclosure banner
+    assert "Statistics Teacher" in out and "web search" in out
+    assert out.index("Heads up") < out.index("Plan —")  # announced up front, before the plan
+
+
+def test_execution_no_fallback_block_when_none() -> None:
+    plan, result = _one_ok({"reply": "hi"})  # no note on the result
+    out = render_execution(plan, result)
+    assert "Heads up" not in out
