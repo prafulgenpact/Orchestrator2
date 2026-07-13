@@ -1,1 +1,1 @@
-20260713-synthesis-no-truncate.md
+20260713-better-decomposition.md

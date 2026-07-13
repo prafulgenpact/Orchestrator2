@@ -1,8 +1,18 @@
 # Project State — A multi agent orchestrator system calling relevant apps basis intent recognition
 
-Last updated: 2026-07-13 (synthesis-no-truncate task)
+Last updated: 2026-07-13 (better-decomposition task)
 
 ## Done (most recent first)
+
+- 2026-07-13 better-decomposition (Phase 2, planner prompt v2 — fixes under-decomposition +
+  keyword-routing). Live, "explain LLM pre-training … teach me … show code … blog" collapsed to 2
+  subtasks (Teach Me + Blogs), missed Stanford LLM, made no code step. Rewrote planner_system.md to
+  v2: one subtask per distinct ask (explanation / code / written artifact are separate); route by
+  SUBJECT MATTER not keywords ("teach me" ≠ Teach Me app); allow multiple relevant apps; dropped the
+  "smallest/minimal" bias (typically 2–5). PROMPT_VERSION→"2"; re-recorded the dry-run e2e fixture.
+  VERIFIED (dry-run): the LLM task now → Stanford LLM + Teach Me (parallel) + Simulated Learning
+  (code) + Blogs (4 subtasks); CLT still correct. make verify PASS. NEXT: async-handle for
+  Blogs/Research long jobs (user chose start→return→collect-later; removes the >cap web fallback).
 
 - 2026-07-13 synthesis-no-truncate (Phase 2, fix a truncated multi-app answer found live). A 4-app
   CLT run (explain+repos+code+blog) truncated mid-code because synthesis re-fused everything into a
