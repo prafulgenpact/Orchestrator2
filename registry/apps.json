@@ -14,6 +14,11 @@
         "ask a question about the current lesson's theory"
       ],
       "fallback": false,
+      "when_not": [
+        "not for LLM or transformer theory questions (use stanford-llm)",
+        "not for statistics questions (use stats-teacher)",
+        "not for general non-code topics (use teach-me)"
+      ],
       "port": 8001,
       "health": "/api/health",
       "operations": [
@@ -57,6 +62,10 @@
         "explain a specific paper in simple terms"
       ],
       "fallback": false,
+      "when_not": [
+        "only for research papers (arXiv or a paper URL); not for teaching a concept from scratch (use teach-me or a subject tutor)",
+        "not for general web facts or AI news (use web-search or ai-intelligence-deck)"
+      ],
       "port": 8002,
       "health": "/api/health",
       "operations": [
@@ -153,6 +162,10 @@
         "preview the first rows of the Titanic dataset"
       ],
       "fallback": false,
+      "when_not": [
+        "does NOT run arbitrary Python over REST (the kernel is WebSocket-only) — to execute a code snippet use simulated-learning",
+        "only for kernel status/control and browsing or previewing built-in datasets"
+      ],
       "port": 8003,
       "health": "/health",
       "operations": [
@@ -239,6 +252,10 @@
         "what trends are emerging across AI news"
       ],
       "fallback": false,
+      "when_not": [
+        "not for social-media content such as Twitter/X or Medium (use social-media-ai)",
+        "for curated AI news and trends only, not arbitrary web facts (use web-search)"
+      ],
       "port": 8004,
       "health": "/health",
       "operations": [
@@ -293,6 +310,10 @@
         "aggregate social media content across platforms"
       ],
       "fallback": false,
+      "when_not": [
+        "not for curated AI news headlines or an executive news summary (use ai-intelligence-deck)",
+        "for Twitter/X and Medium aggregation only"
+      ],
       "port": 8005,
       "health": "/api/health",
       "operations": [
@@ -355,6 +376,9 @@
         "help me study transformers with CME 295 materials"
       ],
       "fallback": false,
+      "when_not": [
+        "only Transformers and LLMs (Stanford CME 295) — for statistics use stats-teacher, for other topics use teach-me"
+      ],
       "port": 8006,
       "health": "/api/health",
       "operations": [
@@ -383,6 +407,9 @@
         "help me understand p-values"
       ],
       "fallback": false,
+      "when_not": [
+        "only statistics — for LLM or transformer topics use stanford-llm, for other topics use teach-me"
+      ],
       "port": 8007,
       "health": "/api/health",
       "operations": [
@@ -417,6 +444,10 @@
         "continue my lesson on backpropagation"
       ],
       "fallback": false,
+      "when_not": [
+        "not for LLM/transformer questions (use stanford-llm) or statistics (use stats-teacher) — those specialists fit better",
+        "use Teach Me for general topics that have no dedicated specialist app"
+      ],
       "port": 8008,
       "health": "/models",
       "operations": [
@@ -482,6 +513,9 @@
         "search what I have learned from repositories"
       ],
       "fallback": false,
+      "when_not": [
+        "only for GitHub repositories — not for research papers (use arxiv-papers) or general web search"
+      ],
       "port": 8009,
       "health": "/api/repos/",
       "operations": [
@@ -548,6 +582,9 @@
         "revise my blog to be more concise"
       ],
       "fallback": false,
+      "when_not": [
+        "for drafting or refining personal blog posts in the user's voice — not for long-form cited research reports (use research-assistant)"
+      ],
       "port": 8010,
       "health": "/api/health",
       "operations": [
@@ -652,6 +689,9 @@
         "run a deep research pass on a topic with citations"
       ],
       "fallback": false,
+      "when_not": [
+        "for long-form cited research synthesis — not for short personal blog posts (use blogs-playground)"
+      ],
       "port": 8011,
       "health": "/api/health",
       "operations": [

@@ -4,6 +4,26 @@ Last updated: 2026-07-13 (better-decomposition task)
 
 ## Done (most recent first)
 
+- 2026-07-14 app-card-boundaries (Phase 2, richer app cards — serves AC-1). Every non-fallback
+  app card now carries a `when_not` boundary (where it is the WRONG choice + the better app);
+  loader parses it, `to_prompt_dict` exposes it, planner prompt → v3 with a rule to honour it
+  (`PROMPT_VERSION="3"`). This is the "detailed description" investment aimed at the collisions
+  (teach-me/stanford-llm/stats-teacher, news/social, blogs/research, code/coding-playground).
+  Re-recorded the eval + e2e dry-run fixtures for prompt v3. Scored on the decomposition eval:
+  **16/16, no regression** (v2 was already 16/16, so no measurable gain on THIS set — value is
+  robustness + insurance for harder queries/new apps; a harder A/B set is a follow-up).
+  make verify PASS. Bundled with the still-unsealed decomposition-eval deliverable (push together).
+
+- 2026-07-14 decomposition-eval (Phase 2, measurement — serves AC-1). Added an offline
+  decomposition test set so planner accuracy is a NUMBER, not an eyeball of one task.
+  `tests/eval/cases.json` (16 labelled cases across the known app collisions + shape),
+  `tests/eval/test_decomposition.py` (replays `plan_task` per case; asserts must-include /
+  must-not-include apps + subtask-count range; SKIPS on a missing fixture so verify stays green),
+  `tests/eval/record.sh` + README (record fixtures via the sanctioned dry-run CLI; hashes match
+  the test's request). Baseline on prompt v2: **16/16 pass** — every collision routes right and
+  the multi-ask case fans out correctly. make verify PASS (coverage counts only src, gate
+  unmoved). NEXT: use this as the referee for the app-card "when NOT to use" boundaries.
+
 - 2026-07-13 better-decomposition (Phase 2, planner prompt v2 — fixes under-decomposition +
   keyword-routing). Live, "explain LLM pre-training … teach me … show code … blog" collapsed to 2
   subtasks (Teach Me + Blogs), missed Stanford LLM, made no code step. Rewrote planner_system.md to

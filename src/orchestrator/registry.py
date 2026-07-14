@@ -127,6 +127,7 @@ class AppEntry:
     capabilities: tuple[str, ...]
     example_tasks: tuple[str, ...]
     fallback: bool
+    when_not: tuple[str, ...] = ()  # situations this app is the WRONG choice (names the better app)
     port: int | None = None
     health: str | None = None
     operations: tuple[AppOperation, ...] = ()
@@ -139,6 +140,7 @@ class AppEntry:
             "description": self.description,
             "capabilities": list(self.capabilities),
             "example_tasks": list(self.example_tasks),
+            "when_not": list(self.when_not),
             "fallback": self.fallback,
         }
 
@@ -287,6 +289,7 @@ def _parse_app(raw: Any) -> AppEntry:
     description = _require_str(raw["description"], f"app '{app_id}' description")
     capabilities = _str_list(raw.get("capabilities", []), f"app '{app_id}' capabilities")
     example_tasks = _str_list(raw.get("example_tasks", []), f"app '{app_id}' example_tasks")
+    when_not = _str_list(raw.get("when_not", []), f"app '{app_id}' when_not")
     fallback = bool(raw.get("fallback", False))
 
     port: int | None = None
@@ -326,6 +329,7 @@ def _parse_app(raw: Any) -> AppEntry:
         description=description,
         capabilities=capabilities,
         example_tasks=example_tasks,
+        when_not=when_not,
         fallback=fallback,
         port=port,
         health=health,

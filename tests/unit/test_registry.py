@@ -86,7 +86,33 @@ def test_to_prompt_dict_is_compact() -> None:
     entry = reg.get("teach-me")
     assert entry is not None
     d = entry.to_prompt_dict()
-    assert set(d) == {"id", "name", "description", "capabilities", "example_tasks", "fallback"}
+    assert set(d) == {
+        "id",
+        "name",
+        "description",
+        "capabilities",
+        "example_tasks",
+        "when_not",
+        "fallback",
+    }
+
+
+def test_when_not_boundaries_present_and_in_prompt_dict() -> None:
+    """Every non-fallback app carries a when_not boundary, and the planner sees it verbatim."""
+    reg = load_registry()
+    for app in reg.apps:
+        if app.fallback:
+            continue
+        assert app.when_not, f"{app.id} has no when_not boundary"
+        assert app.to_prompt_dict()["when_not"] == list(app.when_not), app.id
+
+
+def test_when_not_defaults_empty_and_validates(tmp_path: Path) -> None:
+    reg = load_registry(_write(tmp_path, _registry([VALID_APP, FALLBACK_APP])))
+    assert reg.get("teach-me").when_not == ()  # type: ignore[union-attr]
+    bad = {**VALID_APP, "when_not": [1, 2]}
+    with pytest.raises(RegistryError, match="when_not must be a list of strings"):
+        load_registry(_write(tmp_path, _registry([bad, FALLBACK_APP])))
 
 
 def test_exactly_one_fallback_in_real_registry() -> None:

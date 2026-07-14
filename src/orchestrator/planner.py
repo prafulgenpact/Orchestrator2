@@ -17,7 +17,7 @@ from orchestrator.models import Plan
 from orchestrator.registry import Registry
 from orchestrator.validation import PlanValidationError, parse_plan
 
-PROMPT_VERSION = "2"
+PROMPT_VERSION = "3"
 _PROMPT_PATH = Path(__file__).resolve().parent / "prompts" / "planner_system.md"
 _MAX_TOKENS = 8000
 

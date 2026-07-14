@@ -1,1 +1,1 @@
-20260713-better-decomposition.md
+20260714-app-card-boundaries.md
