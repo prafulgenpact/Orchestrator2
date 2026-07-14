@@ -11,6 +11,7 @@ runs — unit tests, e2e, CI — need neither the package nor a key.
 from __future__ import annotations
 
 import importlib
+import json
 import os
 from dataclasses import dataclass
 from pathlib import Path
@@ -92,6 +93,34 @@ def resolve_credentials() -> FoundryCredentials:
     return FoundryCredentials(api_key=api_key, base_url=base_url)
 
 
+def _extract_text(message: Any, *, expect_tool: bool) -> str:
+    """Turn a Foundry message into the response string the orchestrator consumes.
+
+    For a tool-use request (``expect_tool``), return the chosen tool call's input as canonical
+    JSON — it came from the SDK's *structured* tool input, so it is ALWAYS valid JSON even when
+    an argument embeds a large multi-line code block (the fragility that used to truncate the
+    hand-written JSON and drop the run to a web fallback). A ``max_tokens`` truncation is
+    surfaced as a clear LLMError so a cut-off response never masquerades as a complete one.
+
+    Kept a pure function (no network) so it is fully unit-tested; ``complete`` — the only
+    network line — stays excluded from coverage.
+    """
+    if expect_tool:
+        if getattr(message, "stop_reason", None) == "max_tokens":
+            raise LLMError(
+                "selection response was truncated (hit max_tokens) before completing — "
+                "the chosen argument was too large to return in full"
+            )
+        for block in message.content:
+            if getattr(block, "type", None) == "tool_use":
+                return json.dumps(block.input)
+        raise LLMError("expected a tool_use block in the Foundry response, found none")
+    texts = [block.text for block in message.content if getattr(block, "type", None) == "text"]
+    if not texts:
+        raise LLMError("Foundry response contained no text content")
+    return "".join(texts)
+
+
 class FoundryClient:
     """Calls Anthropic Foundry. Construction is cheap; the SDK loads on first call."""
 
@@ -108,13 +137,15 @@ class FoundryClient:
             base_url=self._creds.base_url,
             max_retries=2,
         )
-        message = client.messages.create(
-            model=request.model,
-            max_tokens=request.max_tokens,
-            system=request.system,
-            messages=[dict(entry) for entry in request.messages],
-        )
-        texts = [block.text for block in message.content if getattr(block, "type", None) == "text"]
-        if not texts:
-            raise LLMError("Foundry response contained no text content")
-        return "".join(texts)
+        kwargs: dict[str, Any] = {
+            "model": request.model,
+            "max_tokens": request.max_tokens,
+            "system": request.system,
+            "messages": [dict(entry) for entry in request.messages],
+        }
+        if request.tools:
+            kwargs["tools"] = [dict(tool) for tool in request.tools]
+            if request.tool_choice is not None:
+                kwargs["tool_choice"] = dict(request.tool_choice)
+        message = client.messages.create(**kwargs)
+        return _extract_text(message, expect_tool=bool(request.tools))

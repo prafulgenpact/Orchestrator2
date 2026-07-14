@@ -19,7 +19,7 @@ import httpx
 
 from orchestrator.app_caller import CallResult, call_operation
 from orchestrator.grounding import check_relevance
-from orchestrator.llm.base import LLMClient
+from orchestrator.llm.base import LLMClient, LLMError
 from orchestrator.models import Plan, PlanResult, Subtask, SubtaskResult
 from orchestrator.registry import AppEntry, AppOperation, Registry
 from orchestrator.render import compute_waves
@@ -116,7 +116,10 @@ async def _run_app_op(
     """Run one non-fallback app operation: select -> required-field skip -> call -> relevance."""
     try:
         op, args = select_operation(llm_client, app, sub, model=model, upstream=upstream)
-    except SelectionError as exc:
+    except (SelectionError, LLMError) as exc:
+        # SelectionError = model couldn't ground a valid operation; LLMError = the LLM layer
+        # failed (e.g. a truncated selection response). Either way, return a clean error so the
+        # run never crashes and the web safety net (in _run_subtask) can answer with disclosure.
         return SubtaskResult(sub.id, app.id, app.name, "error", None, None, None, str(exc), 0.0)
 
     # Skip a doomed call: if the op needs inputs the selector could not ground (e.g. a course

@@ -11,10 +11,11 @@ from pathlib import Path
 import pytest
 
 from orchestrator.llm import get_client
-from orchestrator.llm.base import LLMError
+from orchestrator.llm.base import LLMError, LLMRequest
 from orchestrator.llm.foundry import (
     DEFAULT_MODEL,
     FoundryClient,
+    _extract_text,
     _parse_env_file,
     resolve_credentials,
     resolve_model,
@@ -160,3 +161,86 @@ def test_get_client_record(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> N
 def test_get_client_unknown_mode() -> None:
     with pytest.raises(ValueError, match="unknown LLM mode"):
         get_client("banana")
+
+
+# --- LLMRequest tool fields: opt-in, hash-preserving -------------------------
+
+
+def test_to_dict_omits_tool_fields_when_unset() -> None:
+    # A tools-free request must serialize EXACTLY as before (same keys) so its request_hash
+    # is byte-identical — this is what guarantees the planner/grounding/synthesis fixtures
+    # do not need re-recording when the selector adopts tool-use.
+    req = LLMRequest(model="m", system="s", messages=({"role": "user", "content": "hi"},))
+    assert req.to_dict() == {
+        "model": "m",
+        "system": "s",
+        "messages": [{"role": "user", "content": "hi"}],
+        "max_tokens": req.max_tokens,
+    }
+
+
+def test_to_dict_includes_tool_fields_when_set() -> None:
+    tool = {"name": "pick", "input_schema": {"type": "object"}}
+    choice = {"type": "tool", "name": "pick"}
+    req = LLMRequest(
+        model="m",
+        system="s",
+        messages=({"role": "user", "content": "hi"},),
+        tools=(tool,),
+        tool_choice=choice,
+    )
+    data = req.to_dict()
+    assert data["tools"] == [tool]
+    assert data["tool_choice"] == choice
+
+
+# --- _extract_text: tool-use -> canonical JSON; truncation -> clear error -----
+
+
+class _Block:
+    # Mimics an Anthropic content block: attributes are .type / .text / .input (params renamed
+    # to avoid shadowing the `type`/`input` builtins — ruff A002).
+    def __init__(self, kind: str, text: str | None = None, value: object | None = None) -> None:
+        self.type = kind
+        self.text = text
+        self.input = value
+
+
+class _Msg:
+    def __init__(self, content: list[_Block], stop_reason: str = "end_turn") -> None:
+        self.content = content
+        self.stop_reason = stop_reason
+
+
+def test_extract_tool_use_returns_json() -> None:
+    payload = {"operation": "execute_code", "arguments": {"code": "print('hi')\nx = 1"}}
+    msg = _Msg([_Block("tool_use", value=payload)], stop_reason="tool_use")
+    raw = _extract_text(msg, expect_tool=True)
+    # The returned string is guaranteed-valid JSON (it came from the structured tool input,
+    # not free text) — even though the code argument contains a raw newline.
+    import json as _json
+
+    assert _json.loads(raw) == payload
+
+
+def test_extract_raises_on_truncation() -> None:
+    msg = _Msg([_Block("tool_use", value={"partial": True})], stop_reason="max_tokens")
+    with pytest.raises(LLMError, match="truncated"):
+        _extract_text(msg, expect_tool=True)
+
+
+def test_extract_raises_when_no_tool_use() -> None:
+    msg = _Msg([_Block("text", text="I refuse to use the tool")], stop_reason="end_turn")
+    with pytest.raises(LLMError, match="tool_use"):
+        _extract_text(msg, expect_tool=True)
+
+
+def test_extract_text_joins_text_blocks() -> None:
+    msg = _Msg([_Block("text", text="foo"), _Block("text", text="bar")])
+    assert _extract_text(msg, expect_tool=False) == "foobar"
+
+
+def test_extract_text_no_text_raises() -> None:
+    msg = _Msg([_Block("tool_use", value={})])
+    with pytest.raises(LLMError, match="no text content"):
+        _extract_text(msg, expect_tool=False)

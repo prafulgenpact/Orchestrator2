@@ -19,20 +19,34 @@ class LLMError(RuntimeError):
 
 @dataclass(frozen=True)
 class LLMRequest:
-    """One completion request. Message dicts carry 'role' and 'content' strings."""
+    """One completion request. Message dicts carry 'role' and 'content' strings.
+
+    ``tools`` + ``tool_choice`` are optional forced-structured-output controls (Anthropic
+    tool-use). When set, the client must return the chosen tool call's input as JSON — this
+    is what makes a code-heavy selection response always valid JSON. They are serialized by
+    ``to_dict`` ONLY when set, so a request without them hashes identically to before and no
+    recorded fixtures need re-recording.
+    """
 
     model: str
     system: str
     messages: tuple[dict[str, str], ...]
     max_tokens: int = 8000
+    tools: tuple[dict[str, Any], ...] = ()
+    tool_choice: dict[str, Any] | None = None
 
     def to_dict(self) -> dict[str, Any]:
-        return {
+        data: dict[str, Any] = {
             "model": self.model,
             "system": self.system,
             "messages": [dict(message) for message in self.messages],
             "max_tokens": self.max_tokens,
         }
+        if self.tools:
+            data["tools"] = [dict(tool) for tool in self.tools]
+        if self.tool_choice is not None:
+            data["tool_choice"] = dict(self.tool_choice)
+        return data
 
 
 class LLMClient(Protocol):

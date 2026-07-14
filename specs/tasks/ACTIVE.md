@@ -1,1 +1,1 @@
-20260714-app-card-boundaries.md
+20260714-selection-structured-output.md

@@ -12,6 +12,7 @@ from conftest import FakeLLM
 
 from orchestrator.app_caller import CallResult
 from orchestrator.executor import _dig, _run_async, execute_plan
+from orchestrator.llm.base import LLMError
 from orchestrator.models import AppSelection, Plan, PlanResult, Subtask
 from orchestrator.registry import AppEntry, AppOperation, AsyncSpec, load_registry
 from orchestrator.resilience import CircuitBreaker
@@ -168,6 +169,37 @@ def test_execute_unknown_app_is_error(fake_llm: MakeLLM) -> None:
     result = _run(_plan(_sub("ghost-app", "Ghost App")), fake_llm([]))
     assert result.results[0].status == "error"
     assert "unknown app" in (result.results[0].error or "")
+
+
+def test_selection_llm_error_becomes_clean_error(
+    monkeypatch: pytest.MonkeyPatch, fake_llm: MakeLLM
+) -> None:
+    # A truncation (or any LLM-layer failure) during operation selection must NOT crash the run:
+    # it surfaces as a clean subtask error (which then feeds the web safety net). Web is offline
+    # here (autouse), so the clean error surfaces directly.
+    def _raise(*_a: Any, **_kw: Any) -> Any:
+        raise LLMError("selection response was truncated (hit max_tokens)")
+
+    monkeypatch.setattr("orchestrator.executor.select_operation", _raise)
+    r = _run(_plan(_sub("arxiv-papers", "ArXiv Paper Guide")), fake_llm([])).results[0]
+    assert r.status == "error"
+    assert "truncated" in (r.error or "")
+
+
+def test_selection_llm_error_triggers_disclosed_web_fallback(
+    monkeypatch: pytest.MonkeyPatch, fake_llm: MakeLLM
+) -> None:
+    # Same failure, but with the web enabled: the safety net answers and discloses the bypass.
+    _web_ok(monkeypatch, "Web answer.")
+
+    def _raise(*_a: Any, **_kw: Any) -> Any:
+        raise LLMError("selection response was truncated (hit max_tokens)")
+
+    monkeypatch.setattr("orchestrator.executor.select_operation", _raise)
+    r = _run(_plan(_sub("arxiv-papers", "ArXiv Paper Guide")), fake_llm([])).results[0]
+    assert r.status == "ok"
+    assert r.app_name == "Web Search (fallback)"
+    assert r.note is not None and "ArXiv Paper Guide" in r.note
 
 
 def test_execute_call_failure_recorded(monkeypatch: pytest.MonkeyPatch, fake_llm: MakeLLM) -> None:

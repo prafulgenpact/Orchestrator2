@@ -49,6 +49,20 @@ def test_select_success(fake_llm: MakeLLM) -> None:
     assert args == {"query": "moe", "max_results": 5}
 
 
+def test_select_requests_structured_tool_output(fake_llm: MakeLLM) -> None:
+    # Regression for the code-heavy-argument truncation bug: the selection call must be made
+    # as FORCED tool-use (so the response is always valid JSON, even when an argument embeds a
+    # large multi-line code block) with a token budget big enough for that code.
+    client = fake_llm(['{"operation": "search_papers_by_query", "arguments": {"query": "moe"}}'])
+    select_operation(client, _arxiv(), _subtask(), model="m")
+    req = client.requests[0]
+    assert len(req.tools) == 1
+    assert req.tools[0]["name"] == "select_operation"
+    assert set(req.tools[0]["input_schema"]["properties"]) == {"operation", "arguments"}
+    assert req.tool_choice == {"type": "tool", "name": "select_operation"}
+    assert req.max_tokens >= 8000  # headroom for multi-section code args (was 2000 -> truncated)
+
+
 def test_select_strips_code_fences(fake_llm: MakeLLM) -> None:
     client = fake_llm(
         ['```json\n{"operation": "get_paper_by_id", "arguments": {"arxiv_id": "2401.00001"}}\n```']

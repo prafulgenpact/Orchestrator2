@@ -17,8 +17,38 @@ from orchestrator.models import Subtask, SubtaskResult
 from orchestrator.registry import AppEntry, AppOperation
 
 _PROMPT_PATH = Path(__file__).resolve().parent / "prompts" / "operation_select_system.md"
-_MAX_TOKENS = 2000  # headroom for arguments that embed code, so JSON isn't truncated mid-string
+# Big headroom for arguments that embed a whole multi-section code block: the old 2000 truncated
+# the JSON mid-`code` string (Unterminated string) and every retry truncated identically -> web
+# fallback. Combined with forced tool-use below, a realistic code arg now returns intact.
+_MAX_TOKENS = 8000
 _UPSTREAM_LIMIT = 2000  # chars per upstream result — enough to keep ids, bounded for tokens
+_SELECT_TOOL_NAME = "select_operation"
+
+
+def _selection_tool() -> dict[str, Any]:
+    """The single forced tool: the model MUST return ``{operation, arguments}`` as *structured*
+    input, so the response is always valid JSON — no code fences, no raw-newline breakage — even
+    when an argument carries a large multi-line code block. This is the structural fix for the
+    selection-JSON-truncation/parse failures; the free-text parse+retry path below stays as
+    defense-in-depth for non-tool-use clients."""
+    return {
+        "name": _SELECT_TOOL_NAME,
+        "description": "Return the chosen operation and its arguments for this subtask.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "operation": {
+                    "type": "string",
+                    "description": "the exact operation name, chosen from the provided list",
+                },
+                "arguments": {
+                    "type": "object",
+                    "description": "field -> value, using only that operation's request_fields",
+                },
+            },
+            "required": ["operation", "arguments"],
+        },
+    }
 
 
 class SelectionError(ValueError):
@@ -147,7 +177,14 @@ def select_operation(
     last_error: SelectionError | None = None
     for _attempt in range(max_retries + 1):
         raw = client.complete(
-            LLMRequest(model=model, system=system, messages=tuple(messages), max_tokens=_MAX_TOKENS)
+            LLMRequest(
+                model=model,
+                system=system,
+                messages=tuple(messages),
+                max_tokens=_MAX_TOKENS,
+                tools=(_selection_tool(),),
+                tool_choice={"type": "tool", "name": _SELECT_TOOL_NAME},
+            )
         )
         try:
             return _parse_selection(raw, app)

@@ -1,8 +1,25 @@
 # Project State — A multi agent orchestrator system calling relevant apps basis intent recognition
 
-Last updated: 2026-07-13 (better-decomposition task)
+Last updated: 2026-07-14 (selection-structured-output task)
 
 ## Done (most recent first)
+
+- 2026-07-14 selection-structured-output (Phase 2, robustness — fixes a live web-fallback; serves
+  AC-1). Live, a code-heavy step ("code blocks for all sections") routed to Simulated Learning but
+  the selector's LLM authored a big `code` value as hand-written JSON that overflowed
+  `max_tokens=2000` and truncated mid-string (`Unterminated string ... char 52`); all 3 retries
+  truncated identically → web fallback. Fix: the selection call is now FORCED tool-use (one
+  `select_operation` tool → `{operation, arguments}`), so the Foundry client returns
+  `json.dumps(tool_use.input)` — always-valid JSON, no fence/raw-newline breakage even for a large
+  multi-line code arg; `_MAX_TOKENS` 2000→8000 for headroom; a `max_tokens` truncation is detected
+  in a pure `_extract_text` helper and raised as a clear `LLMError`, which the executor catches at
+  the selection site (alongside `SelectionError`) → clean error → existing web safety net answers
+  WITH disclosure (no crash, no silent fallback). `LLMRequest` gained optional `tools`/`tool_choice`
+  serialized by `to_dict` ONLY when set, so planner/grounding/synthesis request hashes are
+  byte-identical → NO fixtures re-recorded; decomposition eval untouched (still 16/16). 316 unit
+  tests (9 new). make verify PASS. VERIFIED LIVE: the five-stage training-script task now executes
+  on Simulated Learning (`op=execute_code status=ok 0.07s`, real stdout, source :8001/api/execute) —
+  no web fallback. NEXT: Fix #2 — concurrent waves for slow async apps (blog/research 600s timeout).
 
 - 2026-07-14 app-card-boundaries (Phase 2, richer app cards — serves AC-1). Every non-fallback
   app card now carries a `when_not` boundary (where it is the WRONG choice + the better app);
