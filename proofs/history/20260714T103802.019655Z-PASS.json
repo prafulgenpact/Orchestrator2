@@ -1,6 +1,6 @@
 {
   "schema": "proof/v1",
-  "created_utc": "2026-07-14T10:59:17+00:00",
+  "created_utc": "2026-07-14T10:37:59+00:00",
   "result": "PASS",
   "failed_checks": [],
   "missing_required_checks": [],
@@ -14,7 +14,7 @@
   ],
   "fingerprint": "e81f276cc7ffb5045c55ac29f7631d196d541e5dde490684a7fb79013c132c38",
   "git": {
-    "commit": "c9b1cf4b5825a356f1e4b79d6c6f9933eb63b9a6",
+    "commit": "b140016ec1572644dfad022716b2d1210d6d6e10",
     "branch": "Orchestrator2",
     "dirty_tracked_files": true
   },
@@ -40,7 +40,7 @@
     {
       "name": "py-unit",
       "status": "pass",
-      "duration_s": 5,
+      "duration_s": 3,
       "evidence": "reports/py-unit.log"
     },
     {
@@ -52,25 +52,25 @@
     {
       "name": "secrets",
       "status": "pass",
-      "duration_s": 1,
+      "duration_s": 0,
       "evidence": "reports/secrets.log"
     },
     {
       "name": "secrets-gitleaks",
       "status": "pass",
-      "duration_s": 1,
+      "duration_s": 0,
       "evidence": "reports/secrets-gitleaks.log"
     },
     {
       "name": "dep-audit",
       "status": "pass",
-      "duration_s": 23,
+      "duration_s": 18,
       "evidence": "reports/dep-audit.log"
     },
     {
       "name": "diff-cover",
       "status": "pass",
-      "duration_s": 0,
+      "duration_s": 1,
       "evidence": "reports/diff-cover.log"
     }
   ],
@@ -80,14 +80,14 @@
       "failures": 0,
       "errors": 0,
       "skipped": 0,
-      "time_s": 3.46
+      "time_s": 2.36
     },
     "e2e": {
       "tests": 2,
       "failures": 0,
       "errors": 0,
       "skipped": 0,
-      "time_s": 0.77
+      "time_s": 0.47
     },
     "web_e2e": null,
     "coverage_pct": 100.0
@@ -99,5 +99,5 @@
     "pytest": "pytest 8.3.2",
     "os": "Darwin 25.5.0"
   },
-  "content_hash": "f27618250167b663a54c8b0234c6d3b2e628b0bca8e628ac1c22f7840c8ce070"
+  "content_hash": "173e9f5085a51cb49f3e5a19fdd95e02f8525e4cba36c968be1053d18793686b"
 }

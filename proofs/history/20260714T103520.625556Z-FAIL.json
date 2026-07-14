@@ -1,8 +1,10 @@
 {
   "schema": "proof/v1",
-  "created_utc": "2026-07-14T10:59:17+00:00",
-  "result": "PASS",
-  "failed_checks": [],
+  "created_utc": "2026-07-14T10:35:17+00:00",
+  "result": "FAIL",
+  "failed_checks": [
+    "py-lint"
+  ],
   "missing_required_checks": [],
   "required_checks": [
     "py-lint",
@@ -12,16 +14,16 @@
     "e2e",
     "secrets"
   ],
-  "fingerprint": "e81f276cc7ffb5045c55ac29f7631d196d541e5dde490684a7fb79013c132c38",
+  "fingerprint": "fdd1c9095afe36ed0d9fce17bc4898642a7e022bce1ee14b5eba562a3c816b2c",
   "git": {
-    "commit": "c9b1cf4b5825a356f1e4b79d6c6f9933eb63b9a6",
+    "commit": "b140016ec1572644dfad022716b2d1210d6d6e10",
     "branch": "Orchestrator2",
     "dirty_tracked_files": true
   },
   "checks": [
     {
       "name": "py-lint",
-      "status": "pass",
+      "status": "fail",
       "duration_s": 0,
       "evidence": "reports/py-lint.log"
     },
@@ -34,19 +36,19 @@
     {
       "name": "py-types",
       "status": "pass",
-      "duration_s": 2,
+      "duration_s": 3,
       "evidence": "reports/py-types.log"
     },
     {
       "name": "py-unit",
       "status": "pass",
-      "duration_s": 5,
+      "duration_s": 4,
       "evidence": "reports/py-unit.log"
     },
     {
       "name": "e2e",
       "status": "pass",
-      "duration_s": 2,
+      "duration_s": 1,
       "evidence": "reports/e2e.log"
     },
     {
@@ -64,13 +66,13 @@
     {
       "name": "dep-audit",
       "status": "pass",
-      "duration_s": 23,
+      "duration_s": 27,
       "evidence": "reports/dep-audit.log"
     },
     {
       "name": "diff-cover",
       "status": "pass",
-      "duration_s": 0,
+      "duration_s": 1,
       "evidence": "reports/diff-cover.log"
     }
   ],
@@ -80,14 +82,14 @@
       "failures": 0,
       "errors": 0,
       "skipped": 0,
-      "time_s": 3.46
+      "time_s": 2.73
     },
     "e2e": {
       "tests": 2,
       "failures": 0,
       "errors": 0,
       "skipped": 0,
-      "time_s": 0.77
+      "time_s": 0.66
     },
     "web_e2e": null,
     "coverage_pct": 100.0
@@ -99,5 +101,5 @@
     "pytest": "pytest 8.3.2",
     "os": "Darwin 25.5.0"
   },
-  "content_hash": "f27618250167b663a54c8b0234c6d3b2e628b0bca8e628ac1c22f7840c8ce070"
+  "content_hash": "eeb34e9db6c8bb7c2eca10b99b14bc51669b6bd184ef20e560dff652d00db598"
 }
