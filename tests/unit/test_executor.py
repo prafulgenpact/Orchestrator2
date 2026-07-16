@@ -144,6 +144,59 @@ def test_wave_concurrency_is_bounded(monkeypatch: pytest.MonkeyPatch) -> None:
     assert probe.peak == 2
 
 
+def test_execute_emits_progress(monkeypatch: pytest.MonkeyPatch, fake_llm: MakeLLM) -> None:
+    # execute_plan reports a start line and a finish line (with status) per subtask via the
+    # progress callback, so the user is never left staring at silence.
+    monkeypatch.setattr("orchestrator.executor.call_operation", _stub_call())
+    events: list[str] = []
+    client = fake_llm([_SELECT, _RELEVANT])
+
+    async def go() -> PlanResult:
+        async with _dummy_client() as http:
+            return await execute_plan(
+                _plan(_sub("arxiv-papers", "ArXiv Paper Guide")),
+                REG,
+                llm_client=client,
+                http_client=http,
+                model="m",
+                progress=events.append,
+            )
+
+    asyncio.run(go())
+    assert any(e.startswith("-> Find papers") for e in events)  # start line
+    assert any(e.startswith("[ok] Find papers") for e in events)  # finish line, ok status
+
+
+def test_async_poll_emits_heartbeat(monkeypatch: pytest.MonkeyPatch) -> None:
+    # A genuinely slow start-then-poll job that keeps responding emits a heartbeat, so slow never
+    # reads as hung.
+    running = [_cr({"status": "running"}) for _ in range(7)]
+    monkeypatch.setattr(
+        "orchestrator.executor.call_operation",
+        _fake_calls(
+            _cr({"run_id": "r1"}), *running, _cr({"status": "done", "result": {"content": "x"}})
+        ),
+    )
+    events: list[str] = []
+    app, op = _blogs_gen()
+
+    async def go() -> CallResult:
+        async with _dummy_client() as http:
+            return await _run_async(
+                app,
+                op,
+                {"topic": "x"},
+                http_client=http,
+                breaker=CircuitBreaker(),
+                sleep=_no_sleep,
+                progress=events.append,
+            )
+
+    res = asyncio.run(go())
+    assert res.ok is True
+    assert any("still working" in e for e in events)
+
+
 def test_execute_success(monkeypatch: pytest.MonkeyPatch, fake_llm: MakeLLM) -> None:
     monkeypatch.setattr("orchestrator.executor.call_operation", _stub_call())
     client = fake_llm([_SELECT, _RELEVANT])  # selector, then relevance guard

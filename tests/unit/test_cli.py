@@ -180,6 +180,27 @@ def test_execute_success(
     assert "no apps were invoked" not in out  # NOT the dry-run banner
 
 
+def test_execute_progress_goes_to_stderr(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # Progress lines go to stderr so stdout stays clean (the answer / --json). The user still sees
+    # live activity, but piping stdout is unaffected.
+    async def _call(app: Any, op: Any, _args: Any, **_kw: Any) -> CallResult:
+        return CallResult(app.id, op.name, "http://x", True, 200, {"papers": ["s"]}, None, 0.5)
+
+    monkeypatch.setattr("orchestrator.executor.call_operation", _call)
+    client = FakeLLM(
+        [_arxiv_plan_response(), _SELECTOR_RESPONSE, _RELEVANT_RESPONSE, _SYNTHESIS_RESPONSE]
+    )
+    rc = main(["find moe papers", "--execute"], client=client)
+    captured = capsys.readouterr()
+    assert rc == 0
+    assert "Starting apps" in captured.err  # progress on stderr
+    assert "Find MoE papers" in captured.err  # per-subtask progress line (the subtask title)
+    assert "Answer:" in captured.out  # the result still lands on stdout
+    assert "Starting apps" not in captured.out  # progress does NOT pollute stdout
+
+
 def test_execute_fallback_skipped(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:

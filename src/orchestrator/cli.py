@@ -117,12 +117,24 @@ def _readiness_note(readiness: dict[str, bool]) -> str:
     return note
 
 
+def _stderr_progress(message: str) -> None:
+    """Live progress to stderr — keeps stdout clean for the answer / --json, and reassures the user
+    the run is alive (never looks stuck) even while a step is genuinely slow."""
+    print(message, file=sys.stderr, flush=True)
+
+
 async def _execute(plan: Plan, registry: Registry, client: LLMClient, model: str) -> PlanResult:
     async with httpx.AsyncClient() as http_client:
         # Start + health-confirm every app at the outset, so a dead app is never invoked mid-run.
+        _stderr_progress("Starting apps...")
         note = _readiness_note(await start_all(registry.apps, http_client))
         if note:
             print(note)
         return await execute_plan(
-            plan, registry, llm_client=client, http_client=http_client, model=model
+            plan,
+            registry,
+            llm_client=client,
+            http_client=http_client,
+            model=model,
+            progress=_stderr_progress,
         )

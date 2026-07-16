@@ -1,8 +1,18 @@
 # Project State — A multi agent orchestrator system calling relevant apps basis intent recognition
 
-Last updated: 2026-07-16 (cache-endpoint-per-run task)
+Last updated: 2026-07-16 (live-progress task)
 
 ## Done (most recent first)
+
+- 2026-07-16 live-progress (Phase 2 — UX: never looks stuck; reinforces AC-2 slow != hung). The
+  user saw nothing between the readiness note and the final result. Added an injectable `progress`
+  callback (default silent) threaded through execute_plan/_run_subtask/_run_app_op/_run_async: a
+  live per-subtask start line ("-> title") and finish line ("[status] title (Xs)"), plus a
+  heartbeat every 3rd successful poll during a long async job ("... still working: app (N polls,
+  responding)"). The CLI prints these to STDERR (a "Starting apps..." line before the preflight),
+  so stdout stays clean for the answer / --json. No change to results, ordering, or exit codes.
+  Proven test-first (executor progress events, poll heartbeat, CLI stdout/stderr split). make
+  verify PASS; decomposition eval still 16/16.
 
 - 2026-07-16 cache-endpoint-per-run (Phase 2 — UX/efficiency; keeps AC-2 safety). Every
   `call_operation` re-issued `GET /api/apps` (launcher resolve) + `GET {health}` before the real

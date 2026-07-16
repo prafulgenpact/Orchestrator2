@@ -37,6 +37,18 @@ from orchestrator.web_search import DEFAULT_TIMEOUT_S, resolve_search_key, searc
 _ASYNC_MAX_WAIT_S = float(os.environ.get("ORCHESTRATOR_ASYNC_MAX_WAIT_S", "3600"))
 _ASYNC_POLL_INTERVAL_S = 4.0
 _ASYNC_MAX_SILENT_POLLS = 5  # consecutive failed polls tolerated before declaring "no progress"
+_ASYNC_HEARTBEAT_EVERY = (
+    3  # emit a "still working" heartbeat every Nth successful non-terminal poll
+)
+
+# Progress is reported through an injectable callback (default: silent), so the CLI can show live
+# activity while the executor stays free of any print/stderr coupling and tests stay deterministic.
+ProgressFn = Callable[[str], None]
+
+
+def _null_progress(_message: str) -> None:
+    return None
+
 
 # Independent subtasks in a wave run concurrently; this bounds how many at once so a wide wave
 # never floods the Foundry API / sibling apps. Env-tunable; blank/non-numeric/<1 uses the default.
@@ -63,6 +75,7 @@ async def execute_plan(
     http_client: httpx.AsyncClient,
     model: str,
     breaker: CircuitBreaker | None = None,
+    progress: ProgressFn = _null_progress,
 ) -> PlanResult:
     """Run every subtask in dependency order and collect a PlanResult.
 
@@ -83,9 +96,12 @@ async def execute_plan(
         # dependencies live in an earlier, already-completed wave, so by_id is fully populated).
         async with sem:
             upstream = _upstream_for(sub, by_id)
-            return await _run_subtask(
-                sub, registry, llm_client, http_client, model, cb, upstream, endpoints
+            progress(f"-> {sub.title}")
+            result = await _run_subtask(
+                sub, registry, llm_client, http_client, model, cb, upstream, endpoints, progress
             )
+            progress(f"[{result.status}] {sub.title} ({result.duration_s:.1f}s)")
+            return result
 
     # Waves stay sequential (they encode dependencies), but the independent subtasks WITHIN a wave
     # run concurrently — the parallelism the renderer already advertises as "(parallel)". Results
@@ -112,6 +128,7 @@ async def _run_subtask(
     breaker: CircuitBreaker,
     upstream: tuple[SubtaskResult, ...] = (),
     endpoints: AppEndpoints | None = None,
+    progress: ProgressFn = _null_progress,
 ) -> SubtaskResult:
     app = registry.get(sub.app.app_id)
     if app is None:  # validated upstream; defensive
@@ -129,7 +146,7 @@ async def _run_subtask(
     if app.fallback:
         return await _run_web_fallback(app, sub, http_client)
     result = await _run_app_op(
-        app, sub, llm_client, http_client, model, breaker, upstream, endpoints
+        app, sub, llm_client, http_client, model, breaker, upstream, endpoints, progress
     )
     if result.status == "ok":
         return result
@@ -155,6 +172,7 @@ async def _run_app_op(
     breaker: CircuitBreaker,
     upstream: tuple[SubtaskResult, ...],
     endpoints: AppEndpoints | None = None,
+    progress: ProgressFn = _null_progress,
 ) -> SubtaskResult:
     """Run one non-fallback app operation: select -> required-field skip -> call -> relevance."""
     try:
@@ -182,7 +200,13 @@ async def _run_app_op(
 
     if op.poll is not None:
         result = await _run_async(
-            app, op, args, http_client=http_client, breaker=breaker, endpoints=endpoints
+            app,
+            op,
+            args,
+            http_client=http_client,
+            breaker=breaker,
+            endpoints=endpoints,
+            progress=progress,
         )
     else:
         result = await call_operation(
@@ -248,6 +272,7 @@ async def _run_async(
     breaker: CircuitBreaker,
     sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
     endpoints: AppEndpoints | None = None,
+    progress: ProgressFn = _null_progress,
 ) -> CallResult:
     """Drive a start-then-poll async op to completion; return the final content as a CallResult.
 
@@ -273,6 +298,7 @@ async def _run_async(
     if poll_op is None:
         return replace(start, ok=False, data=None, error=f"poll op {spec.poll_op!r} not found")
     silent = 0
+    responded = 0  # successful non-terminal polls, for pacing the heartbeat
     for _ in range(max(1, int(_ASYNC_MAX_WAIT_S / _ASYNC_POLL_INTERVAL_S))):
         poll = await call_operation(
             app,
@@ -305,6 +331,10 @@ async def _run_async(
             return replace(poll, data=_dig(poll.data, spec.result_path))
         if status in spec.failed_values:
             return replace(poll, ok=False, data=None, error=f"async run ended: {status}")
+        responded += 1
+        # A slow job that keeps answering is working, not hung — reassure the user periodically.
+        if responded % _ASYNC_HEARTBEAT_EVERY == 0:
+            progress(f"... still working: {app.name} ({responded} polls, responding)")
         await sleep(_ASYNC_POLL_INTERVAL_S)
     return replace(
         start,
