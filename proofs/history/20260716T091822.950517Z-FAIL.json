@@ -1,8 +1,10 @@
 {
   "schema": "proof/v1",
-  "created_utc": "2026-07-16T09:19:15+00:00",
-  "result": "PASS",
-  "failed_checks": [],
+  "created_utc": "2026-07-16T09:18:21+00:00",
+  "result": "FAIL",
+  "failed_checks": [
+    "py-lint"
+  ],
   "missing_required_checks": [],
   "required_checks": [
     "py-lint",
@@ -12,7 +14,7 @@
     "e2e",
     "secrets"
   ],
-  "fingerprint": "90e5a09b76d3f8543e62976f1851cbab2d1cdf6a3d513f443367f0560c49a80f",
+  "fingerprint": "7a73aa4d88bb776d01f321579c9816c747ee281215baa38970d4f708c1f7200b",
   "git": {
     "commit": "5c8ce71c68ebc5af9944294b122c3bb2330a7e25",
     "branch": "Orchestrator2",
@@ -21,8 +23,8 @@
   "checks": [
     {
       "name": "py-lint",
-      "status": "pass",
-      "duration_s": 0,
+      "status": "fail",
+      "duration_s": 1,
       "evidence": "reports/py-lint.log"
     },
     {
@@ -34,19 +36,19 @@
     {
       "name": "py-types",
       "status": "pass",
-      "duration_s": 3,
+      "duration_s": 5,
       "evidence": "reports/py-types.log"
     },
     {
       "name": "py-unit",
       "status": "pass",
-      "duration_s": 6,
+      "duration_s": 7,
       "evidence": "reports/py-unit.log"
     },
     {
       "name": "e2e",
       "status": "pass",
-      "duration_s": 2,
+      "duration_s": 3,
       "evidence": "reports/e2e.log"
     },
     {
@@ -70,7 +72,7 @@
     {
       "name": "diff-cover",
       "status": "pass",
-      "duration_s": 0,
+      "duration_s": 1,
       "evidence": "reports/diff-cover.log"
     }
   ],
@@ -80,14 +82,14 @@
       "failures": 0,
       "errors": 0,
       "skipped": 0,
-      "time_s": 3.95
+      "time_s": 4.2
     },
     "e2e": {
       "tests": 2,
       "failures": 0,
       "errors": 0,
       "skipped": 0,
-      "time_s": 0.84
+      "time_s": 1.41
     },
     "web_e2e": null,
     "coverage_pct": 99.77
@@ -99,5 +101,5 @@
     "pytest": "pytest 8.3.2",
     "os": "Darwin 25.5.0"
   },
-  "content_hash": "d7f6e4955b29e6ac7e4d6a5a99d575d6dbe9a977ae8f3e0f10e4368ce59b1be6"
+  "content_hash": "e75f4786a4bc85dcd1dc7f03c2d61a66049e4724d676a1fbaddf548da2b3dc68"
 }

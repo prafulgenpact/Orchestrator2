@@ -1,8 +1,21 @@
 # Project State — A multi agent orchestrator system calling relevant apps basis intent recognition
 
-Last updated: 2026-07-16 (llm-call-deadline task)
+Last updated: 2026-07-16 (concurrent-waves task)
 
 ## Done (most recent first)
+
+- 2026-07-16 concurrent-waves (Phase 2 — UX: responses faster; serves AC-2 too). The executor
+  advertised "(parallel)" waves but ran every subtask serially, and the synchronous Foundry call
+  froze the event loop so nothing could overlap anyway. Fix (executor.py): each dependency wave now
+  runs its independent subtasks via `asyncio.gather`, bounded by a per-run `asyncio.Semaphore`
+  (`ORCHESTRATOR_MAX_CONCURRENCY`, default 5); the two blocking LLM calls (`select_operation`,
+  `check_relevance`) are offloaded off the loop with `asyncio.to_thread` so the coroutines genuinely
+  overlap. Waves stay sequential, so upstream→downstream data-flow is unchanged. A wave of N
+  independent subtasks now finishes in ~1× the per-subtask time, not N×. Proven test-first: 2 new
+  tests measure peak concurrency (1→3 unbounded; held at 2 under a cap of 2). make verify PASS;
+  decomposition eval still 16/16 (execution-layer change, planner untouched). First of a sequenced
+  performance/UX set (next: progress-based AI-call handling, per-run health cache, live progress,
+  streamed answer).
 
 - 2026-07-16 llm-call-deadline (Phase 2 — AC-2: nothing may hang). Found live: a
   `--execute` run blocked ~86 min at 0% CPU on a wedged Foundry call. The hard no-hang deadline

@@ -38,6 +38,22 @@ _ASYNC_MAX_WAIT_S = float(os.environ.get("ORCHESTRATOR_ASYNC_MAX_WAIT_S", "3600"
 _ASYNC_POLL_INTERVAL_S = 4.0
 _ASYNC_MAX_SILENT_POLLS = 5  # consecutive failed polls tolerated before declaring "no progress"
 
+# Independent subtasks in a wave run concurrently; this bounds how many at once so a wide wave
+# never floods the Foundry API / sibling apps. Env-tunable; blank/non-numeric/<1 uses the default.
+_DEFAULT_MAX_CONCURRENCY = 5
+
+
+def _resolve_max_concurrency() -> int:
+    """Max subtasks to run at once (env ``ORCHESTRATOR_MAX_CONCURRENCY``, default 5)."""
+    raw = os.environ.get("ORCHESTRATOR_MAX_CONCURRENCY")
+    if raw is None:
+        return _DEFAULT_MAX_CONCURRENCY
+    try:
+        value = int(raw)
+    except ValueError:
+        return _DEFAULT_MAX_CONCURRENCY
+    return value if value >= 1 else _DEFAULT_MAX_CONCURRENCY
+
 
 async def execute_plan(
     plan: Plan,
@@ -57,10 +73,21 @@ async def execute_plan(
     cb = breaker or CircuitBreaker()
     results: list[SubtaskResult] = []
     by_id: dict[str, SubtaskResult] = {}
-    for wave in compute_waves(plan.subtasks):
-        for sub in wave:
+    sem = asyncio.Semaphore(_resolve_max_concurrency())
+
+    async def _guarded(sub: Subtask) -> SubtaskResult:
+        # The semaphore bounds concurrency; upstream is read here (all of this subtask's
+        # dependencies live in an earlier, already-completed wave, so by_id is fully populated).
+        async with sem:
             upstream = _upstream_for(sub, by_id)
-            result = await _run_subtask(sub, registry, llm_client, http_client, model, cb, upstream)
+            return await _run_subtask(sub, registry, llm_client, http_client, model, cb, upstream)
+
+    # Waves stay sequential (they encode dependencies), but the independent subtasks WITHIN a wave
+    # run concurrently — the parallelism the renderer already advertises as "(parallel)". Results
+    # are indexed after the wave completes so a later wave can read its dependencies' outputs.
+    for wave in compute_waves(plan.subtasks):
+        wave_results = await asyncio.gather(*(_guarded(sub) for sub in wave))
+        for sub, result in zip(wave, wave_results, strict=True):
             results.append(result)
             by_id[sub.id] = result
     return PlanResult(task=plan.task, intent=plan.intent, results=tuple(results))
@@ -122,7 +149,11 @@ async def _run_app_op(
 ) -> SubtaskResult:
     """Run one non-fallback app operation: select -> required-field skip -> call -> relevance."""
     try:
-        op, args = select_operation(llm_client, app, sub, model=model, upstream=upstream)
+        # Offload the blocking (synchronous) LLM call off the event loop, so subtasks running
+        # concurrently in the same wave genuinely overlap instead of serializing on this call.
+        op, args = await asyncio.to_thread(
+            select_operation, llm_client, app, sub, model=model, upstream=upstream
+        )
     except (SelectionError, LLMError) as exc:
         # SelectionError = model couldn't ground a valid operation; LLMError = the LLM layer
         # failed (e.g. a truncated selection response). Either way, return a clean error so the
@@ -159,7 +190,10 @@ async def _run_app_op(
         )
 
     # Grounding guard: the app returned data, but is it actually relevant to the task?
-    relevant, reason = check_relevance(llm_client, sub, result.data, model=model)
+    # Offloaded off the event loop for the same reason as the selection call above.
+    relevant, reason = await asyncio.to_thread(
+        check_relevance, llm_client, sub, result.data, model=model
+    )
     if not relevant:
         return SubtaskResult(
             sub.id,

@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import asyncio
+import threading
+import time
 from collections.abc import Callable, Sequence
 from typing import Any
 
@@ -76,6 +78,70 @@ def _run(plan: Plan, client: FakeLLM) -> PlanResult:
 _SELECT = '{"operation": "search_papers_by_query", "arguments": {"query": "moe"}}'
 _RELEVANT = '{"verdict": "PASS", "reason": "on topic"}'
 _IRRELEVANT = '{"verdict": "FAIL", "reason": "off-topic keyword match"}'
+
+
+class _ConcurrencyProbe:
+    """Thread-safe fake LLM that records the peak number of concurrent in-flight calls.
+
+    Selection requests (forced tool-use -> ``request.tools`` set) hold for a short window so
+    genuinely-overlapping subtasks are observable, then return a fixed valid selection; relevance
+    requests return PASS immediately. It has no shared response queue, so it is safe to call from
+    several ``asyncio.to_thread`` worker threads at once (unlike the sequential ``FakeLLM``)."""
+
+    def __init__(self, hold_s: float = 0.05) -> None:
+        self._hold = hold_s
+        self._lock = threading.Lock()
+        self.current = 0
+        self.peak = 0
+
+    def complete(self, request: Any) -> str:
+        if not request.tools:  # relevance guard — not part of the concurrency measurement
+            return _RELEVANT
+        with self._lock:
+            self.current += 1
+            self.peak = max(self.peak, self.current)
+        time.sleep(self._hold)  # overlap window: serial callers can never raise peak above 1
+        with self._lock:
+            self.current -= 1
+        return _SELECT
+
+
+def _independent_plan(n: int) -> Plan:
+    """A plan of n subtasks with no dependencies — compute_waves puts them all in one wave."""
+    subs = tuple(
+        Subtask(
+            f"t{i}",
+            f"step {i}",
+            f"work {i}",
+            (),
+            AppSelection("arxiv-papers", "ArXiv Paper Guide", "because", 0.9, False),
+        )
+        for i in range(n)
+    )
+    return _plan(*subs)
+
+
+def test_wave_runs_subtasks_concurrently(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Independent subtasks in a wave must run in parallel (the plan already labels them
+    # "(parallel)"). With the default cap (5) and a wave of 3, all three selections should be
+    # in flight at once. Serial execution would cap peak at 1.
+    monkeypatch.delenv("ORCHESTRATOR_MAX_CONCURRENCY", raising=False)
+    monkeypatch.setattr("orchestrator.executor.call_operation", _stub_call())
+    probe = _ConcurrencyProbe()
+    result = _run(_independent_plan(3), probe)  # type: ignore[arg-type]
+    assert [r.status for r in result.results] == ["ok", "ok", "ok"]
+    assert probe.peak == 3
+
+
+def test_wave_concurrency_is_bounded(monkeypatch: pytest.MonkeyPatch) -> None:
+    # ORCHESTRATOR_MAX_CONCURRENCY caps how many subtasks run at once: with a cap of 2 and a wave
+    # of 4, peak in-flight must reach 2 (concurrency works) but never exceed it (the cap holds).
+    monkeypatch.setenv("ORCHESTRATOR_MAX_CONCURRENCY", "2")
+    monkeypatch.setattr("orchestrator.executor.call_operation", _stub_call())
+    probe = _ConcurrencyProbe()
+    result = _run(_independent_plan(4), probe)  # type: ignore[arg-type]
+    assert [r.status for r in result.results] == ["ok", "ok", "ok", "ok"]
+    assert probe.peak == 2
 
 
 def test_execute_success(monkeypatch: pytest.MonkeyPatch, fake_llm: MakeLLM) -> None:
