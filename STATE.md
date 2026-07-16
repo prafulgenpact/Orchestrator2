@@ -1,8 +1,20 @@
 # Project State — A multi agent orchestrator system calling relevant apps basis intent recognition
 
-Last updated: 2026-07-16 (progress-based-llm task)
+Last updated: 2026-07-16 (cache-endpoint-per-run task)
 
 ## Done (most recent first)
+
+- 2026-07-16 cache-endpoint-per-run (Phase 2 — UX/efficiency; keeps AC-2 safety). Every
+  `call_operation` re-issued `GET /api/apps` (launcher resolve) + `GET {health}` before the real
+  request; on the async poll path `_run_async` calls `call_operation` for the start AND every poll,
+  so a long job paid ~2 wasted round-trips per poll (~1800 on an hour-long run). New `AppEndpoints`
+  cache (app_caller.py) resolves the base URL + confirms health ONCE per app per run (auto-starting
+  a down app on first miss, as before) and reuses both; `call_operation` gained
+  `endpoints=None` (default = old per-call behaviour) and `execute_plan` threads one instance
+  through `_run_subtask`/`_run_app_op`/`_run_async`. Safety intact: app confirmed alive once, later
+  death still surfaces on the real call (circuit breaker / clean error). Proven test-first: shared
+  cache dedupes resolve+health across calls; a real N-poll run pings launcher+health once each; the
+  no-cache path is unchanged. make verify PASS; decomposition eval still 16/16.
 
 - 2026-07-16 progress-based-llm (Phase 2 — AC-2: nothing may hang, without capping genuine work).
   Directly resolves the FOLLOW-UP the llm-call-deadline task left below. `FoundryClient.complete`

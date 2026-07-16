@@ -8,7 +8,7 @@ from collections.abc import Callable
 import httpx
 import pytest
 
-from orchestrator.app_caller import CallResult, call_operation
+from orchestrator.app_caller import AppEndpoints, CallResult, call_operation
 from orchestrator.registry import AppEntry, AppOperation, RetrySpec, load_registry
 from orchestrator.resilience import CircuitBreaker
 
@@ -524,3 +524,58 @@ def test_call_errors_when_autostart_fails() -> None:
     res = asyncio.run(go())
     assert res.ok is False
     assert "health check failed" in (res.error or "")
+
+
+# --- AppEndpoints: cache the launcher-resolve + health per run (cache-endpoint-per-run task) ----
+
+
+def _counting_arxiv_handler(counts: dict[str, int]) -> Handler:
+    def handler(req: httpx.Request) -> httpx.Response:
+        p = req.url.path
+        if p == "/api/apps":
+            counts["apps"] = counts.get("apps", 0) + 1
+            return _apps_ok()
+        if p == "/api/health":
+            counts["health"] = counts.get("health", 0) + 1
+            return httpx.Response(200, json={"ok": True})
+        if p == "/api/papers/search":
+            counts["op"] = counts.get("op", 0) + 1
+            return httpx.Response(200, json={"papers": []})
+        return httpx.Response(404)
+
+    return handler
+
+
+def test_shared_endpoints_dedupes_resolve_and_health() -> None:
+    # A shared AppEndpoints resolves the launcher and checks health ONCE across repeated calls,
+    # while every operation call still fires — the poll-loop amplification fix.
+    app, op = _arxiv()
+    counts: dict[str, int] = {}
+
+    async def go() -> None:
+        eps = AppEndpoints()
+        async with _client(_counting_arxiv_handler(counts)) as c:
+            for _ in range(3):
+                await call_operation(app, op, {"query": "x"}, client=c, endpoints=eps)
+
+    asyncio.run(go())
+    assert counts["op"] == 3  # every operation call still goes through
+    assert counts["apps"] == 1  # launcher resolved once, then cached
+    assert counts["health"] == 1  # health checked once, then cached
+
+
+def test_no_shared_endpoints_resolves_each_call() -> None:
+    # Backward compatible: with no shared cache (endpoints=None), each call resolves + health-checks
+    # exactly as before.
+    app, op = _arxiv()
+    counts: dict[str, int] = {}
+
+    async def go() -> None:
+        async with _client(_counting_arxiv_handler(counts)) as c:
+            for _ in range(3):
+                await call_operation(app, op, {"query": "x"}, client=c)
+
+    asyncio.run(go())
+    assert counts["op"] == 3
+    assert counts["apps"] == 3  # resolved every call (unchanged behaviour)
+    assert counts["health"] == 3

@@ -95,6 +95,42 @@ async def _is_healthy(base_url: str, app: AppEntry, client: httpx.AsyncClient) -
     return resp.status_code < 500
 
 
+class AppEndpoints:
+    """Per-run cache of resolved base URLs + confirmed health, keyed by app id.
+
+    Without it, every ``call_operation`` re-issues ``GET /api/apps`` (launcher resolve) and
+    ``GET {health}`` before the real request — cheap once, but on the async poll path
+    (``_run_async`` calls ``call_operation`` for the start AND every poll) it becomes ~2 wasted
+    round-trips per poll. Sharing one instance across a run resolves + health-confirms each app
+    ONCE (auto-starting a down app on first miss, exactly as before) and reuses both. The safety is
+    unchanged: an app is still confirmed alive once, and any later death still surfaces on the real
+    request (circuit breaker / clean error). Not thread-safe by design — it lives on the asyncio
+    loop, where coroutines interleave only at await points; a duplicate probe under a race is just
+    a redundant GET, never a correctness issue.
+    """
+
+    def __init__(self) -> None:
+        self._base: dict[str, str] = {}
+        self._healthy: set[str] = set()
+
+    async def base_url(self, app: AppEntry, client: httpx.AsyncClient, launcher_url: str) -> str:
+        if app.id not in self._base:
+            self._base[app.id] = await _resolve_base_url(app, client, launcher_url)
+        return self._base[app.id]
+
+    async def ensure_healthy(self, base_url: str, app: AppEntry, client: httpx.AsyncClient) -> bool:
+        """True if the app is healthy (cached after the first success). On a first-time miss, try
+        to auto-start it and re-check — the user never starts apps by hand."""
+        if app.id in self._healthy:
+            return True
+        if not await _is_healthy(base_url, app, client):
+            await ensure_started(app, client)
+            if not await _is_healthy(base_url, app, client):
+                return False
+        self._healthy.add(app.id)
+        return True
+
+
 def _build_request(
     base_url: str, op: AppOperation, args: dict[str, Any]
 ) -> tuple[str, dict[str, Any], dict[str, Any]]:
@@ -119,9 +155,15 @@ async def call_operation(
     client: httpx.AsyncClient,
     breaker: CircuitBreaker | None = None,
     launcher_url: str = DEFAULT_LAUNCHER_URL,
+    endpoints: AppEndpoints | None = None,
 ) -> CallResult:
-    """Invoke one operation on ``app`` and return a CallResult. Never raises."""
+    """Invoke one operation on ``app`` and return a CallResult. Never raises.
+
+    Pass a shared ``endpoints`` to reuse the resolved base URL + health across calls in one run
+    (see ``AppEndpoints``); the default creates a throwaway one, i.e. resolve + health every call.
+    """
     cb = breaker or CircuitBreaker()
+    eps = endpoints or AppEndpoints()
     key = app.id
     start = time.monotonic()
     if cb.is_open(key):
@@ -137,12 +179,11 @@ async def call_operation(
         )
     url = ""
     try:
-        base_url = await _resolve_base_url(app, client, launcher_url)
-        if not await _is_healthy(base_url, app, client):
-            # Auto-start the app if we know how, then re-check — the user never starts apps by hand.
-            await ensure_started(app, client)
-            if not await _is_healthy(base_url, app, client):
-                raise ConnectionError(f"health check failed for {app.id} at {base_url}{app.health}")
+        base_url = await eps.base_url(app, client, launcher_url)
+        # Resolve + health-confirm once per app per run (auto-starting a down app on first miss);
+        # a shared ``endpoints`` means repeated calls (esp. the poll loop) skip the duplicate pings.
+        if not await eps.ensure_healthy(base_url, app, client):
+            raise ConnectionError(f"health check failed for {app.id} at {base_url}{app.health}")
         url, params, body = _build_request(base_url, op, args)
 
         async def attempt() -> httpx.Response:

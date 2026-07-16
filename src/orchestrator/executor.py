@@ -18,7 +18,7 @@ from typing import Any
 
 import httpx
 
-from orchestrator.app_caller import CallResult, call_operation
+from orchestrator.app_caller import AppEndpoints, CallResult, call_operation
 from orchestrator.grounding import check_relevance
 from orchestrator.llm.base import LLMClient, LLMError
 from orchestrator.models import Plan, PlanResult, Subtask, SubtaskResult
@@ -74,13 +74,18 @@ async def execute_plan(
     results: list[SubtaskResult] = []
     by_id: dict[str, SubtaskResult] = {}
     sem = asyncio.Semaphore(_resolve_max_concurrency())
+    # One endpoint cache for the whole run: each app is launcher-resolved + health-confirmed once,
+    # so repeated calls (especially the async poll loop) skip the duplicate resolve/health pings.
+    endpoints = AppEndpoints()
 
     async def _guarded(sub: Subtask) -> SubtaskResult:
         # The semaphore bounds concurrency; upstream is read here (all of this subtask's
         # dependencies live in an earlier, already-completed wave, so by_id is fully populated).
         async with sem:
             upstream = _upstream_for(sub, by_id)
-            return await _run_subtask(sub, registry, llm_client, http_client, model, cb, upstream)
+            return await _run_subtask(
+                sub, registry, llm_client, http_client, model, cb, upstream, endpoints
+            )
 
     # Waves stay sequential (they encode dependencies), but the independent subtasks WITHIN a wave
     # run concurrently — the parallelism the renderer already advertises as "(parallel)". Results
@@ -106,6 +111,7 @@ async def _run_subtask(
     model: str,
     breaker: CircuitBreaker,
     upstream: tuple[SubtaskResult, ...] = (),
+    endpoints: AppEndpoints | None = None,
 ) -> SubtaskResult:
     app = registry.get(sub.app.app_id)
     if app is None:  # validated upstream; defensive
@@ -122,7 +128,9 @@ async def _run_subtask(
         )
     if app.fallback:
         return await _run_web_fallback(app, sub, http_client)
-    result = await _run_app_op(app, sub, llm_client, http_client, model, breaker, upstream)
+    result = await _run_app_op(
+        app, sub, llm_client, http_client, model, breaker, upstream, endpoints
+    )
     if result.status == "ok":
         return result
     # Safety net: the chosen app could not ground this subtask (skip/error/no_match). Rather than
@@ -146,6 +154,7 @@ async def _run_app_op(
     model: str,
     breaker: CircuitBreaker,
     upstream: tuple[SubtaskResult, ...],
+    endpoints: AppEndpoints | None = None,
 ) -> SubtaskResult:
     """Run one non-fallback app operation: select -> required-field skip -> call -> relevance."""
     try:
@@ -172,9 +181,13 @@ async def _run_app_op(
         return SubtaskResult(sub.id, app.id, app.name, "skipped", op.name, None, None, reason, 0.0)
 
     if op.poll is not None:
-        result = await _run_async(app, op, args, http_client=http_client, breaker=breaker)
+        result = await _run_async(
+            app, op, args, http_client=http_client, breaker=breaker, endpoints=endpoints
+        )
     else:
-        result = await call_operation(app, op, args, client=http_client, breaker=breaker)
+        result = await call_operation(
+            app, op, args, client=http_client, breaker=breaker, endpoints=endpoints
+        )
     source = result.url or None
     if not result.ok:
         return SubtaskResult(
@@ -234,6 +247,7 @@ async def _run_async(
     http_client: httpx.AsyncClient,
     breaker: CircuitBreaker,
     sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
+    endpoints: AppEndpoints | None = None,
 ) -> CallResult:
     """Drive a start-then-poll async op to completion; return the final content as a CallResult.
 
@@ -245,7 +259,9 @@ async def _run_async(
     """
     spec = op.poll
     assert spec is not None  # only called when op.poll is set
-    start = await call_operation(app, op, args, client=http_client, breaker=breaker)
+    start = await call_operation(
+        app, op, args, client=http_client, breaker=breaker, endpoints=endpoints
+    )
     if not start.ok:
         return start
     run_id = _dig(start.data, spec.run_id_field)
@@ -259,7 +275,12 @@ async def _run_async(
     silent = 0
     for _ in range(max(1, int(_ASYNC_MAX_WAIT_S / _ASYNC_POLL_INTERVAL_S))):
         poll = await call_operation(
-            app, poll_op, {spec.run_id_arg: run_id}, client=http_client, breaker=breaker
+            app,
+            poll_op,
+            {spec.run_id_arg: run_id},
+            client=http_client,
+            breaker=breaker,
+            endpoints=endpoints,
         )
         if not poll.ok:
             # A failed poll is a silence signal, not proof the job died — tolerate a few in a row

@@ -12,7 +12,7 @@ import httpx
 import pytest
 from conftest import FakeLLM
 
-from orchestrator.app_caller import CallResult
+from orchestrator.app_caller import AppEndpoints, CallResult
 from orchestrator.executor import _ASYNC_MAX_SILENT_POLLS, _dig, _run_async, execute_plan
 from orchestrator.llm.base import LLMError
 from orchestrator.models import AppSelection, Plan, PlanResult, Subtask
@@ -576,6 +576,63 @@ def test_async_times_out(monkeypatch: pytest.MonkeyPatch) -> None:
     res = _do_async(*_blogs_gen())
     assert res.ok is False
     assert "did not finish" in (res.error or "")
+
+
+def test_async_poll_reuses_resolved_endpoint() -> None:
+    # Real call_operation over the poll loop (NOT stubbed): with a shared AppEndpoints, the
+    # launcher resolve (/api/apps) and health check happen ONCE, not per poll (amplification fix).
+    counts = {"apps": 0, "health": 0}
+    polls = {"n": 0}
+    spec = AsyncSpec("get_run", "run_id", "run_id", "status", ("done",), (), "result")
+    start_op = AppOperation("start", "d", "POST", "/api/start", 30, False, "none", poll=spec)
+    poll_op = AppOperation("get_run", "d", "GET", "/api/runs/{run_id}", 30, False, "none")
+    app = AppEntry(
+        "cust",
+        "Cust",
+        "d",
+        (),
+        (),
+        False,
+        port=8099,
+        health="/health",
+        operations=(start_op, poll_op),
+    )
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        p = req.url.path
+        if p == "/api/apps":
+            counts["apps"] += 1
+            return httpx.Response(200, json={"apps": [{"id": "cust", "backend_port": 8099}]})
+        if p == "/health":
+            counts["health"] += 1
+            return httpx.Response(200, json={"ok": True})
+        if p == "/api/start":
+            return httpx.Response(200, json={"run_id": "r1"})
+        if p.startswith("/api/runs/"):
+            polls["n"] += 1
+            if polls["n"] >= 4:
+                return httpx.Response(200, json={"status": "done", "result": {"content": "done!"}})
+            return httpx.Response(200, json={"status": "running"})
+        return httpx.Response(404)
+
+    async def go() -> CallResult:
+        async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as c:
+            return await _run_async(
+                app,
+                start_op,
+                {"topic": "x"},
+                http_client=c,
+                breaker=CircuitBreaker(),
+                sleep=_no_sleep,
+                endpoints=AppEndpoints(),
+            )
+
+    res = asyncio.run(go())
+    assert res.ok is True
+    assert res.data == {"content": "done!"}  # spec.result_path="result" -> the whole result object
+    assert polls["n"] >= 4  # several polls happened
+    assert counts["apps"] == 1  # launcher resolved once, not per poll
+    assert counts["health"] == 1  # health checked once, not per poll
 
 
 def test_execute_routes_async_op(monkeypatch: pytest.MonkeyPatch, fake_llm: MakeLLM) -> None:
