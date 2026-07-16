@@ -15,8 +15,13 @@ Last updated: 2026-07-16 (stream-answer task)
   answer itself without duplication; the CLI prints "Answer:", streams the answer, then Sources,
   then the plan/results below. Proven test-first (foundry deltas, synthesis stream + fallback +
   pass-through emit, render omit-answer, CLI single-emit-no-duplication). make verify PASS;
-  decomposition eval still 16/16. Completes the sequenced performance/UX set (1 optional item —
-  in-run LLM memoization — remains, to be assessed).
+  decomposition eval still 16/16. Completes the sequenced performance/UX set. The optional 6th item
+  (in-run LLM memoization) was assessed and DROPPED: within one run there are no duplicate LLM
+  requests (planner retries carry different error feedback; selector/relevance/synthesis each run
+  once per distinct subtask), so an in-run cache would never hit; a cross-run disk cache was
+  declined on accuracy grounds ("no guesswork"). Net of the 5 shipped changes: real parallel waves
+  (~slowest-app not sum), progress-based LLM calls (no blind stopwatch; ~9-min hang gone), no
+  duplicate poll-time health pings, live progress + heartbeats, and a streamed answer.
 
 - 2026-07-16 live-progress (Phase 2 — UX: never looks stuck; reinforces AC-2 slow != hung). The
   user saw nothing between the readiness note and the final result. Added an injectable `progress`
