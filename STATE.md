@@ -1,8 +1,22 @@
 # Project State — A multi agent orchestrator system calling relevant apps basis intent recognition
 
-Last updated: 2026-07-16 (concurrent-waves task)
+Last updated: 2026-07-16 (progress-based-llm task)
 
 ## Done (most recent first)
+
+- 2026-07-16 progress-based-llm (Phase 2 — AC-2: nothing may hang, without capping genuine work).
+  Directly resolves the FOLLOW-UP the llm-call-deadline task left below. `FoundryClient.complete`
+  now streams (`messages.stream`) instead of one blocking `messages.create`, which changes what the
+  existing `timeout` MEANS: many small reads → it is now a per-token *inactivity* limit, not a total
+  stopwatch. A call that keeps emitting tokens runs as long as it needs (slow ≠ hung); only true
+  silence for `resolve_llm_timeout()` seconds fails. Total length is still bounded by `max_tokens`,
+  so a runaway can't hang either. Also dropped the SDK self-retry (`max_retries` 2→0) so a stall
+  can't compound to ~9 min; failures still surface cleanly (selection→web, relevance→fail-open,
+  planner/synthesis→exit 4). Record/replay + request hashing unchanged (streaming is internal to
+  complete). Proven test-first with an injected fake `anthropic` SDK (3 tests: text stream, tool-use
+  JSON from the assembled message, max_retries=0 + timeout wiring); the network path is now covered
+  (pragma removed). This is also the streaming plumbing the "stream the answer to the user" task
+  (Change 5) will reuse. make verify PASS; decomposition eval still 16/16.
 
 - 2026-07-16 concurrent-waves (Phase 2 — UX: responses faster; serves AC-2 too). The executor
   advertised "(parallel)" waves but ran every subtask serially, and the synchronous Foundry call

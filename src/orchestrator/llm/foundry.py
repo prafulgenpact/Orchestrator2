@@ -149,16 +149,22 @@ class FoundryClient:
     def __init__(self, credentials: FoundryCredentials) -> None:
         self._creds = credentials
 
-    def complete(self, request: LLMRequest) -> str:  # pragma: no cover - network path
+    def complete(self, request: LLMRequest) -> str:
         try:
             anthropic: Any = importlib.import_module("anthropic")
-        except ImportError as exc:
+        except ImportError as exc:  # pragma: no cover - only when the package is absent
             raise LLMError("the 'anthropic' package is required for live LLM calls") from exc
         client = anthropic.AnthropicFoundry(
             api_key=self._creds.api_key,
             base_url=self._creds.base_url,
-            max_retries=2,
-            timeout=resolve_llm_timeout(),  # hard per-request bound so a stall never hangs the run
+            # No silent self-retry: a stalled request must not compound (2 retries times the
+            # timeout below read as a multi-minute hang). A clean failure is handled by the callers
+            # (selection -> web safety net, relevance -> fail-open, planner/synthesis -> exit 4).
+            max_retries=0,
+            # Under streaming (below) this is a per-token *inactivity* bound, NOT a total stopwatch:
+            # tokens keep arriving → the clock keeps resetting → a genuinely slow call runs as long
+            # as it needs (slow ≠ hung); only true silence for this long fails.
+            timeout=resolve_llm_timeout(),
         )
         kwargs: dict[str, Any] = {
             "model": request.model,
@@ -170,5 +176,12 @@ class FoundryClient:
             kwargs["tools"] = [dict(tool) for tool in request.tools]
             if request.tool_choice is not None:
                 kwargs["tool_choice"] = dict(request.tool_choice)
-        message = client.messages.create(**kwargs)
+        # Stream the response: each token is a separate read, so the client timeout becomes an
+        # inactivity limit (progress-based, the "slow is not hung" rule the app-poll loop uses).
+        # Total length stays bounded by max_tokens, so a runaway generation can't hang either.
+        # Drive the event stream to completion, then read the assembled message for extraction.
+        with client.messages.stream(**kwargs) as stream:
+            for _ in stream:
+                pass
+            message = stream.get_final_message()
         return _extract_text(message, expect_tool=bool(request.tools))

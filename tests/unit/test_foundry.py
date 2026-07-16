@@ -6,7 +6,11 @@ sibling .env is never read, and clears the Foundry env vars for a clean baseline
 
 from __future__ import annotations
 
+import json
+import sys
+import types
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -263,3 +267,87 @@ def test_extract_text_no_text_raises() -> None:
     msg = _Msg([_Block("tool_use", value={})])
     with pytest.raises(LLMError, match="no text content"):
         _extract_text(msg, expect_tool=False)
+
+
+# --- complete(): streaming (progress-based, no total stopwatch) + no self-retry ----------------
+
+
+class _FakeStream:
+    """Mimics the SDK streaming context manager: an iterable of events (each event is a read that
+    resets the inactivity clock), then ``get_final_message()`` returns the assembled Message."""
+
+    def __init__(self, message: _Msg, events: int = 3) -> None:
+        self._message = message
+        self._events = ["delta"] * events
+
+    def __enter__(self) -> _FakeStream:
+        return self
+
+    def __exit__(self, *_a: object) -> bool:
+        return False
+
+    def __iter__(self) -> Any:
+        return iter(self._events)
+
+    def get_final_message(self) -> _Msg:
+        return self._message
+
+
+class _FakeMessages:
+    def __init__(self, message: _Msg, captured: dict[str, Any]) -> None:
+        self._message = message
+        self._captured = captured
+
+    def stream(self, **kwargs: Any) -> _FakeStream:
+        self._captured["stream_kwargs"] = kwargs
+        return _FakeStream(self._message)
+
+
+def _install_fake_anthropic(monkeypatch: pytest.MonkeyPatch, message: _Msg) -> dict[str, Any]:
+    """Inject a fake ``anthropic`` module so complete()'s network path runs with no real SDK/key.
+
+    Returns a dict capturing the AnthropicFoundry construction kwargs and the stream() kwargs."""
+    captured: dict[str, Any] = {}
+
+    class _FakeFoundry:
+        def __init__(self, **kwargs: Any) -> None:
+            captured["init_kwargs"] = kwargs
+            self.messages = _FakeMessages(message, captured)
+
+    module = types.ModuleType("anthropic")
+    module.AnthropicFoundry = _FakeFoundry  # type: ignore[attr-defined]
+    monkeypatch.setitem(sys.modules, "anthropic", module)
+    return captured
+
+
+def _req(**extra: Any) -> LLMRequest:
+    return LLMRequest(model="m", system="s", messages=({"role": "user", "content": "hi"},), **extra)
+
+
+def test_complete_streams_text_response(monkeypatch: pytest.MonkeyPatch) -> None:
+    _set_creds(monkeypatch)
+    msg = _Msg([_Block("text", text="hello "), _Block("text", text="world")])
+    _install_fake_anthropic(monkeypatch, msg)
+    out = FoundryClient(resolve_credentials()).complete(_req())
+    assert out == "hello world"  # assembled from the final streamed message
+
+
+def test_complete_streams_tool_use_json(monkeypatch: pytest.MonkeyPatch) -> None:
+    _set_creds(monkeypatch)
+    payload = {"operation": "execute_code", "arguments": {"code": "print(1)\nx = 2"}}
+    msg = _Msg([_Block("tool_use", value=payload)], stop_reason="tool_use")
+    captured = _install_fake_anthropic(monkeypatch, msg)
+    tool = {"name": "pick", "input_schema": {"type": "object"}}
+    req = _req(tools=(tool,), tool_choice={"type": "tool", "name": "pick"})
+    assert json.loads(FoundryClient(resolve_credentials()).complete(req)) == payload
+    assert captured["stream_kwargs"]["tools"] == [tool]  # tools forwarded to the stream call
+
+
+def test_complete_disables_self_retry_and_sets_timeout(monkeypatch: pytest.MonkeyPatch) -> None:
+    _set_creds(monkeypatch)
+    monkeypatch.setenv("ORCHESTRATOR_LLM_TIMEOUT_S", "42")  # now an inactivity (silence) bound
+    captured = _install_fake_anthropic(monkeypatch, _Msg([_Block("text", text="ok")]))
+    FoundryClient(resolve_credentials()).complete(_req())
+    assert captured["init_kwargs"]["max_retries"] == 0  # no silent self-retry compounding a stall
+    assert captured["init_kwargs"]["timeout"] == 42.0
+    assert "tools" not in captured["stream_kwargs"]  # omitted when the request has none
