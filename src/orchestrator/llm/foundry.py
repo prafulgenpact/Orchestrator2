@@ -13,6 +13,7 @@ from __future__ import annotations
 import importlib
 import json
 import os
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -143,6 +144,11 @@ def _extract_text(message: Any, *, expect_tool: bool) -> str:
     return "".join(texts)
 
 
+def _discard_delta(_text: str) -> None:
+    """The default streaming sink for ``complete`` — the deltas are not surfaced to anyone."""
+    return None
+
+
 class FoundryClient:
     """Calls Anthropic Foundry. Construction is cheap; the SDK loads on first call."""
 
@@ -150,6 +156,16 @@ class FoundryClient:
         self._creds = credentials
 
     def complete(self, request: LLMRequest) -> str:
+        # complete == complete_stream with the deltas thrown away: one code path, same streaming
+        # semantics (inactivity timeout, no self-retry) for the non-streaming callers.
+        return self.complete_stream(request, _discard_delta)
+
+    def complete_stream(self, request: LLMRequest, on_delta: Callable[[str], None]) -> str:
+        """Stream the response: each text delta is passed to ``on_delta`` as it arrives; the full
+        assembled text is returned. Callers that want the answer live (synthesis) pass a real sink;
+        ``complete`` passes a no-op. Tool-use requests emit no text deltas — the structured tool
+        JSON is read from the assembled final message.
+        """
         try:
             anthropic: Any = importlib.import_module("anthropic")
         except ImportError as exc:  # pragma: no cover - only when the package is absent
@@ -161,9 +177,10 @@ class FoundryClient:
             # timeout below read as a multi-minute hang). A clean failure is handled by the callers
             # (selection -> web safety net, relevance -> fail-open, planner/synthesis -> exit 4).
             max_retries=0,
-            # Under streaming (below) this is a per-token *inactivity* bound, NOT a total stopwatch:
-            # tokens keep arriving → the clock keeps resetting → a genuinely slow call runs as long
-            # as it needs (slow ≠ hung); only true silence for this long fails.
+            # Under streaming this is a per-token *inactivity* bound, NOT a total stopwatch: tokens
+            # keep arriving → the clock keeps resetting → a genuinely slow call runs as long as it
+            # needs (slow ≠ hung); only true silence for this long fails. Total length is capped by
+            # max_tokens, so a runaway generation can't hang either.
             timeout=resolve_llm_timeout(),
         )
         kwargs: dict[str, Any] = {
@@ -176,12 +193,8 @@ class FoundryClient:
             kwargs["tools"] = [dict(tool) for tool in request.tools]
             if request.tool_choice is not None:
                 kwargs["tool_choice"] = dict(request.tool_choice)
-        # Stream the response: each token is a separate read, so the client timeout becomes an
-        # inactivity limit (progress-based, the "slow is not hung" rule the app-poll loop uses).
-        # Total length stays bounded by max_tokens, so a runaway generation can't hang either.
-        # Drive the event stream to completion, then read the assembled message for extraction.
         with client.messages.stream(**kwargs) as stream:
-            for _ in stream:
-                pass
+            for text in stream.text_stream:
+                on_delta(text)
             message = stream.get_final_message()
         return _extract_text(message, expect_tool=bool(request.tools))

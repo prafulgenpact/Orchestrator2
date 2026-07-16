@@ -180,6 +180,27 @@ def test_execute_success(
     assert "no apps were invoked" not in out  # NOT the dry-run banner
 
 
+def test_execute_streams_answer_to_stdout(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # The answer is streamed to stdout (via synthesize's on_delta) and NOT repeated by the render
+    # block below it — so it appears exactly once.
+    async def _call(app: Any, op: Any, _args: Any, **_kw: Any) -> CallResult:
+        return CallResult(app.id, op.name, "http://x", True, 200, {"papers": ["s"]}, None, 0.5)
+
+    monkeypatch.setattr("orchestrator.executor.call_operation", _call)
+    client = FakeLLM(
+        [_arxiv_plan_response(), _SELECTOR_RESPONSE, _RELEVANT_RESPONSE, _SYNTHESIS_RESPONSE]
+    )
+    rc = main(["find moe papers", "--execute"], client=client)
+    out = capsys.readouterr().out
+    assert rc == 0
+    assert _SYNTHESIS_RESPONSE in out  # the streamed answer is present
+    assert out.count(_SYNTHESIS_RESPONSE) == 1  # once only — not duplicated by the render block
+    assert "Answer:" in out
+    assert "Plan —" in out  # the supporting detail still renders below the answer
+
+
 def test_execute_progress_goes_to_stderr(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:

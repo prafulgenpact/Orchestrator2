@@ -94,11 +94,23 @@ def main(argv: list[str] | None = None, *, client: LLMClient | None = None) -> i
         try:
             result = asyncio.run(_execute(plan, registry, client, model))
             deps = {s.id: s.depends_on for s in plan.subtasks}
-            synthesis = synthesize(client, result, model=model, subtask_deps=deps)
+            # Stream the answer to stdout as it is written (like a chat reply) — it appears almost
+            # immediately instead of after the whole run. The supporting detail follows below, and
+            # render_execution is told not to repeat the answer (include_answer=False).
+            print("Answer:")
+            synthesis = synthesize(
+                client, result, model=model, subtask_deps=deps, on_delta=_stream_stdout
+            )
+            print()  # terminate the streamed answer line
         except LLMError as exc:
             print(f"error: {exc}", file=sys.stderr)
             return 4
-        print(render_execution(plan, result, synthesis, verbose=args.verbose))
+        if synthesis.sources:
+            print("Sources:")
+            for src in synthesis.sources:
+                print(f"  - {src}")
+        print()
+        print(render_execution(plan, result, synthesis, verbose=args.verbose, include_answer=False))
         return 0
 
     print(render_json(plan) if args.json else render_human(plan))
@@ -115,6 +127,11 @@ def _readiness_note(readiness: dict[str, bool]) -> str:
     if down:
         note += f" — unavailable: {', '.join(down)} (these will fall back to web)"
     return note
+
+
+def _stream_stdout(text: str) -> None:
+    """Write a streamed answer delta to stdout with no newline, flushed so it appears live."""
+    print(text, end="", flush=True)
 
 
 def _stderr_progress(message: str) -> None:

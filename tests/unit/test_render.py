@@ -137,6 +137,21 @@ def _one_ok(output: object) -> tuple[Plan, PlanResult]:
     return plan, PlanResult(plan.task, plan.intent, (res,))
 
 
+def test_render_execution_can_omit_answer() -> None:
+    # include_answer=False (used when the CLI streams the answer itself) drops the Answer/Sources
+    # block but keeps everything else, so the answer is never printed twice.
+    plan, result = _one_ok({"reply": "hello"})
+    syn = Synthesis(answer="The streamed answer.", mode="synthesized", sources=("http://s",))
+    with_answer = render_execution(plan, result, syn)
+    without = render_execution(plan, result, syn, include_answer=False)
+    assert "Answer:" in with_answer and "The streamed answer." in with_answer
+    assert "Answer:" not in without
+    assert "The streamed answer." not in without
+    assert "http://s" not in without  # sources are part of the answer block
+    assert "Plan — 1 subtask(s)" in without  # the rest is still rendered
+    assert "Results:" in without
+
+
 def test_execution_clean_shows_plan_and_result() -> None:
     plan, result = _one_ok({"reply": "hello"})
     out = render_execution(plan, result)

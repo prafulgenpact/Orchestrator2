@@ -273,12 +273,12 @@ def test_extract_text_no_text_raises() -> None:
 
 
 class _FakeStream:
-    """Mimics the SDK streaming context manager: an iterable of events (each event is a read that
-    resets the inactivity clock), then ``get_final_message()`` returns the assembled Message."""
+    """Mimics the SDK streaming context manager: ``text_stream`` yields the text deltas (each a
+    read that resets the inactivity clock); ``get_final_message()`` returns the final Message."""
 
-    def __init__(self, message: _Msg, events: int = 3) -> None:
+    def __init__(self, message: _Msg, text_pieces: tuple[str, ...]) -> None:
         self._message = message
-        self._events = ["delta"] * events
+        self.text_stream = list(text_pieces)
 
     def __enter__(self) -> _FakeStream:
         return self
@@ -286,24 +286,26 @@ class _FakeStream:
     def __exit__(self, *_a: object) -> bool:
         return False
 
-    def __iter__(self) -> Any:
-        return iter(self._events)
-
     def get_final_message(self) -> _Msg:
         return self._message
 
 
 class _FakeMessages:
-    def __init__(self, message: _Msg, captured: dict[str, Any]) -> None:
+    def __init__(
+        self, message: _Msg, captured: dict[str, Any], text_pieces: tuple[str, ...]
+    ) -> None:
         self._message = message
         self._captured = captured
+        self._text = text_pieces
 
     def stream(self, **kwargs: Any) -> _FakeStream:
         self._captured["stream_kwargs"] = kwargs
-        return _FakeStream(self._message)
+        return _FakeStream(self._message, self._text)
 
 
-def _install_fake_anthropic(monkeypatch: pytest.MonkeyPatch, message: _Msg) -> dict[str, Any]:
+def _install_fake_anthropic(
+    monkeypatch: pytest.MonkeyPatch, message: _Msg, text_pieces: tuple[str, ...] = ("hel", "lo")
+) -> dict[str, Any]:
     """Inject a fake ``anthropic`` module so complete()'s network path runs with no real SDK/key.
 
     Returns a dict capturing the AnthropicFoundry construction kwargs and the stream() kwargs."""
@@ -312,12 +314,24 @@ def _install_fake_anthropic(monkeypatch: pytest.MonkeyPatch, message: _Msg) -> d
     class _FakeFoundry:
         def __init__(self, **kwargs: Any) -> None:
             captured["init_kwargs"] = kwargs
-            self.messages = _FakeMessages(message, captured)
+            self.messages = _FakeMessages(message, captured, text_pieces)
 
     module = types.ModuleType("anthropic")
     module.AnthropicFoundry = _FakeFoundry  # type: ignore[attr-defined]
     monkeypatch.setitem(sys.modules, "anthropic", module)
     return captured
+
+
+def test_complete_stream_emits_deltas(monkeypatch: pytest.MonkeyPatch) -> None:
+    _set_creds(monkeypatch)
+    # deltas come from the token stream; the returned string is the assembled final message —
+    # different sources on purpose, so the test proves both wires are connected.
+    msg = _Msg([_Block("text", text="FULL ANSWER")])
+    _install_fake_anthropic(monkeypatch, msg, text_pieces=("de", "lta", "s"))
+    deltas: list[str] = []
+    out = FoundryClient(resolve_credentials()).complete_stream(_req(), deltas.append)
+    assert deltas == ["de", "lta", "s"]  # streamed to the callback, in order
+    assert out == "FULL ANSWER"  # assembled from the final message
 
 
 def _req(**extra: Any) -> LLMRequest:

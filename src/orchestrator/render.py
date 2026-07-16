@@ -107,6 +107,7 @@ def render_execution(
     synthesis: Synthesis | None = None,
     *,
     verbose: bool = False,
+    include_answer: bool = True,
 ) -> str:
     """Clean view of an executed plan: the Answer on top, then input, decomposition, output.
 
@@ -123,7 +124,9 @@ def render_execution(
         f"Intent: {plan.intent}",
         "",
     ]
-    if synthesis is not None:
+    if synthesis is not None and include_answer:
+        # include_answer=False when the caller already showed the answer (e.g. the CLI streamed it
+        # live), so it is not printed twice.
         lines.append("Answer:")
         lines.extend(f"  {line}" for line in (synthesis.answer.splitlines() or [""]))
         if synthesis.sources:

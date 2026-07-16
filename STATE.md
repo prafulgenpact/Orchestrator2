@@ -1,8 +1,22 @@
 # Project State — A multi agent orchestrator system calling relevant apps basis intent recognition
 
-Last updated: 2026-07-16 (live-progress task)
+Last updated: 2026-07-16 (stream-answer task)
 
 ## Done (most recent first)
+
+- 2026-07-16 stream-answer (Phase 2 — UX: the answer appears as it is written). The final answer
+  now streams to stdout token-by-token instead of appearing only after the whole run.
+  `FoundryClient.complete_stream(request, on_delta)` streams text deltas and returns the assembled
+  text; `complete` is now just `complete_stream` with a no-op sink (one path, same inactivity
+  bound + max_retries=0). `synthesize(..., on_delta=)` feeds the answer to the sink — streamed on
+  the LLM-fusion path when the client supports it, emitted whole for the pass-through modes;
+  clients without complete_stream (Replay/Recording) transparently fall back, so determinism +
+  fixtures are untouched. `render_execution(include_answer=False)` lets the CLI print the streamed
+  answer itself without duplication; the CLI prints "Answer:", streams the answer, then Sources,
+  then the plan/results below. Proven test-first (foundry deltas, synthesis stream + fallback +
+  pass-through emit, render omit-answer, CLI single-emit-no-duplication). make verify PASS;
+  decomposition eval still 16/16. Completes the sequenced performance/UX set (1 optional item —
+  in-run LLM memoization — remains, to be assessed).
 
 - 2026-07-16 live-progress (Phase 2 — UX: never looks stuck; reinforces AC-2 slow != hung). The
   user saw nothing between the readiness note and the final result. Added an injectable `progress`

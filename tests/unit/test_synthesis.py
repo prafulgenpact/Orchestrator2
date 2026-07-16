@@ -93,6 +93,58 @@ def test_single_nonprose_result_is_synthesized(fake_llm: MakeLLM) -> None:
     assert "(None)" not in client.requests[0].messages[0]["content"]  # no op suffix
 
 
+# --- on_delta: stream the fused answer live (stream-answer task) --------------
+
+
+def _fusion_plan() -> PlanResult:
+    # two ok results (a list + prose) force the LLM-fusion path
+    return _plan_result(
+        _res("t1", ["Paper A"], operation="search", source="http://a"),
+        _res("t2", "takeaways", operation="analyze", source="http://b"),
+    )
+
+
+class _StreamingClient:
+    """A client that supports complete_stream — streams the fused answer in pieces."""
+
+    def complete(self, _request: Any) -> str:
+        raise AssertionError("complete() must not be called when streaming is supported")
+
+    def complete_stream(self, _request: Any, on_delta: Callable[[str], None]) -> str:
+        for piece in ("Fu", "sed", " answer"):
+            on_delta(piece)
+        return "Fused answer"
+
+
+def test_synthesize_streams_when_supported() -> None:
+    deltas: list[str] = []
+    s = synthesize(_StreamingClient(), _fusion_plan(), model="m", on_delta=deltas.append)
+    assert s.mode == "synthesized"
+    assert s.answer == "Fused answer"
+    assert deltas == ["Fu", "sed", " answer"]  # streamed live, in order
+
+
+def test_synthesize_falls_back_to_single_emit(fake_llm: MakeLLM) -> None:
+    # A client without complete_stream (FakeLLM) uses complete() and emits the whole answer once,
+    # so the CLI still shows it. Proves determinism/CI clients are unaffected.
+    client = fake_llm(["Whole fused answer."])
+    deltas: list[str] = []
+    s = synthesize(client, _fusion_plan(), model="m", on_delta=deltas.append)
+    assert s.answer == "Whole fused answer."
+    assert deltas == ["Whole fused answer."]  # single whole-string emit
+
+
+def test_synthesize_pass_through_mode_still_emits(fake_llm: MakeLLM) -> None:
+    # The verbatim pass-through path (no LLM call) also feeds the answer to on_delta.
+    client = fake_llm([])
+    deltas: list[str] = []
+    pr = _plan_result(_res("t1", "The answer is 42.", source="http://x"))
+    s = synthesize(client, pr, model="m", on_delta=deltas.append)
+    assert s.mode == "verbatim"
+    assert deltas == ["The answer is 42."]
+    assert client.requests == []  # still no LLM call
+
+
 def test_single_empty_string_result_is_synthesized(fake_llm: MakeLLM) -> None:
     # A lone but blank prose result is NOT a verbatim answer -> falls through to synthesis.
     client = fake_llm(["Something grounded."])
