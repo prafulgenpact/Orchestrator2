@@ -1,6 +1,6 @@
 {
   "schema": "proof/v1",
-  "created_utc": "2026-07-16T09:11:08+00:00",
+  "created_utc": "2026-07-16T06:58:03+00:00",
   "result": "PASS",
   "failed_checks": [],
   "missing_required_checks": [],
@@ -22,7 +22,7 @@
     {
       "name": "py-lint",
       "status": "pass",
-      "duration_s": 1,
+      "duration_s": 0,
       "evidence": "reports/py-lint.log"
     },
     {
@@ -40,7 +40,7 @@
     {
       "name": "py-unit",
       "status": "pass",
-      "duration_s": 6,
+      "duration_s": 3,
       "evidence": "reports/py-unit.log"
     },
     {
@@ -64,7 +64,7 @@
     {
       "name": "dep-audit",
       "status": "pass",
-      "duration_s": 23,
+      "duration_s": 13,
       "evidence": "reports/dep-audit.log"
     },
     {
@@ -80,14 +80,14 @@
       "failures": 0,
       "errors": 0,
       "skipped": 0,
-      "time_s": 4.47
+      "time_s": 2.7
     },
     "e2e": {
       "tests": 2,
       "failures": 0,
       "errors": 0,
       "skipped": 0,
-      "time_s": 0.59
+      "time_s": 0.44
     },
     "web_e2e": null,
     "coverage_pct": 99.92
@@ -99,5 +99,5 @@
     "pytest": "pytest 8.3.2",
     "os": "Darwin 25.5.0"
   },
-  "content_hash": "3ee82f623eeeafd76fa0da6e63b48c7ddcba18f94e7d35a144c37fd5f7fc62f7"
+  "content_hash": "0b81290850bd171329f4aca5e4084c341dc3c6d69a27b3a5af2059538d1e1436"
 }

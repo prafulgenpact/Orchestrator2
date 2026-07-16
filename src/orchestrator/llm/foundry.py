@@ -37,6 +37,9 @@ class FoundryCredentials:
     base_url: str
 
 
+DEFAULT_LLM_TIMEOUT_S = 180.0
+
+
 def resolve_model(override: str | None = None) -> str:
     """Model for a request: explicit override > ORCHESTRATOR_MODEL > pinned default.
 
@@ -44,6 +47,25 @@ def resolve_model(override: str | None = None) -> str:
     request hash regardless of whether a live .env is present.
     """
     return override or os.environ.get("ORCHESTRATOR_MODEL") or DEFAULT_MODEL
+
+
+def resolve_llm_timeout() -> float:
+    """Hard per-request wall-clock timeout (seconds) for a live LLM call — the AC-2 anti-hang bound.
+
+    A stalled Foundry request fails after this long (raising, then handled cleanly) instead of
+    hanging the whole run: the SDK's own default is ~10 min per attempt, which — across retries —
+    reads as a hang. Override with ``ORCHESTRATOR_LLM_TIMEOUT_S``; a blank / non-numeric / non-
+    positive value falls back to the default. Independent of model/credential resolution so the
+    record/replay request hash is unaffected.
+    """
+    raw = os.environ.get("ORCHESTRATOR_LLM_TIMEOUT_S")
+    if raw is None:
+        return DEFAULT_LLM_TIMEOUT_S
+    try:
+        value = float(raw)
+    except ValueError:
+        return DEFAULT_LLM_TIMEOUT_S
+    return value if value > 0 else DEFAULT_LLM_TIMEOUT_S
 
 
 def _parse_env_file(path: Path) -> dict[str, str]:
@@ -136,6 +158,7 @@ class FoundryClient:
             api_key=self._creds.api_key,
             base_url=self._creds.base_url,
             max_retries=2,
+            timeout=resolve_llm_timeout(),  # hard per-request bound so a stall never hangs the run
         )
         kwargs: dict[str, Any] = {
             "model": request.model,

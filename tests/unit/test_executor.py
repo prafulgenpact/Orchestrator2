@@ -11,7 +11,7 @@ import pytest
 from conftest import FakeLLM
 
 from orchestrator.app_caller import CallResult
-from orchestrator.executor import _dig, _run_async, execute_plan
+from orchestrator.executor import _ASYNC_MAX_SILENT_POLLS, _dig, _run_async, execute_plan
 from orchestrator.llm.base import LLMError
 from orchestrator.models import AppSelection, Plan, PlanResult, Subtask
 from orchestrator.registry import AppEntry, AppOperation, AsyncSpec, load_registry
@@ -74,8 +74,8 @@ def _run(plan: Plan, client: FakeLLM) -> PlanResult:
 
 
 _SELECT = '{"operation": "search_papers_by_query", "arguments": {"query": "moe"}}'
-_RELEVANT = '{"relevant": true, "reason": "on topic"}'
-_IRRELEVANT = '{"relevant": false, "reason": "off-topic keyword match"}'
+_RELEVANT = '{"verdict": "PASS", "reason": "on topic"}'
+_IRRELEVANT = '{"verdict": "FAIL", "reason": "off-topic keyword match"}'
 
 
 def test_execute_success(monkeypatch: pytest.MonkeyPatch, fake_llm: MakeLLM) -> None:
@@ -445,14 +445,49 @@ def test_async_start_fails(monkeypatch: pytest.MonkeyPatch) -> None:
     assert "down" in (res.error or "")
 
 
-def test_async_poll_call_fails(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_async_stops_when_app_goes_silent(monkeypatch: pytest.MonkeyPatch) -> None:
+    # The app stops answering polls: after _ASYNC_MAX_SILENT_POLLS consecutive failures we declare
+    # "no progress" and stop (silence = hung), preserving the underlying error.
+    fails = [_cr(None, ok=False, error="retry: boom") for _ in range(_ASYNC_MAX_SILENT_POLLS)]
     monkeypatch.setattr(
-        "orchestrator.executor.call_operation",
-        _fake_calls(_cr({"run_id": "r1"}), _cr(None, ok=False, error="retry: boom")),
+        "orchestrator.executor.call_operation", _fake_calls(_cr({"run_id": "r1"}), *fails)
     )
     res = _do_async(*_blogs_gen())
     assert res.ok is False
+    assert "stopped responding" in (res.error or "")
     assert "boom" in (res.error or "")
+
+
+def test_async_tolerates_transient_poll_blip(monkeypatch: pytest.MonkeyPatch) -> None:
+    # A single failed poll (a blip) is not a hang: the run recovers and completes.
+    monkeypatch.setattr(
+        "orchestrator.executor.call_operation",
+        _fake_calls(
+            _cr({"run_id": "r1"}),
+            _cr(None, ok=False, error="retry: transient"),
+            _cr({"status": "running"}),
+            _cr({"status": "done", "result": {"content": "recovered"}}),
+        ),
+    )
+    res = _do_async(*_blogs_gen())
+    assert res.ok is True
+    assert res.data == "recovered"
+
+
+def test_async_slow_but_responsive_completes(monkeypatch: pytest.MonkeyPatch) -> None:
+    # A genuinely slow job that keeps answering "running" is NOT cut off — it finishes when done.
+    running = [_cr({"status": "running"}) for _ in range(20)]
+    monkeypatch.setattr(
+        "orchestrator.executor.call_operation",
+        _fake_calls(
+            _cr({"run_id": "r1"}),
+            *running,
+            _cr({"status": "done", "result": {"content": "finally"}}),
+        ),
+    )
+    res = _do_async(*_blogs_gen())
+    assert res.ok is True
+    assert res.data == "finally"
 
 
 def test_async_poll_op_missing(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -496,3 +531,52 @@ def test_execute_routes_async_op(monkeypatch: pytest.MonkeyPatch, fake_llm: Make
     r = _run(_plan(sub), client).results[0]
     assert r.status == "ok"
     assert r.output == "blog!"
+
+
+def test_async_start_backfills_missing_topic(
+    monkeypatch: pytest.MonkeyPatch, fake_llm: MakeLLM
+) -> None:
+    # The selector omitted 'topic' (the upstream-distraction bug). It is backfilled from the subtask
+    # so the blog app actually RUNS on the request instead of 422-ing / skipping to web.
+    calls: list[tuple[str, dict[str, Any]]] = []
+
+    async def _capture(_app: Any, op: Any, args: Any, **_kw: Any) -> CallResult:
+        calls.append((op.name, dict(args)))
+        if op.name == "generate_blog_async":
+            return _cr({"run_id": "r1"})
+        return _cr({"status": "done", "result": {"content": "blog!"}})
+
+    monkeypatch.setattr("orchestrator.executor.call_operation", _capture)
+    sub = Subtask(
+        "t1",
+        "Draft a blog",
+        "write a blog about retrocausality",
+        (),
+        AppSelection("blogs-playground", "Blogs Playground", "b", 0.9, False),
+    )
+    client = fake_llm(['{"operation": "generate_blog_async", "arguments": {}}', _RELEVANT])
+    r = _run(_plan(sub), client).results[0]
+    assert r.status == "ok"
+    assert r.output == "blog!"
+    start_args = next(a for name, a in calls if name == "generate_blog_async")
+    assert start_args.get("topic") == "write a blog about retrocausality"  # backfilled, no fallback
+
+
+def test_iterate_without_blog_id_skips(monkeypatch: pytest.MonkeyPatch, fake_llm: MakeLLM) -> None:
+    # A non-derivable id field (blog_id) is NOT backfilled — the run skips cleanly rather than
+    # inventing an id or firing a doomed call.
+    async def _boom(*_a: Any, **_kw: Any) -> Any:
+        raise AssertionError("must not call the app when a non-derivable id is missing")
+
+    monkeypatch.setattr("orchestrator.executor.call_operation", _boom)
+    sub = Subtask(
+        "t1",
+        "Revise blog",
+        "make my blog shorter",
+        (),
+        AppSelection("blogs-playground", "Blogs Playground", "b", 0.9, False),
+    )
+    client = fake_llm(['{"operation": "iterate_blog_async", "arguments": {}}'])
+    r = _run(_plan(sub), client).results[0]
+    assert r.status == "skipped"
+    assert "blog_id" in (r.error or "")

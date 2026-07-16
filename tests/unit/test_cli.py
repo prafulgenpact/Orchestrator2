@@ -10,8 +10,26 @@ import pytest
 from conftest import FakeLLM
 
 from orchestrator.app_caller import CallResult
-from orchestrator.cli import main
+from orchestrator.cli import _readiness_note, main
 from orchestrator.llm.base import LLMError, LLMRequest
+
+
+@pytest.fixture(autouse=True)
+def _stub_outset_preflight(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Keep --execute tests network-free: stub the outset app preflight as all-ready."""
+
+    async def _all_ready(_apps: Any, _client: Any, **_kw: Any) -> dict[str, bool]:
+        return {"arxiv-papers": True}
+
+    monkeypatch.setattr("orchestrator.cli.start_all", _all_ready)
+
+
+def test_readiness_note_branches() -> None:
+    assert _readiness_note({}) == ""  # nothing to report
+    assert _readiness_note({"a": True, "b": True}) == "Apps ready: 2/2"
+    mixed = _readiness_note({"a": True, "b": False})
+    assert "Apps ready: 1/2" in mixed
+    assert "unavailable: b" in mixed
 
 
 def _valid_response() -> str:
@@ -124,7 +142,7 @@ def _arxiv_plan_response() -> str:
 
 
 _SELECTOR_RESPONSE = '{"operation": "search_papers_by_query", "arguments": {"query": "moe"}}'
-_RELEVANT_RESPONSE = '{"relevant": true, "reason": "on topic"}'
+_RELEVANT_RESPONSE = '{"verdict": "PASS", "reason": "on topic"}'
 # A structured (non-prose) single result is synthesized -> one final synthesis LLM call.
 _SYNTHESIS_RESPONSE = "Recent work surveys mixture-of-experts routing."
 
@@ -151,6 +169,7 @@ def test_execute_success(
     rc = main(["find moe papers", "--execute"], client=client)
     out = capsys.readouterr().out
     assert rc == 0
+    assert "Apps ready: 1/1" in out  # the outset preflight reported readiness
     assert "Answer:" in out  # the grounded answer leads
     assert "Recent work surveys mixture-of-experts routing." in out
     assert "Plan — 1 subtask(s)" in out

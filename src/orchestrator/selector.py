@@ -55,6 +55,28 @@ class SelectionError(ValueError):
     """The model did not pick a valid operation for the app."""
 
 
+# Free-text "primary input" fields. When the model leaves one of these blank — often because an
+# upstream dependency distracts it into thinking the value must come from upstream — we fill it
+# deterministically from the SUBTASK's own text. The subtask description is the grounded source of
+# what to act on (the user's request for this step), not an invented value. Id/path fields (e.g.
+# blog_id, arxiv_id) are deliberately NOT here: those cannot be derived and must genuinely skip.
+_PRIMARY_TEXT_FIELDS = frozenset({"topic", "query", "question", "text", "subject"})
+
+
+def _backfill_primary_fields(op: AppOperation, args: dict[str, Any], subtask: Subtask) -> None:
+    """Fill a required free-text primary field the model omitted, from the subtask itself.
+
+    A stochastic prompt can't guarantee the model fills ``topic``/``query``/…; this makes it a
+    guarantee, so a chosen app runs on the user's request instead of 422-ing / skipping to web.
+    """
+    subject = (subtask.description or subtask.title).strip()
+    if not subject:
+        return
+    for field in op.required_fields:
+        if field in _PRIMARY_TEXT_FIELDS and (field not in args or args[field] in (None, "")):
+            args[field] = subject
+
+
 def load_system_prompt() -> str:
     return _PROMPT_PATH.read_text()
 
@@ -187,7 +209,7 @@ def select_operation(
             )
         )
         try:
-            return _parse_selection(raw, app)
+            op, args = _parse_selection(raw, app)
         except SelectionError as exc:
             last_error = exc
             messages.append({"role": "assistant", "content": raw})
@@ -201,5 +223,10 @@ def select_operation(
                     ),
                 }
             )
+        else:
+            # Guarantee the primary input is present even if the model left it blank (deterministic,
+            # grounded in the subtask) — a chosen app must run on the request, not fall back to web.
+            _backfill_primary_fields(op, args, subtask)
+            return op, args
     assert last_error is not None  # loop runs >=1 time; a success would have returned
     raise last_error

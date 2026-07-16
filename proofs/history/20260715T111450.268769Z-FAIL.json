@@ -1,8 +1,10 @@
 {
   "schema": "proof/v1",
-  "created_utc": "2026-07-16T09:11:08+00:00",
-  "result": "PASS",
-  "failed_checks": [],
+  "created_utc": "2026-07-15T11:14:49+00:00",
+  "result": "FAIL",
+  "failed_checks": [
+    "py-lint"
+  ],
   "missing_required_checks": [],
   "required_checks": [
     "py-lint",
@@ -12,7 +14,7 @@
     "e2e",
     "secrets"
   ],
-  "fingerprint": "c39e1551dfebc51a203e8f48ba806e830004ca9aa113c1b9db4b016df61fcf67",
+  "fingerprint": "eec01840f57eb8a3a9183ba2d37a474a08b83f05efd1f015ac84e9a309b3b5c2",
   "git": {
     "commit": "e0b55b3b53cbe1ab7eedd4757cbadac14c6cdd76",
     "branch": "Orchestrator2",
@@ -21,7 +23,7 @@
   "checks": [
     {
       "name": "py-lint",
-      "status": "pass",
+      "status": "fail",
       "duration_s": 1,
       "evidence": "reports/py-lint.log"
     },
@@ -34,19 +36,19 @@
     {
       "name": "py-types",
       "status": "pass",
-      "duration_s": 1,
+      "duration_s": 4,
       "evidence": "reports/py-types.log"
     },
     {
       "name": "py-unit",
       "status": "pass",
-      "duration_s": 6,
+      "duration_s": 4,
       "evidence": "reports/py-unit.log"
     },
     {
       "name": "e2e",
       "status": "pass",
-      "duration_s": 2,
+      "duration_s": 3,
       "evidence": "reports/e2e.log"
     },
     {
@@ -70,27 +72,27 @@
     {
       "name": "diff-cover",
       "status": "pass",
-      "duration_s": 1,
+      "duration_s": 0,
       "evidence": "reports/diff-cover.log"
     }
   ],
   "tests": {
     "unit": {
-      "tests": 331,
+      "tests": 323,
       "failures": 0,
       "errors": 0,
       "skipped": 0,
-      "time_s": 4.47
+      "time_s": 3.26
     },
     "e2e": {
       "tests": 2,
       "failures": 0,
       "errors": 0,
       "skipped": 0,
-      "time_s": 0.59
+      "time_s": 0.85
     },
     "web_e2e": null,
-    "coverage_pct": 99.92
+    "coverage_pct": 100.0
   },
   "environment": {
     "python": "Python 3.10.0",
@@ -99,5 +101,5 @@
     "pytest": "pytest 8.3.2",
     "os": "Darwin 25.5.0"
   },
-  "content_hash": "3ee82f623eeeafd76fa0da6e63b48c7ddcba18f94e7d35a144c37fd5f7fc62f7"
+  "content_hash": "e1cae382211885a7eb6d597f2b1127dc54c1ba3767b433febb499da7b7b6de5a"
 }

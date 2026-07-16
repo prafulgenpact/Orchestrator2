@@ -478,7 +478,7 @@
           "description": "Start a new topic — generates concept map + first lesson via a multi-agent pipeline (long-running).",
           "method": "POST",
           "path": "/topics",
-          "timeout_s": 180,
+          "timeout_s": 600,
           "destructive": false,
           "idempotency": "none",
           "retry": { "transient_max": 0, "backoff_s": 0 },
@@ -489,7 +489,7 @@
           "description": "Continue a lesson with a grounded teaching reply (LLM). Persists the turn; non-empty content required.",
           "method": "POST",
           "path": "/topics/{topic_id}/messages",
-          "timeout_s": 120,
+          "timeout_s": 300,
           "destructive": false,
           "idempotency": "none",
           "retry": { "transient_max": 0, "backoff_s": 0 },
@@ -631,6 +631,7 @@
           "idempotency": "none",
           "retry": { "transient_max": 0, "backoff_s": 0 },
           "request_fields": ["topic"],
+          "required_fields": ["topic"],
           "poll": {
             "poll_op": "get_run",
             "run_id_field": "run_id",
@@ -651,6 +652,7 @@
           "idempotency": "none",
           "retry": { "transient_max": 0, "backoff_s": 0 },
           "request_fields": ["blog_id", "instruction"],
+          "required_fields": ["blog_id", "instruction"],
           "poll": {
             "poll_op": "get_run",
             "run_id_field": "run_id",
@@ -705,6 +707,7 @@
           "idempotency": "none",
           "retry": { "transient_max": 0, "backoff_s": 0 },
           "request_fields": ["topic"],
+          "required_fields": ["topic"],
           "poll": {
             "poll_op": "get_run",
             "run_id_field": "run_id",

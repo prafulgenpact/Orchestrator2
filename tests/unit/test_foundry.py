@@ -13,11 +13,13 @@ import pytest
 from orchestrator.llm import get_client
 from orchestrator.llm.base import LLMError, LLMRequest
 from orchestrator.llm.foundry import (
+    DEFAULT_LLM_TIMEOUT_S,
     DEFAULT_MODEL,
     FoundryClient,
     _extract_text,
     _parse_env_file,
     resolve_credentials,
+    resolve_llm_timeout,
     resolve_model,
 )
 from orchestrator.llm.replay import RecordingClient, ReplayClient
@@ -27,7 +29,8 @@ FOUNDRY_ENV = ("ANTHROPIC_FOUNDRY_API_KEY", "ANTHROPIC_FOUNDRY_BASE_URL")
 
 @pytest.fixture(autouse=True)
 def _clean_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    for var in (*FOUNDRY_ENV, "ANTHROPIC_MODEL", "ORCHESTRATOR_MODEL"):
+    extra = ("ANTHROPIC_MODEL", "ORCHESTRATOR_MODEL", "ORCHESTRATOR_LLM_TIMEOUT_S")
+    for var in (*FOUNDRY_ENV, *extra):
         monkeypatch.delenv(var, raising=False)
     # default: point the fallback at a non-existent file so nothing leaks in
     monkeypatch.setenv("ORCHESTRATOR_FALLBACK_ENV", str(tmp_path / "absent.env"))
@@ -133,6 +136,22 @@ def test_resolve_model_precedence(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("ORCHESTRATOR_MODEL", "from-orch-env")
     assert resolve_model() == "from-orch-env"
     assert resolve_model("explicit-wins") == "explicit-wins"
+
+
+def test_resolve_llm_timeout_default() -> None:
+    # _clean_env (autouse) cleared ORCHESTRATOR_LLM_TIMEOUT_S
+    assert resolve_llm_timeout() == DEFAULT_LLM_TIMEOUT_S
+
+
+def test_resolve_llm_timeout_override(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("ORCHESTRATOR_LLM_TIMEOUT_S", "42")
+    assert resolve_llm_timeout() == 42.0
+
+
+def test_resolve_llm_timeout_rejects_bad_values(monkeypatch: pytest.MonkeyPatch) -> None:
+    for bad in ("", "not-a-number", "0", "-5"):
+        monkeypatch.setenv("ORCHESTRATOR_LLM_TIMEOUT_S", bad)
+        assert resolve_llm_timeout() == DEFAULT_LLM_TIMEOUT_S, bad
 
 
 def test_missing_credentials_raises() -> None:

@@ -9,7 +9,12 @@ from conftest import FakeLLM
 
 from orchestrator.models import AppSelection, Subtask, SubtaskResult
 from orchestrator.registry import AppEntry, AppOperation, RetrySpec, load_registry
-from orchestrator.selector import SelectionError, build_select_message, select_operation
+from orchestrator.selector import (
+    SelectionError,
+    build_select_message,
+    load_system_prompt,
+    select_operation,
+)
 
 REG = load_registry()
 MakeLLM = Callable[[Sequence[str]], FakeLLM]
@@ -24,6 +29,44 @@ def _arxiv() -> AppEntry:
 def _subtask() -> Subtask:
     app = AppSelection("arxiv-papers", "ArXiv Paper Guide", "searches arxiv", 0.9, False)
     return Subtask("t1", "Find papers", "find recent MoE papers", (), app)
+
+
+def test_prompt_requires_filling_primary_input_even_with_upstream() -> None:
+    # Guards the fix for the empty-args-with-upstream bug (blog 422): the prompt must instruct the
+    # model to fill the primary input from the subtask and treat upstream as id-only, not a reason
+    # to leave the field blank.
+    prompt = load_system_prompt()
+    assert "primary input" in prompt
+    assert "UPSTREAM RESULTS are ONLY" in prompt
+    assert "Never return empty" in prompt
+
+
+def _blog_sub(title: str, desc: str) -> Subtask:
+    app = AppSelection("blogs-playground", "Blogs Playground", "drafts blogs", 0.9, False)
+    return Subtask("t2", title, desc, ("t1",), app)
+
+
+def test_backfill_fills_missing_primary_field_from_subtask(fake_llm: MakeLLM) -> None:
+    # The model returns EMPTY args (the upstream-distraction bug). 'topic' must be backfilled from
+    # the subtask deterministically, so the blog app runs instead of failing to web.
+    app = REG.get("blogs-playground")
+    assert app is not None
+    client = fake_llm(['{"operation": "generate_blog_async", "arguments": {}}'])
+    op, args = select_operation(
+        client, app, _blog_sub("Draft a blog", "write a blog on retro"), model="m"
+    )
+    assert op.name == "generate_blog_async"
+    assert args["topic"] == "write a blog on retro"
+
+
+def test_backfill_does_not_invent_id_fields(fake_llm: MakeLLM) -> None:
+    # iterate needs blog_id (an id, not free text): it must NOT be fabricated from the subtask.
+    app = REG.get("blogs-playground")
+    assert app is not None
+    client = fake_llm(['{"operation": "iterate_blog_async", "arguments": {}}'])
+    op, args = select_operation(client, app, _blog_sub("Revise", "make it shorter"), model="m")
+    assert op.name == "iterate_blog_async"
+    assert not args.get("blog_id")  # id fields are never backfilled
 
 
 def _upstream_result(output: object) -> SubtaskResult:

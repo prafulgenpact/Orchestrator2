@@ -12,7 +12,7 @@ from __future__ import annotations
 import asyncio
 import os
 import subprocess
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Iterable
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -121,3 +121,23 @@ async def ensure_started(
             return True
         await sleep(interval_s)
     return False
+
+
+async def start_all(
+    apps: Iterable[AppEntry],
+    client: httpx.AsyncClient,
+    *,
+    ensure: Callable[..., Awaitable[bool]] = ensure_started,
+) -> dict[str, bool]:
+    """Start + health-confirm every non-fallback app up front, concurrently (the outset preflight).
+
+    Returns ``{app_id: healthy}``. Never raises — an app that cannot be brought up maps to False so
+    the caller can report it (and the per-subtask path still applies its own fallback). Fallback
+    apps (no port) are skipped. Concurrency means the wall-clock is the slowest single app, not the
+    sum, and an app already running returns immediately (its health check passes).
+    """
+    targets = [app for app in apps if not app.fallback]
+    outcomes = await asyncio.gather(
+        *(ensure(app, client) for app in targets), return_exceptions=True
+    )
+    return {app.id: (outcome is True) for app, outcome in zip(targets, outcomes, strict=True)}

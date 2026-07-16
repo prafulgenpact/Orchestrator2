@@ -1,8 +1,53 @@
 # Project State — A multi agent orchestrator system calling relevant apps basis intent recognition
 
-Last updated: 2026-07-14 (selection-structured-output task)
+Last updated: 2026-07-16 (llm-call-deadline task)
 
 ## Done (most recent first)
+
+- 2026-07-16 llm-call-deadline (Phase 2 — AC-2: nothing may hang). Found live: a
+  `--execute` run blocked ~86 min at 0% CPU on a wedged Foundry call. The hard no-hang deadline
+  covered app HTTP calls + the async poll loop but NOT the LLM calls (planner/selector/relevance/
+  synthesis), which hit the SDK with only its ~10-min default timeout — a hang in practice. Fix:
+  `foundry.resolve_llm_timeout()` (default 180 s, override `ORCHESTRATOR_LLM_TIMEOUT_S`) is now
+  passed as `timeout=` to the `AnthropicFoundry` client, so a stall raises within a bounded time →
+  handled cleanly (selection→web safety net, relevance→fail-open, planner/synthesis→exit 4) instead
+  of hanging. Independent of model/credential resolution → record/replay hashes unchanged, no
+  fixtures re-recorded. make verify PASS (3 new foundry tests). Also cleared the live mess: killed
+  the stuck run (pid 95242) and the wedged arxiv-papers backend (pid 20227), relaunched arxiv on
+  :8002 (healthy). FOLLOW-UP for the human: a stalled planner/synthesis call still ends the whole
+  run (exit 4) rather than degrading — acceptable (no hang), improvable later via streaming +
+  inactivity timeout for true slow≠hung on LLM calls too.
+
+- 2026-07-15 reduce-unwarranted-web-fallbacks (Phase 2 — fewer web fallbacks when the RIGHT app was
+  chosen but execution failed; serves AC-1/AC-2). Diagnosis first: live probing showed the planner
+  ROUTES well (14/15 messy tasks → correct specialist; only a genuinely-general task → web), so the
+  "unexpected web fallbacks" are EXECUTION-stage — the web safety net silently substitutes for a
+  chosen app that failed. Three fixes: (1) Relevance guard no longer discards correct answers —
+  `grounding.check_relevance` judges the app's FULL output (dropped the 1500-char `_summarize`
+  truncation that showed the judge ~5% of a 33 KB dataset preview) under explicit PASS/FAIL rules
+  (`relevance_system.md` v2, "Be strict" removed), with a deterministic empty gate (blank output =
+  FAIL, no LLM call) and fail-open on any parse/LLM error and on an unknown verdict. (2) Slow ≠ hung:
+  `_run_async` no longer gives up on a fixed 600s budget — it keeps polling while the app answers
+  (progress), stops early only when the app goes SILENT (`_ASYNC_MAX_SILENT_POLLS`=5 failed polls in
+  a row = no progress, a blip is tolerated), and keeps only a generous env-tunable
+  `ORCHESTRATOR_ASYNC_MAX_WAIT_S` (default 3600s) as the AC-2 anti-hang backstop; Teach Me
+  create_topic/send_user_message sync timeouts raised (180→600, 120→300) since that app exposes no
+  status endpoint to poll. (3) Start-all preflight: `launcher.start_all` starts + health-confirms
+  every non-fallback app concurrently at the outset (wired into `cli._execute`), printing a
+  readiness line (e.g. "Apps ready: 9/11 — unavailable: … will fall back to web") so a dead app is
+  never silently invoked. (4) Selector empty-args bug: live, a blog subtask that DEPENDS on an
+  upstream step (Teach Me) made the selector return `arguments: {}` (no `topic`) → the blog app
+  422'd → web fallback; reproduced deterministically (with-upstream → {}, no-upstream → correct
+  topic). Fix: `operation_select_system.md` v3 tells the model to ALWAYS fill the operation's
+  primary input from the subtask and treat UPSTREAM as id-only (never a reason to leave the field
+  blank); verified live the args flip {} → a real topic. Defense-in-depth: the async start ops now
+  declare `required_fields` (generate→[topic], iterate→[blog_id,instruction], start_research→
+  [topic]) so a future miss SKIPS with a clear reason instead of a cryptic 422. make verify PASS
+  (10 new tests across grounding/executor/launcher/cli/selector).
+  VERIFIED LIVE: p-value → Stats Teacher status=ok (no fallback) under the new relevance path.
+  NOTE for the human: NOT sealed/pushed — awaiting your review. Deeper follow-ups still open:
+  the safety-net still relabels a failed specialist's result app_id as "web-search" (observability),
+  and there's no alternate-specialist retry before web.
 
 - 2026-07-14 selection-structured-output (Phase 2, robustness — fixes a live web-fallback; serves
   AC-1). Live, a code-heavy step ("code blocks for all sections") routed to Simulated Learning but

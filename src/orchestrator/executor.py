@@ -10,6 +10,7 @@ subtask's failure never aborts the rest.
 from __future__ import annotations
 
 import asyncio
+import os
 import time
 from collections.abc import Awaitable, Callable
 from dataclasses import replace
@@ -27,9 +28,15 @@ from orchestrator.resilience import CircuitBreaker, run_with_deadline
 from orchestrator.selector import SelectionError, select_operation
 from orchestrator.web_search import DEFAULT_TIMEOUT_S, resolve_search_key, search_web
 
-_ASYNC_MAX_WAIT_S = 600.0  # overall cap for a start-then-poll job — bounded so it can never hang
-# (measured: a real blog run ~415s; 600s gives headroom while still guaranteeing termination)
+# Slow is NOT hung. We do not cap how long a genuinely-working start-then-poll job may take: we keep
+# polling while the app keeps responding (progress), and stop early only when it goes SILENT —
+# _ASYNC_MAX_SILENT_POLLS consecutive failed polls = no progress (a single blip is tolerated, not a
+# hang). A generous, env-tunable absolute ceiling remains ONLY as the AC-2 anti-hang backstop, so a
+# server that stays up but wedged forever still terminates. Raise ORCHESTRATOR_ASYNC_MAX_WAIT_S (or
+# set it very high) for legitimately long jobs — it is a safety net, not the normal limit.
+_ASYNC_MAX_WAIT_S = float(os.environ.get("ORCHESTRATOR_ASYNC_MAX_WAIT_S", "3600"))
 _ASYNC_POLL_INTERVAL_S = 4.0
+_ASYNC_MAX_SILENT_POLLS = 5  # consecutive failed polls tolerated before declaring "no progress"
 
 
 async def execute_plan(
@@ -196,9 +203,11 @@ async def _run_async(
 ) -> CallResult:
     """Drive a start-then-poll async op to completion; return the final content as a CallResult.
 
-    Start the job, read its run id, then poll the run op until a terminal status — bounded by
-    ``_ASYNC_MAX_WAIT_S`` so it can never hang. A failed terminal status or a timeout is a clean
-    error (the caller then applies grounding / the web safety net).
+    Start the job, read its run id, then poll until a terminal status. Slow is not hung: a job runs
+    as long as it needs while the app keeps answering polls (progress). We stop early only when it
+    goes silent (``_ASYNC_MAX_SILENT_POLLS`` failed polls in a row), on a failed status, or at the
+    generous ``_ASYNC_MAX_WAIT_S`` ceiling (the AC-2 anti-hang backstop). Each is a clean error (the
+    caller then applies grounding / the web safety net).
     """
     spec = op.poll
     assert spec is not None  # only called when op.poll is set
@@ -213,12 +222,29 @@ async def _run_async(
     poll_op = app.operation(spec.poll_op)
     if poll_op is None:
         return replace(start, ok=False, data=None, error=f"poll op {spec.poll_op!r} not found")
+    silent = 0
     for _ in range(max(1, int(_ASYNC_MAX_WAIT_S / _ASYNC_POLL_INTERVAL_S))):
         poll = await call_operation(
             app, poll_op, {spec.run_id_arg: run_id}, client=http_client, breaker=breaker
         )
         if not poll.ok:
-            return poll
+            # A failed poll is a silence signal, not proof the job died — tolerate a few in a row
+            # (a transient blip is not a hang). Give up only once the app has gone silent for
+            # _ASYNC_MAX_SILENT_POLLS consecutive polls = no progress.
+            silent += 1
+            if silent >= _ASYNC_MAX_SILENT_POLLS:
+                return replace(
+                    poll,
+                    ok=False,
+                    data=None,
+                    error=(
+                        f"async run stopped responding after {silent} consecutive failed polls "
+                        f"(no progress): {poll.error}"
+                    ),
+                )
+            await sleep(_ASYNC_POLL_INTERVAL_S)
+            continue
+        silent = 0  # the app answered — it is alive and making progress; keep waiting as needed
         status = _dig(poll.data, spec.status_path)
         if status in spec.done_values:
             return replace(poll, data=_dig(poll.data, spec.result_path))
@@ -229,7 +255,7 @@ async def _run_async(
         start,
         ok=False,
         data=None,
-        error=f"async run did not finish within {int(_ASYNC_MAX_WAIT_S)}s",
+        error=f"async run did not finish within {int(_ASYNC_MAX_WAIT_S)}s (hard ceiling)",
     )
 
 

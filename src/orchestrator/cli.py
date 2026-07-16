@@ -19,6 +19,7 @@ from pathlib import Path
 import httpx
 
 from orchestrator.executor import execute_plan
+from orchestrator.launcher import start_all
 from orchestrator.llm import VALID_MODES, get_client
 from orchestrator.llm.base import LLMClient, LLMError
 from orchestrator.llm.foundry import resolve_model
@@ -104,8 +105,24 @@ def main(argv: list[str] | None = None, *, client: LLMClient | None = None) -> i
     return 0
 
 
+def _readiness_note(readiness: dict[str, bool]) -> str:
+    """One-line summary of the outset app preflight ("" when there are no apps to report)."""
+    if not readiness:
+        return ""
+    up = sorted(app_id for app_id, healthy in readiness.items() if healthy)
+    down = sorted(app_id for app_id, healthy in readiness.items() if not healthy)
+    note = f"Apps ready: {len(up)}/{len(readiness)}"
+    if down:
+        note += f" — unavailable: {', '.join(down)} (these will fall back to web)"
+    return note
+
+
 async def _execute(plan: Plan, registry: Registry, client: LLMClient, model: str) -> PlanResult:
     async with httpx.AsyncClient() as http_client:
+        # Start + health-confirm every app at the outset, so a dead app is never invoked mid-run.
+        note = _readiness_note(await start_all(registry.apps, http_client))
+        if note:
+            print(note)
         return await execute_plan(
             plan, registry, llm_client=client, http_client=http_client, model=model
         )

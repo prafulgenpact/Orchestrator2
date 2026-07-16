@@ -3,10 +3,17 @@
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Awaitable, Callable
 
 import httpx
 
-from orchestrator.launcher import LAUNCH_SPECS, LaunchSpec, _health_ok, ensure_started
+from orchestrator.launcher import (
+    LAUNCH_SPECS,
+    LaunchSpec,
+    _health_ok,
+    ensure_started,
+    start_all,
+)
 from orchestrator.registry import AppEntry, load_registry
 
 REG = load_registry()
@@ -110,3 +117,37 @@ def test_launch_spec_paths() -> None:
     spec = LaunchSpec("Some App", "main:app", {"K": "v"})
     assert spec.backend_dir().as_posix().endswith("Some App/backend")
     assert spec.env == {"K": "v"}
+
+
+# --- start_all (outset preflight) --------------------------------------------
+
+
+def _run_start_all(ensure: Callable[..., Awaitable[bool]]) -> dict[str, bool]:
+    async def go() -> dict[str, bool]:
+        async with _client(200) as c:
+            return await start_all(REG.apps, c, ensure=ensure)
+
+    return asyncio.run(go())
+
+
+def test_start_all_health_map_excludes_fallback() -> None:
+    async def ensure(app: AppEntry, _c: httpx.AsyncClient) -> bool:
+        return app.id != "social-media-ai"  # one app cannot come up
+
+    result = _run_start_all(ensure)
+    # every non-fallback app is reported; the web-search fallback (no port) is not started
+    assert "web-search" not in result
+    assert set(result) == {a.id for a in REG.apps if not a.fallback}
+    assert result["social-media-ai"] is False
+    assert result["arxiv-papers"] is True
+
+
+def test_start_all_maps_exceptions_to_false() -> None:
+    async def ensure(app: AppEntry, _c: httpx.AsyncClient) -> bool:
+        if app.id == "teach-me":
+            raise RuntimeError("spawn blew up")
+        return True
+
+    result = _run_start_all(ensure)
+    assert result["teach-me"] is False  # never raises — a failed start is just False
+    assert result["arxiv-papers"] is True
