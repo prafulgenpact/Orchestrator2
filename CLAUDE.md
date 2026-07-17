@@ -4,6 +4,8 @@ This project runs under a verification contract between the human and the agent.
 The contract is enforced by hooks; these rules explain it. Violating them wastes
 everyone's time because the hooks will block you anyway.
 
+*ALWAYS ANSWER IN SIMPLE , CONCISE, DIRECT AND TO THE POINT LANGUAGE TO ME. NO JARGONS, NO LENGTHY ANSWERS* - THIS IS VERY IMPORTANT
+
 ## The contract
 
 1. **Evidence, not assertions.** "Done", "fixed", and "works" mean exactly one
