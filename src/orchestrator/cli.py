@@ -18,6 +18,7 @@ from pathlib import Path
 
 import httpx
 
+from orchestrator.artifacts import save_artifacts
 from orchestrator.executor import execute_plan
 from orchestrator.launcher import start_all
 from orchestrator.llm import VALID_MODES, get_client
@@ -26,7 +27,7 @@ from orchestrator.llm.foundry import resolve_model
 from orchestrator.models import Plan, PlanResult
 from orchestrator.planner import PlannerError, plan_task
 from orchestrator.registry import Registry, RegistryError, load_registry
-from orchestrator.render import render_execution, render_human, render_json
+from orchestrator.render import render_chart_paths, render_execution, render_human, render_json
 from orchestrator.synthesis import synthesize
 
 
@@ -109,6 +110,12 @@ def main(argv: list[str] | None = None, *, client: LLMClient | None = None) -> i
             print("Sources:")
             for src in synthesis.sources:
                 print(f"  - {src}")
+        # Save any charts the apps produced to openable HTML files and show their paths, so a graph
+        # is never silently dropped just because a terminal can't draw it.
+        chart_block = render_chart_paths(save_artifacts(result))
+        if chart_block:
+            print()
+            print(chart_block)
         print()
         print(render_execution(plan, result, synthesis, verbose=args.verbose, include_answer=False))
         return 0

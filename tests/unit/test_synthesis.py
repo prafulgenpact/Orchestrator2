@@ -234,4 +234,9 @@ def test_render_output_str_json_and_truncation() -> None:
 
 def test_synthesis_to_dict() -> None:
     s = Synthesis(answer="a", mode="verbatim", sources=("u1", "u2"))
-    assert s.to_dict() == {"answer": "a", "mode": "verbatim", "sources": ["u1", "u2"]}
+    assert s.to_dict() == {
+        "answer": "a",
+        "mode": "verbatim",
+        "sources": ["u1", "u2"],
+        "artifacts": [],
+    }

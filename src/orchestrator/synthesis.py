@@ -23,7 +23,7 @@ from pathlib import Path
 from typing import Any
 
 from orchestrator.llm.base import LLMClient, LLMRequest
-from orchestrator.models import PlanResult, SubtaskResult
+from orchestrator.models import Artifact, PlanResult, SubtaskResult
 
 # A sink for streamed answer text; the CLI passes one to show the answer live, others omit it.
 DeltaFn = Callable[[str], None]
@@ -46,9 +46,15 @@ class Synthesis:
     answer: str
     mode: str
     sources: tuple[str, ...]
+    artifacts: tuple[Artifact, ...] = ()
 
     def to_dict(self) -> dict[str, Any]:
-        return {"answer": self.answer, "mode": self.mode, "sources": list(self.sources)}
+        return {
+            "answer": self.answer,
+            "mode": self.mode,
+            "sources": list(self.sources),
+            "artifacts": [a.to_dict() for a in self.artifacts],
+        }
 
 
 def load_system_prompt() -> str:
@@ -67,6 +73,12 @@ def _sources(ok: Sequence[SubtaskResult]) -> tuple[str, ...]:
         if r.source and r.source not in seen:
             seen.append(r.source)
     return tuple(seen)
+
+
+def _artifacts(ok: Sequence[SubtaskResult]) -> tuple[Artifact, ...]:
+    """All chart artifacts from the ok results — carried separately so they never enter the LLM
+    prompt or the text length caps (a chart is not text and must not be truncated)."""
+    return tuple(a for r in ok for a in r.artifacts)
 
 
 def _render_output(output: Any, limit: int = _RESULT_LIMIT) -> str:
@@ -170,6 +182,7 @@ def synthesize(
     """
     ok = _ok_results(plan_result)
     sources = _sources(ok)
+    artifacts = _artifacts(ok)
     if not ok:
         answer = "No app returned a grounded result for this task, so there is no answer."
         _emit(on_delta, answer)
@@ -179,12 +192,12 @@ def synthesize(
         # The final step already folded in the upstream results — pass it through, don't re-fuse.
         answer = terminal.output.strip()
         _emit(on_delta, answer)
-        return Synthesis(answer=answer, mode="final-step", sources=sources)
+        return Synthesis(answer=answer, mode="final-step", sources=sources, artifacts=artifacts)
     only = ok[0]
     if len(ok) == 1 and isinstance(only.output, str) and only.output.strip():
         # One app fully answered in prose — pass it through verbatim to keep its tuned voice.
         answer = only.output.strip()
         _emit(on_delta, answer)
-        return Synthesis(answer=answer, mode="verbatim", sources=sources)
+        return Synthesis(answer=answer, mode="verbatim", sources=sources, artifacts=artifacts)
     answer = _synthesize_llm(client, plan_result.task, ok, model=model, on_delta=on_delta)
-    return Synthesis(answer=answer, mode="synthesized", sources=sources)
+    return Synthesis(answer=answer, mode="synthesized", sources=sources, artifacts=artifacts)

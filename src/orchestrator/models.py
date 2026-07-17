@@ -120,12 +120,38 @@ class Plan:
 
 
 @dataclass(frozen=True)
+class Artifact:
+    """A non-text output an app produced — today a chart. Carried alongside the text answer so it
+    survives the pipeline's text length caps (which would otherwise truncate a chart to nothing).
+
+    ``kind`` is "chart" for now. ``spec`` is the app's chart-ready data (e.g. a box-plot's
+    quartiles), rendered to a picture later. ``title`` labels it; ``subtask_id`` ties it to the
+    step that produced it.
+    """
+
+    kind: str
+    title: str
+    spec: dict[str, Any]
+    subtask_id: str
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "kind": self.kind,
+            "title": self.title,
+            "spec": self.spec,
+            "subtask_id": self.subtask_id,
+        }
+
+
+@dataclass(frozen=True)
 class SubtaskResult:
     """The outcome of executing one subtask against its chosen app.
 
     ``status`` is "ok" (app returned a result), "error" (call/selection failed), or
     "skipped" (not executed — e.g. the web-search fallback, deferred). ``output`` is the
     app's real response; ``source`` is the URL it came from (provenance for grounding).
+    ``artifacts`` carries any charts the app produced (kept out of the text answer so they are
+    never truncated) — trailing + defaulted because SubtaskResult is built positionally everywhere.
     """
 
     subtask_id: str
@@ -138,6 +164,7 @@ class SubtaskResult:
     error: str | None
     duration_s: float
     note: str | None = None  # disclosure, e.g. "<app> couldn't answer; used web fallback"
+    artifacts: tuple[Artifact, ...] = ()
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -151,6 +178,7 @@ class SubtaskResult:
             "error": self.error,
             "duration_s": round(self.duration_s, 3),
             "note": self.note,
+            "artifacts": [a.to_dict() for a in self.artifacts],
         }
 
 

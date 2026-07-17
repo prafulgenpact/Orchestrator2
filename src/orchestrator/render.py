@@ -9,12 +9,22 @@ Nothing here runs an app; the output always ends with the dry-run banner.
 from __future__ import annotations
 
 import json
+from pathlib import Path
 from typing import Any
 
 from orchestrator.models import Plan, PlanResult, Subtask
 from orchestrator.synthesis import Synthesis
 
 DRY_RUN_BANNER = "DRY RUN — no apps were invoked."
+
+
+def render_chart_paths(paths: list[Path]) -> str:
+    """A block listing saved chart files so the user can open them ("" when there are none)."""
+    if not paths:
+        return ""
+    lines = ["Charts (open in a browser):"]
+    lines.extend(f"  📊 {p}" for p in paths)
+    return "\n".join(lines)
 
 
 def compute_waves(subtasks: tuple[Subtask, ...]) -> list[list[Subtask]]:
