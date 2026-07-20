@@ -1,8 +1,20 @@
 # Project State — A multi agent orchestrator system calling relevant apps basis intent recognition
 
-Last updated: 2026-07-20 (expose-all-capabilities task)
+Last updated: 2026-07-20 (sse-streaming-transport task)
 
 ## Done (most recent first)
+
+- 2026-07-20 sse-streaming-transport (Phase 2 — final 100% capability coverage). Added a generic
+  Server-Sent-Events transport: an op flagged `stream: "sse"` is consumed to completion via
+  `client.stream` and assembled into `{text, events}` (handles both frame dialects — `{"token":..}`
+  and `{"type":"token","content":..}` — stops at `[DONE]`, bounded by the op deadline = no hang).
+  New `stream` field on `AppOperation`. Wired the 7 SSE endpoints (github chat/repo·code·cross-repo,
+  build/suggest, compare; blogs generate/streaming; research stream) + `get_runs_events` (actually
+  JSON). Registry 207 -> 215 ops. Coverage ratchet's deferred set is now EMPTY -> the test demands
+  100%. Live-smoked `post_build_suggest` against the real github app (11k+ chars assembled). Every
+  non-internal endpoint of all 11 apps is now exposed (the WebSocket kernel is outside the OpenAPI
+  denominator). make verify PASS; decomposition eval 16/16.
+
 
 - 2026-07-20 expose-all-capabilities (Phase 2 — capability coverage). Wired every non-internal,
   non-streaming endpoint of all 11 apps as a registry operation, generated directly from each app's

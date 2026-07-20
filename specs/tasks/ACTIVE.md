@@ -1,1 +1,1 @@
-20260720-expose-all-capabilities.md
+20260720-sse-streaming-transport.md

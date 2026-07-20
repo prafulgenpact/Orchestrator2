@@ -2986,6 +2986,117 @@
           "required_fields": [
             "snippet_id"
           ]
+        },
+        {
+          "name": "post_build_suggest",
+          "description": "Get architecture/build suggestions for a described project (streamed).",
+          "method": "POST",
+          "path": "/api/build/suggest",
+          "timeout_s": 300,
+          "destructive": false,
+          "idempotency": "none",
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": [
+            "description",
+            "language"
+          ],
+          "required_fields": [
+            "description"
+          ],
+          "stream": "sse"
+        },
+        {
+          "name": "post_chat_repo",
+          "description": "Chat with an ingested repository \u2014 grounded answers about its code (streamed).",
+          "method": "POST",
+          "path": "/api/chat/repo",
+          "timeout_s": 300,
+          "destructive": false,
+          "idempotency": "none",
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": [
+            "repo_id",
+            "message",
+            "session_id",
+            "file_paths"
+          ],
+          "required_fields": [
+            "message"
+          ],
+          "stream": "sse"
+        },
+        {
+          "name": "post_chat_code",
+          "description": "Chat about specific files in a repository (streamed).",
+          "method": "POST",
+          "path": "/api/chat/code",
+          "timeout_s": 300,
+          "destructive": false,
+          "idempotency": "none",
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": [
+            "repo_id",
+            "message",
+            "session_id",
+            "file_paths"
+          ],
+          "required_fields": [
+            "message"
+          ],
+          "stream": "sse"
+        },
+        {
+          "name": "post_chat_cross_repo",
+          "description": "Chat across all ingested repositories (streamed).",
+          "method": "POST",
+          "path": "/api/chat/cross-repo",
+          "timeout_s": 300,
+          "destructive": false,
+          "idempotency": "none",
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": [
+            "repo_id",
+            "message",
+            "session_id",
+            "file_paths"
+          ],
+          "required_fields": [
+            "message"
+          ],
+          "stream": "sse"
+        },
+        {
+          "name": "post_compare",
+          "description": "Compare repositories across aspects (streamed).",
+          "method": "POST",
+          "path": "/api/compare/",
+          "timeout_s": 300,
+          "destructive": false,
+          "idempotency": "none",
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": [
+            "repo_ids",
+            "aspects"
+          ],
+          "required_fields": [
+            "repo_ids"
+          ],
+          "stream": "sse"
         }
       ]
     },
@@ -3717,6 +3828,33 @@
           },
           "request_fields": [],
           "required_fields": []
+        },
+        {
+          "name": "post_blog_generate_streaming",
+          "description": "Generate a blog post, streamed token-by-token.",
+          "method": "POST",
+          "path": "/api/blog/generate/streaming",
+          "timeout_s": 300,
+          "destructive": false,
+          "idempotency": "none",
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": [
+            "topic",
+            "model",
+            "research",
+            "research_depth",
+            "thinking_depth",
+            "verification",
+            "word_count_target",
+            "audience"
+          ],
+          "required_fields": [
+            "topic"
+          ],
+          "stream": "sse"
         }
       ]
     },
@@ -4214,6 +4352,45 @@
           "required_fields": [
             "url",
             "score"
+          ]
+        },
+        {
+          "name": "get_stream",
+          "description": "Stream a research run's live progress events.",
+          "method": "GET",
+          "path": "/api/stream/{run_id}",
+          "timeout_s": 300,
+          "destructive": false,
+          "idempotency": "supported",
+          "retry": {
+            "transient_max": 2,
+            "backoff_s": 3
+          },
+          "request_fields": [
+            "run_id"
+          ],
+          "required_fields": [
+            "run_id"
+          ],
+          "stream": "sse"
+        },
+        {
+          "name": "get_runs_events",
+          "description": "Get a research run's recorded events (JSON).",
+          "method": "GET",
+          "path": "/api/runs/{run_id}/events",
+          "timeout_s": 300,
+          "destructive": false,
+          "idempotency": "supported",
+          "retry": {
+            "transient_max": 2,
+            "backoff_s": 3
+          },
+          "request_fields": [
+            "run_id"
+          ],
+          "required_fields": [
+            "run_id"
           ]
         }
       ]

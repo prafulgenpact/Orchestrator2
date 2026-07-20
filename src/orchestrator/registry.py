@@ -95,6 +95,7 @@ class AppOperation:
     defaults: dict[str, Any] = field(default_factory=dict)  # values the selector fills if absent
     poll: AsyncSpec | None = None  # present for start-then-poll async operations
     produces: str | None = None  # "chart" => the executor keeps the output as a chart artifact
+    stream: str | None = None  # "sse" => response is a text/event-stream, consumed + assembled
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -111,6 +112,7 @@ class AppOperation:
             "defaults": dict(self.defaults),
             "poll": self.poll.to_dict() if self.poll else None,
             "produces": self.produces,
+            "stream": self.stream,
         }
 
 
@@ -279,6 +281,7 @@ def _parse_operation(raw: Any, app_id: str, index: int) -> AppOperation:
         defaults=_parse_defaults(raw.get("defaults", {}), f"{where} ({name})"),
         poll=_parse_async_spec(raw.get("poll"), f"{where} ({name})"),
         produces=raw.get("produces") or None,
+        stream=raw.get("stream") or None,
     )
 
 

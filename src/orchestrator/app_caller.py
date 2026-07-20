@@ -8,6 +8,7 @@ the executor decides what to do with a failed call.
 
 from __future__ import annotations
 
+import json
 import time
 from dataclasses import dataclass
 from typing import Any
@@ -67,6 +68,75 @@ def _parse_body(resp: httpx.Response) -> Any:
         return resp.json()
     except Exception:
         return resp.text
+
+
+# Text-bearing SSE frame keys, in priority order. A frame like {"token": "x"} or
+# {"type": "token", "content": "x"} contributes "x" to the assembled text; any other structured
+# frame (e.g. {"type": "sources", ...}) is kept as an event so nothing streamed is lost.
+_SSE_TEXT_KEYS = ("content", "token", "text", "delta", "chunk")
+_SSE_TEXT_TYPES = (None, "token", "delta", "text", "chunk")
+
+
+def _sse_text(obj: dict[str, Any]) -> str | None:
+    """The text a data-frame contributes, or None if it is a non-text structured event."""
+    if obj.get("type") not in _SSE_TEXT_TYPES:
+        return None
+    for key in _SSE_TEXT_KEYS:
+        value = obj.get(key)
+        if isinstance(value, str):
+            return value
+    return None
+
+
+async def _consume_sse(
+    client: httpx.AsyncClient,
+    method: str,
+    url: str,
+    params: dict[str, Any],
+    body: dict[str, Any],
+    timeout_s: float,
+) -> dict[str, Any]:
+    """Consume a text/event-stream to completion and assemble it into a single result dict.
+
+    Accumulates the text of every ``data:`` frame that carries one (streamed LLM tokens) into
+    ``text``; any structured (non-text) frame is collected under ``events``. A ``[DONE]`` sentinel
+    ends the stream. Bounded by the operation's hard deadline (the anti-hang guarantee) just like a
+    normal call, so a wedged stream can never hang the run.
+    """
+
+    async def run() -> dict[str, Any]:
+        text_parts: list[str] = []
+        events: list[Any] = []
+        async with client.stream(
+            method, url, params=params or None, json=body or None, timeout=timeout_s
+        ) as resp:
+            resp.raise_for_status()
+            async for line in resp.aiter_lines():
+                if not line.startswith("data:"):
+                    continue
+                payload = line[len("data:") :].strip()
+                if payload == "[DONE]":
+                    break
+                if not payload:
+                    continue
+                try:
+                    obj = json.loads(payload)
+                except ValueError:
+                    text_parts.append(payload)  # a raw (non-JSON) data line
+                    continue
+                text = _sse_text(obj) if isinstance(obj, dict) else None
+                if text is not None:
+                    text_parts.append(text)
+                else:
+                    events.append(obj)
+        data: dict[str, Any] = {}
+        if text_parts:
+            data["text"] = "".join(text_parts)
+        if events:
+            data["events"] = events
+        return data or {"text": ""}
+
+    return await run_with_deadline(run(), timeout_s)
 
 
 async def _resolve_base_url(app: AppEntry, client: httpx.AsyncClient, launcher_url: str) -> str:
@@ -185,6 +255,17 @@ async def call_operation(
         if not await eps.ensure_healthy(base_url, app, client):
             raise ConnectionError(f"health check failed for {app.id} at {base_url}{app.health}")
         url, params, body = _build_request(base_url, op, args)
+
+        if op.stream == "sse":
+            # Streamed (text/event-stream) op: consume + assemble instead of a single response.
+            async def stream_attempt() -> dict[str, Any]:
+                return await _consume_sse(client, op.method, url, params, body, op.timeout_s)
+
+            data = await retry_async(
+                stream_attempt, transient_max=op.retry.transient_max, backoff_s=op.retry.backoff_s
+            )
+            cb.record_success(key)
+            return CallResult(app.id, op.name, url, True, 200, data, None, time.monotonic() - start)
 
         async def attempt() -> httpx.Response:
             resp = await run_with_deadline(
