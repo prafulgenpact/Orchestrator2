@@ -574,7 +574,7 @@
           "destructive": false,
           "idempotency": "none",
           "retry": { "transient_max": 0, "backoff_s": 0 },
-          "request_fields": ["title", "model"]
+          "request_fields": ["title"]
         },
         {
           "name": "send_user_message",
@@ -585,7 +585,7 @@
           "destructive": false,
           "idempotency": "none",
           "retry": { "transient_max": 0, "backoff_s": 0 },
-          "request_fields": ["topic_id", "content", "model"]
+          "request_fields": ["topic_id", "content"]
         }
       ]
     },

@@ -1,0 +1,266 @@
+{
+  "/api/ai/analyze": {
+    "POST": {
+      "params": [
+        "arxiv_id",
+        "mode",
+        "question"
+      ],
+      "required": [
+        "arxiv_id",
+        "mode"
+      ]
+    }
+  },
+  "/api/ai/chat": {
+    "POST": {
+      "params": [
+        "messages",
+        "arxiv_id"
+      ],
+      "required": [
+        "messages"
+      ]
+    }
+  },
+  "/api/db/tables": {
+    "GET": {
+      "params": [],
+      "required": []
+    }
+  },
+  "/api/db/tables/{table_name}": {
+    "GET": {
+      "params": [
+        "table_name",
+        "limit",
+        "offset"
+      ],
+      "required": [
+        "table_name"
+      ]
+    }
+  },
+  "/api/favorites/": {
+    "GET": {
+      "params": [],
+      "required": []
+    },
+    "POST": {
+      "params": [
+        "paper_id"
+      ],
+      "required": [
+        "paper_id"
+      ]
+    }
+  },
+  "/api/favorites/{favorite_id}": {
+    "DELETE": {
+      "params": [
+        "favorite_id"
+      ],
+      "required": [
+        "favorite_id"
+      ]
+    },
+    "PUT": {
+      "params": [
+        "favorite_id",
+        "is_read"
+      ],
+      "required": [
+        "favorite_id",
+        "is_read"
+      ]
+    }
+  },
+  "/api/health": {
+    "GET": {
+      "params": [],
+      "required": []
+    }
+  },
+  "/api/implement/chat": {
+    "POST": {
+      "params": [
+        "concept",
+        "paper_title",
+        "messages"
+      ],
+      "required": [
+        "concept",
+        "paper_title",
+        "messages"
+      ]
+    }
+  },
+  "/api/implement/hint": {
+    "POST": {
+      "params": [
+        "concept",
+        "code",
+        "error",
+        "step_description"
+      ],
+      "required": [
+        "concept",
+        "code",
+        "error"
+      ]
+    }
+  },
+  "/api/implement/plan": {
+    "POST": {
+      "params": [
+        "concept",
+        "paper_title",
+        "paper_abstract"
+      ],
+      "required": [
+        "concept",
+        "paper_title",
+        "paper_abstract"
+      ]
+    }
+  },
+  "/api/implement/run": {
+    "POST": {
+      "params": [
+        "code",
+        "timeout"
+      ],
+      "required": [
+        "code"
+      ]
+    }
+  },
+  "/api/implement/verify": {
+    "POST": {
+      "params": [
+        "concept",
+        "code",
+        "output",
+        "paper_title"
+      ],
+      "required": [
+        "concept",
+        "code",
+        "output",
+        "paper_title"
+      ]
+    }
+  },
+  "/api/luminaries/": {
+    "GET": {
+      "params": [],
+      "required": []
+    }
+  },
+  "/api/luminaries/{author_id}/papers": {
+    "GET": {
+      "params": [
+        "author_id"
+      ],
+      "required": [
+        "author_id"
+      ]
+    }
+  },
+  "/api/papers/by-id": {
+    "POST": {
+      "params": [
+        "arxiv_id"
+      ],
+      "required": [
+        "arxiv_id"
+      ]
+    }
+  },
+  "/api/papers/by-title": {
+    "POST": {
+      "params": [
+        "query",
+        "max_results"
+      ],
+      "required": [
+        "query"
+      ]
+    }
+  },
+  "/api/papers/revolutionary": {
+    "GET": {
+      "params": [],
+      "required": []
+    }
+  },
+  "/api/papers/search": {
+    "POST": {
+      "params": [
+        "query",
+        "max_results"
+      ],
+      "required": [
+        "query"
+      ]
+    }
+  },
+  "/api/seed-revolutionary": {
+    "POST": {
+      "params": [],
+      "required": []
+    }
+  },
+  "/api/topics/search": {
+    "POST": {
+      "params": [
+        "topic",
+        "max_results"
+      ],
+      "required": [
+        "topic"
+      ]
+    }
+  },
+  "/api/url-paper/analyze": {
+    "POST": {
+      "params": [
+        "url",
+        "title",
+        "content",
+        "mode",
+        "question"
+      ],
+      "required": [
+        "url",
+        "title",
+        "content",
+        "mode"
+      ]
+    }
+  },
+  "/api/url-paper/chat": {
+    "POST": {
+      "params": [
+        "title",
+        "content",
+        "messages"
+      ],
+      "required": [
+        "title",
+        "content",
+        "messages"
+      ]
+    }
+  },
+  "/api/url-paper/fetch": {
+    "POST": {
+      "params": [
+        "url"
+      ],
+      "required": [
+        "url"
+      ]
+    }
+  }
+}

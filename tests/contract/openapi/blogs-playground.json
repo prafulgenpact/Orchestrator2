@@ -1,0 +1,385 @@
+{
+  "/api/blog/generate": {
+    "POST": {
+      "params": [
+        "topic",
+        "model",
+        "research",
+        "research_depth",
+        "thinking_depth",
+        "verification",
+        "word_count_target",
+        "audience"
+      ],
+      "required": [
+        "topic"
+      ]
+    }
+  },
+  "/api/blog/generate/async": {
+    "POST": {
+      "params": [
+        "topic",
+        "model",
+        "research",
+        "research_depth",
+        "thinking_depth",
+        "verification",
+        "word_count_target",
+        "audience"
+      ],
+      "required": [
+        "topic"
+      ]
+    }
+  },
+  "/api/blog/generate/streaming": {
+    "POST": {
+      "params": [
+        "topic",
+        "model",
+        "research",
+        "research_depth",
+        "thinking_depth",
+        "verification",
+        "word_count_target",
+        "audience"
+      ],
+      "required": [
+        "topic"
+      ]
+    }
+  },
+  "/api/blog/import": {
+    "POST": {
+      "params": [
+        "content",
+        "title",
+        "run_critique"
+      ],
+      "required": [
+        "content"
+      ]
+    }
+  },
+  "/api/blog/{blog_id}": {
+    "DELETE": {
+      "params": [
+        "blog_id"
+      ],
+      "required": [
+        "blog_id"
+      ]
+    },
+    "GET": {
+      "params": [
+        "blog_id"
+      ],
+      "required": [
+        "blog_id"
+      ]
+    },
+    "PATCH": {
+      "params": [
+        "blog_id",
+        "status",
+        "tags",
+        "pinned",
+        "title"
+      ],
+      "required": [
+        "blog_id"
+      ]
+    }
+  },
+  "/api/blog/{blog_id}/cover-image": {
+    "POST": {
+      "params": [
+        "blog_id",
+        "prompt",
+        "style"
+      ],
+      "required": [
+        "blog_id"
+      ]
+    }
+  },
+  "/api/blog/{blog_id}/iterate": {
+    "POST": {
+      "params": [
+        "blog_id",
+        "instruction",
+        "model"
+      ],
+      "required": [
+        "blog_id",
+        "instruction"
+      ]
+    }
+  },
+  "/api/blog/{blog_id}/iterate/async": {
+    "POST": {
+      "params": [
+        "blog_id",
+        "instruction",
+        "model"
+      ],
+      "required": [
+        "blog_id",
+        "instruction"
+      ]
+    }
+  },
+  "/api/blog/{blog_id}/iterate/paragraph": {
+    "POST": {
+      "params": [
+        "blog_id",
+        "paragraph_index",
+        "instruction",
+        "model"
+      ],
+      "required": [
+        "blog_id",
+        "paragraph_index",
+        "instruction"
+      ]
+    }
+  },
+  "/api/blog/{blog_id}/manual_edit": {
+    "POST": {
+      "params": [
+        "blog_id",
+        "content"
+      ],
+      "required": [
+        "blog_id",
+        "content"
+      ]
+    }
+  },
+  "/api/blog/{blog_id}/publish/wordpress": {
+    "POST": {
+      "params": [
+        "blog_id",
+        "status",
+        "categories",
+        "tags"
+      ],
+      "required": [
+        "blog_id"
+      ]
+    }
+  },
+  "/api/blog/{blog_id}/restore/{version_num}": {
+    "POST": {
+      "params": [
+        "blog_id",
+        "version_num"
+      ],
+      "required": [
+        "blog_id",
+        "version_num"
+      ]
+    }
+  },
+  "/api/blog/{blog_id}/wordpress/unpublish": {
+    "POST": {
+      "params": [
+        "blog_id"
+      ],
+      "required": [
+        "blog_id"
+      ]
+    }
+  },
+  "/api/blogs": {
+    "GET": {
+      "params": [],
+      "required": []
+    }
+  },
+  "/api/blogs/search": {
+    "GET": {
+      "params": [
+        "q",
+        "status",
+        "tag",
+        "limit"
+      ],
+      "required": []
+    }
+  },
+  "/api/blogs/tags": {
+    "GET": {
+      "params": [],
+      "required": []
+    }
+  },
+  "/api/blogs/{blog_id}/cost": {
+    "GET": {
+      "params": [
+        "blog_id"
+      ],
+      "required": [
+        "blog_id"
+      ]
+    }
+  },
+  "/api/health": {
+    "GET": {
+      "params": [],
+      "required": []
+    }
+  },
+  "/api/models": {
+    "GET": {
+      "params": [],
+      "required": []
+    }
+  },
+  "/api/runs": {
+    "GET": {
+      "params": [],
+      "required": []
+    }
+  },
+  "/api/runs/{run_id}": {
+    "GET": {
+      "params": [
+        "run_id"
+      ],
+      "required": [
+        "run_id"
+      ]
+    }
+  },
+  "/api/runs/{run_id}/cancel": {
+    "POST": {
+      "params": [
+        "run_id"
+      ],
+      "required": [
+        "run_id"
+      ]
+    }
+  },
+  "/api/style": {
+    "GET": {
+      "params": [],
+      "required": []
+    },
+    "PUT": {
+      "params": [
+        "seed_rules",
+        "learned_traits",
+        "vocabulary_preferences",
+        "sample_snippets",
+        "updated_at"
+      ],
+      "required": []
+    }
+  },
+  "/api/style/critique": {
+    "POST": {
+      "params": [
+        "text"
+      ],
+      "required": [
+        "text"
+      ]
+    }
+  },
+  "/api/style/drift": {
+    "GET": {
+      "params": [],
+      "required": []
+    }
+  },
+  "/api/style/reset": {
+    "POST": {
+      "params": [],
+      "required": []
+    }
+  },
+  "/api/style/sample": {
+    "POST": {
+      "params": [
+        "text",
+        "label"
+      ],
+      "required": [
+        "text"
+      ]
+    }
+  },
+  "/api/style/samples/bulk": {
+    "POST": {
+      "params": [
+        "samples"
+      ],
+      "required": [
+        "samples"
+      ]
+    }
+  },
+  "/api/style/trait/{trait_index}": {
+    "DELETE": {
+      "params": [
+        "trait_index"
+      ],
+      "required": [
+        "trait_index"
+      ]
+    },
+    "PATCH": {
+      "params": [
+        "trait_index",
+        "trait",
+        "evidence_count"
+      ],
+      "required": [
+        "trait_index"
+      ]
+    }
+  },
+  "/api/topics/recent": {
+    "GET": {
+      "params": [
+        "limit"
+      ],
+      "required": []
+    }
+  },
+  "/api/topics/suggestions": {
+    "GET": {
+      "params": [
+        "limit"
+      ],
+      "required": []
+    }
+  },
+  "/api/wordpress/config": {
+    "GET": {
+      "params": [],
+      "required": []
+    },
+    "POST": {
+      "params": [
+        "site_url",
+        "username",
+        "app_password"
+      ],
+      "required": [
+        "site_url",
+        "username",
+        "app_password"
+      ]
+    }
+  },
+  "/api/wordpress/test": {
+    "POST": {
+      "params": [],
+      "required": []
+    }
+  }
+}

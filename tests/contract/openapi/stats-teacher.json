@@ -1,0 +1,35 @@
+{
+  "/api/health": {
+    "GET": {
+      "params": [],
+      "required": []
+    }
+  },
+  "/api/qa": {
+    "POST": {
+      "params": [
+        "question",
+        "module_id",
+        "module_title",
+        "module_part",
+        "conversation_history"
+      ],
+      "required": [
+        "question",
+        "module_id",
+        "module_title",
+        "module_part"
+      ]
+    }
+  },
+  "/{full_path}": {
+    "GET": {
+      "params": [
+        "full_path"
+      ],
+      "required": [
+        "full_path"
+      ]
+    }
+  }
+}

@@ -1,0 +1,360 @@
+{
+  "/api/build/suggest": {
+    "POST": {
+      "params": [
+        "description",
+        "language"
+      ],
+      "required": [
+        "description"
+      ]
+    }
+  },
+  "/api/chat/code": {
+    "POST": {
+      "params": [
+        "repo_id",
+        "message",
+        "session_id",
+        "file_paths"
+      ],
+      "required": [
+        "message"
+      ]
+    }
+  },
+  "/api/chat/cross-repo": {
+    "POST": {
+      "params": [
+        "repo_id",
+        "message",
+        "session_id",
+        "file_paths"
+      ],
+      "required": [
+        "message"
+      ]
+    }
+  },
+  "/api/chat/repo": {
+    "POST": {
+      "params": [
+        "repo_id",
+        "message",
+        "session_id",
+        "file_paths"
+      ],
+      "required": [
+        "message"
+      ]
+    }
+  },
+  "/api/chat/sessions": {
+    "GET": {
+      "params": [],
+      "required": []
+    },
+    "POST": {
+      "params": [
+        "id",
+        "repo_id",
+        "title",
+        "context_type",
+        "messages",
+        "created_at"
+      ],
+      "required": [
+        "title"
+      ]
+    }
+  },
+  "/api/chat/sessions/{session_id}": {
+    "DELETE": {
+      "params": [
+        "session_id"
+      ],
+      "required": [
+        "session_id"
+      ]
+    },
+    "GET": {
+      "params": [
+        "session_id"
+      ],
+      "required": [
+        "session_id"
+      ]
+    }
+  },
+  "/api/compare/": {
+    "POST": {
+      "params": [
+        "repo_ids",
+        "aspects"
+      ],
+      "required": [
+        "repo_ids"
+      ]
+    }
+  },
+  "/api/help/chat": {
+    "POST": {
+      "params": [
+        "message",
+        "page_context",
+        "screen_data"
+      ],
+      "required": [
+        "message"
+      ]
+    }
+  },
+  "/api/learning-paths/": {
+    "GET": {
+      "params": [],
+      "required": []
+    },
+    "POST": {
+      "params": [
+        "title",
+        "description",
+        "repo_ids",
+        "difficulty"
+      ],
+      "required": [
+        "title",
+        "description",
+        "repo_ids",
+        "difficulty"
+      ]
+    }
+  },
+  "/api/learning-paths/generate": {
+    "POST": {
+      "params": [
+        "topic",
+        "repo_ids",
+        "difficulty"
+      ],
+      "required": [
+        "topic",
+        "difficulty"
+      ]
+    }
+  },
+  "/api/learning-paths/{path_id}": {
+    "DELETE": {
+      "params": [
+        "path_id"
+      ],
+      "required": [
+        "path_id"
+      ]
+    },
+    "GET": {
+      "params": [
+        "path_id"
+      ],
+      "required": [
+        "path_id"
+      ]
+    }
+  },
+  "/api/learnings/": {
+    "GET": {
+      "params": [
+        "repo_id"
+      ],
+      "required": []
+    }
+  },
+  "/api/learnings/extract/{repo_id}": {
+    "POST": {
+      "params": [
+        "repo_id"
+      ],
+      "required": [
+        "repo_id"
+      ]
+    }
+  },
+  "/api/learnings/search": {
+    "GET": {
+      "params": [
+        "q"
+      ],
+      "required": [
+        "q"
+      ]
+    }
+  },
+  "/api/learnings/{learning_id}": {
+    "DELETE": {
+      "params": [
+        "learning_id"
+      ],
+      "required": [
+        "learning_id"
+      ]
+    }
+  },
+  "/api/patterns/": {
+    "GET": {
+      "params": [
+        "category"
+      ],
+      "required": []
+    }
+  },
+  "/api/patterns/categories": {
+    "GET": {
+      "params": [],
+      "required": []
+    }
+  },
+  "/api/patterns/detect-cross": {
+    "POST": {
+      "params": [],
+      "required": []
+    }
+  },
+  "/api/patterns/detect/{repo_id}": {
+    "POST": {
+      "params": [
+        "repo_id"
+      ],
+      "required": [
+        "repo_id"
+      ]
+    }
+  },
+  "/api/patterns/search": {
+    "GET": {
+      "params": [
+        "q"
+      ],
+      "required": [
+        "q"
+      ]
+    }
+  },
+  "/api/repos/": {
+    "GET": {
+      "params": [],
+      "required": []
+    },
+    "POST": {
+      "params": [
+        "url",
+        "options"
+      ],
+      "required": [
+        "url"
+      ]
+    }
+  },
+  "/api/repos/{repo_id}": {
+    "DELETE": {
+      "params": [
+        "repo_id"
+      ],
+      "required": [
+        "repo_id"
+      ]
+    },
+    "GET": {
+      "params": [
+        "repo_id"
+      ],
+      "required": [
+        "repo_id"
+      ]
+    }
+  },
+  "/api/repos/{repo_id}/file": {
+    "GET": {
+      "params": [
+        "repo_id",
+        "path"
+      ],
+      "required": [
+        "repo_id",
+        "path"
+      ]
+    }
+  },
+  "/api/repos/{repo_id}/files": {
+    "GET": {
+      "params": [
+        "repo_id"
+      ],
+      "required": [
+        "repo_id"
+      ]
+    }
+  },
+  "/api/snippets/": {
+    "GET": {
+      "params": [
+        "repo_id",
+        "language",
+        "tags"
+      ],
+      "required": []
+    },
+    "POST": {
+      "params": [
+        "repo_id",
+        "title",
+        "code",
+        "language",
+        "file_path",
+        "start_line",
+        "end_line",
+        "explanation",
+        "tags"
+      ],
+      "required": [
+        "repo_id",
+        "title",
+        "code"
+      ]
+    }
+  },
+  "/api/snippets/search": {
+    "GET": {
+      "params": [
+        "q"
+      ],
+      "required": [
+        "q"
+      ]
+    }
+  },
+  "/api/snippets/{snippet_id}": {
+    "DELETE": {
+      "params": [
+        "snippet_id"
+      ],
+      "required": [
+        "snippet_id"
+      ]
+    },
+    "GET": {
+      "params": [
+        "snippet_id"
+      ],
+      "required": [
+        "snippet_id"
+      ]
+    },
+    "PUT": {
+      "params": [
+        "snippet_id"
+      ],
+      "required": [
+        "snippet_id"
+      ]
+    }
+  }
+}

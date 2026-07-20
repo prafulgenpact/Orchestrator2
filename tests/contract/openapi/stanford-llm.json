@@ -1,0 +1,18 @@
+{
+  "/api/chat": {
+    "POST": {
+      "params": [
+        "messages"
+      ],
+      "required": [
+        "messages"
+      ]
+    }
+  },
+  "/api/health": {
+    "GET": {
+      "params": [],
+      "required": []
+    }
+  }
+}

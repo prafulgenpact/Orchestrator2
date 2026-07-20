@@ -1,0 +1,755 @@
+{
+  "/": {
+    "GET": {
+      "params": [],
+      "required": []
+    }
+  },
+  "/api/chat/send": {
+    "POST": {
+      "params": [
+        "message",
+        "active_section",
+        "extra_context",
+        "history"
+      ],
+      "required": [
+        "message"
+      ]
+    }
+  },
+  "/api/code-complete/": {
+    "POST": {
+      "params": [
+        "code_before",
+        "code_after",
+        "language"
+      ],
+      "required": [
+        "code_before"
+      ]
+    }
+  },
+  "/api/datasets/": {
+    "GET": {
+      "params": [],
+      "required": []
+    }
+  },
+  "/api/datasets/upload": {
+    "POST": {
+      "params": [
+        "file"
+      ],
+      "required": [
+        "file"
+      ]
+    }
+  },
+  "/api/datasets/{dataset_id}/load-code": {
+    "GET": {
+      "params": [
+        "dataset_id"
+      ],
+      "required": [
+        "dataset_id"
+      ]
+    }
+  },
+  "/api/datasets/{dataset_id}/preview": {
+    "GET": {
+      "params": [
+        "dataset_id",
+        "n_rows"
+      ],
+      "required": [
+        "dataset_id"
+      ]
+    }
+  },
+  "/api/debug/analyze": {
+    "POST": {
+      "params": [
+        "error_text",
+        "code"
+      ],
+      "required": [
+        "error_text"
+      ]
+    }
+  },
+  "/api/debug/pitfalls": {
+    "GET": {
+      "params": [],
+      "required": []
+    }
+  },
+  "/api/debug/pitfalls/{pitfall_id}": {
+    "GET": {
+      "params": [
+        "pitfall_id"
+      ],
+      "required": [
+        "pitfall_id"
+      ]
+    }
+  },
+  "/api/dl-rl/dl/generate-code": {
+    "POST": {
+      "params": [
+        "dataset_id",
+        "model_id",
+        "target_col",
+        "test_size",
+        "params"
+      ],
+      "required": [
+        "dataset_id",
+        "model_id",
+        "target_col"
+      ]
+    }
+  },
+  "/api/dl-rl/dl/models": {
+    "GET": {
+      "params": [],
+      "required": []
+    }
+  },
+  "/api/dl-rl/dl/models/{model_id}/params": {
+    "GET": {
+      "params": [
+        "model_id"
+      ],
+      "required": [
+        "model_id"
+      ]
+    }
+  },
+  "/api/dl-rl/dl/train": {
+    "POST": {
+      "params": [
+        "dataset_id",
+        "model_id",
+        "target_col",
+        "test_size",
+        "params"
+      ],
+      "required": [
+        "dataset_id",
+        "model_id",
+        "target_col"
+      ]
+    }
+  },
+  "/api/dl-rl/rl/envs": {
+    "GET": {
+      "params": [],
+      "required": []
+    }
+  },
+  "/api/dl-rl/rl/generate-code": {
+    "POST": {
+      "params": [
+        "env_id",
+        "model_id",
+        "params"
+      ],
+      "required": [
+        "env_id",
+        "model_id"
+      ]
+    }
+  },
+  "/api/dl-rl/rl/models": {
+    "GET": {
+      "params": [],
+      "required": []
+    }
+  },
+  "/api/dl-rl/rl/models/{model_id}/params": {
+    "GET": {
+      "params": [
+        "model_id"
+      ],
+      "required": [
+        "model_id"
+      ]
+    }
+  },
+  "/api/dl-rl/rl/train": {
+    "POST": {
+      "params": [
+        "env_id",
+        "model_id",
+        "params"
+      ],
+      "required": [
+        "env_id",
+        "model_id"
+      ]
+    }
+  },
+  "/api/eda/{dataset_id}/correlation": {
+    "GET": {
+      "params": [
+        "dataset_id"
+      ],
+      "required": [
+        "dataset_id"
+      ]
+    }
+  },
+  "/api/eda/{dataset_id}/distribution": {
+    "GET": {
+      "params": [
+        "dataset_id",
+        "column",
+        "plot_type"
+      ],
+      "required": [
+        "dataset_id",
+        "column"
+      ]
+    }
+  },
+  "/api/eda/{dataset_id}/dtypes-missing": {
+    "GET": {
+      "params": [
+        "dataset_id"
+      ],
+      "required": [
+        "dataset_id"
+      ]
+    }
+  },
+  "/api/eda/{dataset_id}/outliers": {
+    "GET": {
+      "params": [
+        "dataset_id",
+        "column",
+        "method"
+      ],
+      "required": [
+        "dataset_id",
+        "column"
+      ]
+    }
+  },
+  "/api/eda/{dataset_id}/scatter": {
+    "GET": {
+      "params": [
+        "dataset_id",
+        "x",
+        "y",
+        "color"
+      ],
+      "required": [
+        "dataset_id",
+        "x",
+        "y"
+      ]
+    }
+  },
+  "/api/eda/{dataset_id}/summary": {
+    "GET": {
+      "params": [
+        "dataset_id"
+      ],
+      "required": [
+        "dataset_id"
+      ]
+    }
+  },
+  "/api/eda/{dataset_id}/target-distribution": {
+    "GET": {
+      "params": [
+        "dataset_id",
+        "target"
+      ],
+      "required": [
+        "dataset_id",
+        "target"
+      ]
+    }
+  },
+  "/api/kernel/interrupt": {
+    "POST": {
+      "params": [],
+      "required": []
+    }
+  },
+  "/api/kernel/restart": {
+    "POST": {
+      "params": [],
+      "required": []
+    }
+  },
+  "/api/kernel/start": {
+    "POST": {
+      "params": [],
+      "required": []
+    }
+  },
+  "/api/kernel/status": {
+    "GET": {
+      "params": [],
+      "required": []
+    }
+  },
+  "/api/learn/paths": {
+    "GET": {
+      "params": [],
+      "required": []
+    }
+  },
+  "/api/learn/paths/{path_id}/topics": {
+    "GET": {
+      "params": [
+        "path_id"
+      ],
+      "required": [
+        "path_id"
+      ]
+    }
+  },
+  "/api/learn/paths/{path_id}/topics/{topic_id}": {
+    "GET": {
+      "params": [
+        "path_id",
+        "topic_id"
+      ],
+      "required": [
+        "path_id",
+        "topic_id"
+      ]
+    }
+  },
+  "/api/learn/snippets": {
+    "GET": {
+      "params": [
+        "q"
+      ],
+      "required": []
+    }
+  },
+  "/api/llm/generate-code": {
+    "POST": {
+      "params": [
+        "model_id",
+        "params"
+      ],
+      "required": [
+        "model_id"
+      ]
+    }
+  },
+  "/api/llm/models": {
+    "GET": {
+      "params": [],
+      "required": []
+    }
+  },
+  "/api/llm/models/{model_id}/params": {
+    "GET": {
+      "params": [
+        "model_id"
+      ],
+      "required": [
+        "model_id"
+      ]
+    }
+  },
+  "/api/llm/run": {
+    "POST": {
+      "params": [
+        "model_id",
+        "params"
+      ],
+      "required": [
+        "model_id"
+      ]
+    }
+  },
+  "/api/mdp/gym-mapping/{env_id}": {
+    "GET": {
+      "params": [
+        "env_id"
+      ],
+      "required": [
+        "env_id"
+      ]
+    }
+  },
+  "/api/mdp/list": {
+    "GET": {
+      "params": [],
+      "required": []
+    }
+  },
+  "/api/mdp/solve": {
+    "POST": {
+      "params": [
+        "mdp_id",
+        "algorithm",
+        "gamma",
+        "max_iters"
+      ],
+      "required": [
+        "mdp_id"
+      ]
+    }
+  },
+  "/api/mdp/{mdp_id}": {
+    "GET": {
+      "params": [
+        "mdp_id"
+      ],
+      "required": [
+        "mdp_id"
+      ]
+    }
+  },
+  "/api/ml/generate-code": {
+    "POST": {
+      "params": [
+        "dataset_id",
+        "model_id",
+        "target_col",
+        "test_size",
+        "params"
+      ],
+      "required": [
+        "dataset_id",
+        "model_id",
+        "target_col"
+      ]
+    }
+  },
+  "/api/ml/models": {
+    "GET": {
+      "params": [],
+      "required": []
+    }
+  },
+  "/api/ml/models/{model_id}/params": {
+    "GET": {
+      "params": [
+        "model_id"
+      ],
+      "required": [
+        "model_id"
+      ]
+    }
+  },
+  "/api/ml/train": {
+    "POST": {
+      "params": [
+        "dataset_id",
+        "model_id",
+        "target_col",
+        "test_size",
+        "params"
+      ],
+      "required": [
+        "dataset_id",
+        "model_id",
+        "target_col"
+      ]
+    }
+  },
+  "/api/ml/train-unsupervised": {
+    "POST": {
+      "params": [
+        "dataset_id",
+        "model_id",
+        "target_col",
+        "params"
+      ],
+      "required": [
+        "dataset_id",
+        "model_id"
+      ]
+    }
+  },
+  "/api/notebooks/list": {
+    "GET": {
+      "params": [],
+      "required": []
+    }
+  },
+  "/api/notebooks/save": {
+    "POST": {
+      "params": [
+        "notebook_id",
+        "name",
+        "cells"
+      ],
+      "required": [
+        "cells"
+      ]
+    }
+  },
+  "/api/notebooks/{notebook_id}": {
+    "DELETE": {
+      "params": [
+        "notebook_id"
+      ],
+      "required": [
+        "notebook_id"
+      ]
+    },
+    "GET": {
+      "params": [
+        "notebook_id"
+      ],
+      "required": [
+        "notebook_id"
+      ]
+    }
+  },
+  "/api/notebooks/{notebook_id}/rename": {
+    "PUT": {
+      "params": [
+        "notebook_id",
+        "name"
+      ],
+      "required": [
+        "notebook_id",
+        "name"
+      ]
+    }
+  },
+  "/api/preprocessing/{dataset_id}/balance": {
+    "POST": {
+      "params": [
+        "dataset_id",
+        "target_col",
+        "method"
+      ],
+      "required": [
+        "dataset_id",
+        "target_col"
+      ]
+    }
+  },
+  "/api/preprocessing/{dataset_id}/columns": {
+    "GET": {
+      "params": [
+        "dataset_id"
+      ],
+      "required": [
+        "dataset_id"
+      ]
+    }
+  },
+  "/api/preprocessing/{dataset_id}/encode": {
+    "POST": {
+      "params": [
+        "dataset_id",
+        "columns",
+        "method"
+      ],
+      "required": [
+        "dataset_id",
+        "columns"
+      ]
+    }
+  },
+  "/api/preprocessing/{dataset_id}/impute": {
+    "POST": {
+      "params": [
+        "dataset_id",
+        "strategies"
+      ],
+      "required": [
+        "dataset_id",
+        "strategies"
+      ]
+    }
+  },
+  "/api/preprocessing/{dataset_id}/scale": {
+    "POST": {
+      "params": [
+        "dataset_id",
+        "columns",
+        "method"
+      ],
+      "required": [
+        "dataset_id",
+        "columns"
+      ]
+    }
+  },
+  "/api/preprocessing/{dataset_id}/split": {
+    "POST": {
+      "params": [
+        "dataset_id",
+        "target_col",
+        "test_size",
+        "stratify"
+      ],
+      "required": [
+        "dataset_id",
+        "target_col"
+      ]
+    }
+  },
+  "/api/tips": {
+    "GET": {
+      "params": [
+        "category"
+      ],
+      "required": []
+    }
+  },
+  "/api/tips/categories": {
+    "GET": {
+      "params": [],
+      "required": []
+    }
+  },
+  "/api/tips/shortcuts": {
+    "GET": {
+      "params": [],
+      "required": []
+    }
+  },
+  "/api/viz/classification-metrics": {
+    "POST": {
+      "params": [
+        "dataset_id",
+        "model_id",
+        "target_col",
+        "test_size",
+        "params"
+      ],
+      "required": [
+        "dataset_id",
+        "model_id",
+        "target_col"
+      ]
+    }
+  },
+  "/api/viz/compare": {
+    "POST": {
+      "params": [
+        "dataset_id",
+        "target_col",
+        "model_ids",
+        "test_size",
+        "params_list"
+      ],
+      "required": [
+        "dataset_id",
+        "target_col",
+        "model_ids"
+      ]
+    }
+  },
+  "/api/viz/cross-validation": {
+    "POST": {
+      "params": [
+        "dataset_id",
+        "model_id",
+        "target_col",
+        "params",
+        "cv"
+      ],
+      "required": [
+        "dataset_id",
+        "model_id",
+        "target_col"
+      ]
+    }
+  },
+  "/api/viz/decision-boundary": {
+    "POST": {
+      "params": [
+        "dataset_id",
+        "model_id",
+        "target_col",
+        "feature_x",
+        "feature_y",
+        "params"
+      ],
+      "required": [
+        "dataset_id",
+        "model_id",
+        "target_col",
+        "feature_x",
+        "feature_y"
+      ]
+    }
+  },
+  "/api/viz/learning-curve": {
+    "POST": {
+      "params": [
+        "dataset_id",
+        "model_id",
+        "target_col",
+        "params",
+        "cv"
+      ],
+      "required": [
+        "dataset_id",
+        "model_id",
+        "target_col"
+      ]
+    }
+  },
+  "/api/viz/pr-curve": {
+    "POST": {
+      "params": [
+        "dataset_id",
+        "model_id",
+        "target_col",
+        "test_size",
+        "params"
+      ],
+      "required": [
+        "dataset_id",
+        "model_id",
+        "target_col"
+      ]
+    }
+  },
+  "/api/viz/regression-plots": {
+    "POST": {
+      "params": [
+        "dataset_id",
+        "model_id",
+        "target_col",
+        "test_size",
+        "params"
+      ],
+      "required": [
+        "dataset_id",
+        "model_id",
+        "target_col"
+      ]
+    }
+  },
+  "/api/viz/roc": {
+    "POST": {
+      "params": [
+        "dataset_id",
+        "model_id",
+        "target_col",
+        "test_size",
+        "params"
+      ],
+      "required": [
+        "dataset_id",
+        "model_id",
+        "target_col"
+      ]
+    }
+  },
+  "/health": {
+    "GET": {
+      "params": [],
+      "required": []
+    }
+  }
+}

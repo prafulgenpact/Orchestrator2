@@ -1,8 +1,12 @@
 {
   "schema": "proof/v1",
-  "created_utc": "2026-07-20T10:02:41+00:00",
-  "result": "PASS",
-  "failed_checks": [],
+  "created_utc": "2026-07-20T10:00:36+00:00",
+  "result": "FAIL",
+  "failed_checks": [
+    "py-lint",
+    "py-format",
+    "py-types"
+  ],
   "missing_required_checks": [],
   "required_checks": [
     "py-lint",
@@ -12,7 +16,7 @@
     "e2e",
     "secrets"
   ],
-  "fingerprint": "be67727fb0eae121b69bee37fdb3f8297e08158553b8aaf1cd795569803ce3a0",
+  "fingerprint": "3ae47849e7189f3e7ab154929e00defe3f1e926b150efbb45dafbcea5cc9e915",
   "git": {
     "commit": "765aea458b4747ea3fe847bbb7c053064fb139f4",
     "branch": "Orchestrator2",
@@ -21,32 +25,32 @@
   "checks": [
     {
       "name": "py-lint",
-      "status": "pass",
+      "status": "fail",
       "duration_s": 0,
       "evidence": "reports/py-lint.log"
     },
     {
       "name": "py-format",
-      "status": "pass",
+      "status": "fail",
       "duration_s": 0,
       "evidence": "reports/py-format.log"
     },
     {
       "name": "py-types",
-      "status": "pass",
-      "duration_s": 1,
+      "status": "fail",
+      "duration_s": 2,
       "evidence": "reports/py-types.log"
     },
     {
       "name": "py-unit",
       "status": "pass",
-      "duration_s": 6,
+      "duration_s": 4,
       "evidence": "reports/py-unit.log"
     },
     {
       "name": "e2e",
       "status": "pass",
-      "duration_s": 1,
+      "duration_s": 2,
       "evidence": "reports/e2e.log"
     },
     {
@@ -64,7 +68,7 @@
     {
       "name": "dep-audit",
       "status": "pass",
-      "duration_s": 23,
+      "duration_s": 28,
       "evidence": "reports/dep-audit.log"
     },
     {
@@ -80,14 +84,14 @@
       "failures": 0,
       "errors": 0,
       "skipped": 0,
-      "time_s": 3.89
+      "time_s": 3.19
     },
     "e2e": {
       "tests": 2,
       "failures": 0,
       "errors": 0,
       "skipped": 0,
-      "time_s": 0.79
+      "time_s": 0.67
     },
     "web_e2e": null,
     "coverage_pct": 98.14
@@ -99,5 +103,5 @@
     "pytest": "pytest 8.3.2",
     "os": "Darwin 25.5.0"
   },
-  "content_hash": "2cf5f2ef911be227de100b5d1a02d6af3876f31a2bcf7f2d266411b7a311f975"
+  "content_hash": "4defe0f404e266058a0b189229c255c69d64893b607fcd2e4cb93a2cc6534d18"
 }

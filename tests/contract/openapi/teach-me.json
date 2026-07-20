@@ -1,0 +1,79 @@
+{
+  "/preferences": {
+    "GET": {
+      "params": [],
+      "required": []
+    }
+  },
+  "/topics": {
+    "GET": {
+      "params": [],
+      "required": []
+    },
+    "POST": {
+      "params": [
+        "title"
+      ],
+      "required": [
+        "title"
+      ]
+    }
+  },
+  "/topics/{topic_id}": {
+    "GET": {
+      "params": [
+        "topic_id"
+      ],
+      "required": [
+        "topic_id"
+      ]
+    }
+  },
+  "/topics/{topic_id}/advance": {
+    "POST": {
+      "params": [
+        "topic_id"
+      ],
+      "required": [
+        "topic_id"
+      ]
+    }
+  },
+  "/topics/{topic_id}/feedback": {
+    "POST": {
+      "params": [
+        "topic_id",
+        "message_id",
+        "feedback_type",
+        "complexity_rating",
+        "free_text"
+      ],
+      "required": [
+        "topic_id",
+        "feedback_type"
+      ]
+    }
+  },
+  "/topics/{topic_id}/messages": {
+    "POST": {
+      "params": [
+        "topic_id",
+        "content"
+      ],
+      "required": [
+        "topic_id",
+        "content"
+      ]
+    }
+  },
+  "/{full_path}": {
+    "GET": {
+      "params": [
+        "full_path"
+      ],
+      "required": [
+        "full_path"
+      ]
+    }
+  }
+}

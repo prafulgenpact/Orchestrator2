@@ -1,0 +1,276 @@
+{
+  "/": {
+    "GET": {
+      "params": [],
+      "required": []
+    }
+  },
+  "/api/bridges": {
+    "GET": {
+      "params": [],
+      "required": []
+    }
+  },
+  "/api/bridges/regenerate": {
+    "POST": {
+      "params": [],
+      "required": []
+    }
+  },
+  "/api/bridges/{bridge_id}": {
+    "DELETE": {
+      "params": [
+        "bridge_id"
+      ],
+      "required": [
+        "bridge_id"
+      ]
+    }
+  },
+  "/api/corpus": {
+    "GET": {
+      "params": [],
+      "required": []
+    }
+  },
+  "/api/corpus/reindex": {
+    "POST": {
+      "params": [
+        "force"
+      ],
+      "required": []
+    }
+  },
+  "/api/corpus/upload": {
+    "POST": {
+      "params": [
+        "file"
+      ],
+      "required": [
+        "file"
+      ]
+    }
+  },
+  "/api/corpus/{doc_id}": {
+    "DELETE": {
+      "params": [
+        "doc_id"
+      ],
+      "required": [
+        "doc_id"
+      ]
+    }
+  },
+  "/api/corpus/{doc_id}/chunk/{idx}": {
+    "GET": {
+      "params": [
+        "doc_id",
+        "idx",
+        "neighbors"
+      ],
+      "required": [
+        "doc_id",
+        "idx"
+      ]
+    }
+  },
+  "/api/disagreements": {
+    "GET": {
+      "params": [],
+      "required": []
+    },
+    "POST": {
+      "params": [
+        "quote",
+        "run_id",
+        "version",
+        "correction"
+      ],
+      "required": [
+        "quote"
+      ]
+    }
+  },
+  "/api/disagreements/{did}": {
+    "DELETE": {
+      "params": [
+        "did"
+      ],
+      "required": [
+        "did"
+      ]
+    }
+  },
+  "/api/graph": {
+    "GET": {
+      "params": [],
+      "required": []
+    }
+  },
+  "/api/health": {
+    "GET": {
+      "params": [],
+      "required": []
+    }
+  },
+  "/api/notes": {
+    "GET": {
+      "params": [
+        "q"
+      ],
+      "required": []
+    },
+    "POST": {
+      "params": [
+        "text",
+        "run_id",
+        "version",
+        "context_before",
+        "context_after",
+        "source_url",
+        "tags"
+      ],
+      "required": [
+        "text"
+      ]
+    }
+  },
+  "/api/notes/{note_id}": {
+    "DELETE": {
+      "params": [
+        "note_id"
+      ],
+      "required": [
+        "note_id"
+      ]
+    }
+  },
+  "/api/quiz/grade": {
+    "POST": {
+      "params": [
+        "run_id",
+        "question",
+        "user_answer"
+      ],
+      "required": [
+        "run_id",
+        "question",
+        "user_answer"
+      ]
+    }
+  },
+  "/api/quiz/{run_id}/questions": {
+    "POST": {
+      "params": [
+        "run_id"
+      ],
+      "required": [
+        "run_id"
+      ]
+    }
+  },
+  "/api/research": {
+    "POST": {
+      "params": [
+        "topic",
+        "depth",
+        "voice",
+        "feedback",
+        "feedback_tag",
+        "feedback_span",
+        "parent_run_id"
+      ],
+      "required": [
+        "topic"
+      ]
+    }
+  },
+  "/api/review/queue": {
+    "GET": {
+      "params": [],
+      "required": []
+    }
+  },
+  "/api/review/{concept_id}/done": {
+    "POST": {
+      "params": [
+        "concept_id"
+      ],
+      "required": [
+        "concept_id"
+      ]
+    }
+  },
+  "/api/review/{concept_id}/refresh": {
+    "POST": {
+      "params": [
+        "concept_id"
+      ],
+      "required": [
+        "concept_id"
+      ]
+    }
+  },
+  "/api/runs": {
+    "GET": {
+      "params": [],
+      "required": []
+    }
+  },
+  "/api/runs/{run_id}": {
+    "GET": {
+      "params": [
+        "run_id"
+      ],
+      "required": [
+        "run_id"
+      ]
+    }
+  },
+  "/api/runs/{run_id}/cancel": {
+    "POST": {
+      "params": [
+        "run_id"
+      ],
+      "required": [
+        "run_id"
+      ]
+    }
+  },
+  "/api/runs/{run_id}/events": {
+    "GET": {
+      "params": [
+        "run_id"
+      ],
+      "required": [
+        "run_id"
+      ]
+    }
+  },
+  "/api/sources/trust": {
+    "GET": {
+      "params": [],
+      "required": []
+    },
+    "POST": {
+      "params": [
+        "url",
+        "score"
+      ],
+      "required": [
+        "url",
+        "score"
+      ]
+    }
+  },
+  "/api/stream/{run_id}": {
+    "GET": {
+      "params": [
+        "run_id"
+      ],
+      "required": [
+        "run_id"
+      ]
+    }
+  }
+}

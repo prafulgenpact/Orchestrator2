@@ -1,8 +1,22 @@
 # Project State — A multi agent orchestrator system calling relevant apps basis intent recognition
 
-Last updated: 2026-07-20 (eda-charts task)
+Last updated: 2026-07-20 (api-contract-guardrail task)
 
 ## Done (most recent first)
+
+- 2026-07-20 api-contract-guardrail (Phase 2 — guardrail #8: registry vs live app APIs). Wiring a
+  registry op with a wrong method/path/field can no longer be sealed. New `contract.py`
+  (`check_op`/`slim_from_openapi`, pure) validates every op against committed slim OpenAPI snapshots
+  in `tests/contract/openapi/<app>.json`; `tools/refresh_openapi.py` re-fetches live `/openapi.json`
+  to update them (live-reconciliation step, like re-recording fixtures). Enforced as a unit test
+  (`tests/unit/test_api_contract.py`) so it rides `py-unit` in `make verify` WITHOUT touching the
+  enforcement layer (rule 8). On its FIRST run it caught real drift record/replay never could:
+  `teach-me.create_topic`/`send_user_message` declared a `model` request-field the API rejects
+  (removed both). A third flag (`upload_corpus_document` `file`) was a false positive from the
+  extractor ignoring `multipart/form-data` bodies — fixed in the extractor. Snapshots seeded for all
+  11 apps (all reachable). make verify PASS; decomposition eval still 16/16; unit 379→488.
+
+- 2026-07-20 eda-charts (Phase 2 — capability coverage: the orchestrator can plot/analyze a
 
 - 2026-07-20 eda-charts (Phase 2 — capability coverage: the orchestrator can plot/analyze a
   dataset). Wired coding-playground's 7 EDA endpoints (summary, dtypes-missing, distribution,

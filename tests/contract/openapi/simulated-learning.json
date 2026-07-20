@@ -1,0 +1,45 @@
+{
+  "/api/ask": {
+    "POST": {
+      "params": [
+        "question",
+        "concept_title",
+        "track_name",
+        "theory_context"
+      ],
+      "required": [
+        "question",
+        "concept_title",
+        "track_name",
+        "theory_context"
+      ]
+    }
+  },
+  "/api/execute": {
+    "POST": {
+      "params": [
+        "code",
+        "timeout"
+      ],
+      "required": [
+        "code"
+      ]
+    }
+  },
+  "/api/health": {
+    "GET": {
+      "params": [],
+      "required": []
+    }
+  },
+  "/{full_path}": {
+    "GET": {
+      "params": [
+        "full_path"
+      ],
+      "required": [
+        "full_path"
+      ]
+    }
+  }
+}

@@ -1,0 +1,59 @@
+{
+  "/api/data": {
+    "GET": {
+      "params": [],
+      "required": []
+    }
+  },
+  "/api/dismiss": {
+    "POST": {
+      "params": [
+        "url"
+      ],
+      "required": [
+        "url"
+      ]
+    }
+  },
+  "/api/refresh": {
+    "POST": {
+      "params": [
+        "provider",
+        "preferences"
+      ],
+      "required": []
+    }
+  },
+  "/api/summary": {
+    "POST": {
+      "params": [
+        "provider"
+      ],
+      "required": []
+    }
+  },
+  "/api/trends": {
+    "POST": {
+      "params": [
+        "provider"
+      ],
+      "required": []
+    }
+  },
+  "/health": {
+    "GET": {
+      "params": [],
+      "required": []
+    }
+  },
+  "/{full_path}": {
+    "GET": {
+      "params": [
+        "full_path"
+      ],
+      "required": [
+        "full_path"
+      ]
+    }
+  }
+}

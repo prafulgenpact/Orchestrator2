@@ -1,0 +1,64 @@
+{
+  "/api/all": {
+    "GET": {
+      "params": [],
+      "required": []
+    }
+  },
+  "/api/categories": {
+    "GET": {
+      "params": [],
+      "required": []
+    }
+  },
+  "/api/feedback": {
+    "GET": {
+      "params": [],
+      "required": []
+    },
+    "POST": {
+      "params": [
+        "url",
+        "title",
+        "category",
+        "source",
+        "vote"
+      ],
+      "required": [
+        "url",
+        "title",
+        "category",
+        "source",
+        "vote"
+      ]
+    }
+  },
+  "/api/health": {
+    "GET": {
+      "params": [],
+      "required": []
+    }
+  },
+  "/api/medium": {
+    "GET": {
+      "params": [],
+      "required": []
+    }
+  },
+  "/api/twitter": {
+    "GET": {
+      "params": [],
+      "required": []
+    }
+  },
+  "/{full_path}": {
+    "GET": {
+      "params": [
+        "full_path"
+      ],
+      "required": [
+        "full_path"
+      ]
+    }
+  }
+}
