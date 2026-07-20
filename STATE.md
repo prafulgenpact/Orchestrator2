@@ -1,8 +1,19 @@
 # Project State — A multi agent orchestrator system calling relevant apps basis intent recognition
 
-Last updated: 2026-07-20 (sse-streaming-transport task)
+Last updated: 2026-07-20 (ws-kernel-transport task)
 
 ## Done (most recent first)
+
+- 2026-07-20 ws-kernel-transport (Phase 2 — the last capability). Added a WebSocket transport so the
+  orchestrator can run arbitrary Python in coding-playground's live Jupyter kernel: op flagged
+  `stream: "ws"` sends an execute request over `websockets` and assembles frames into
+  `{text, images, error}` (stdout/result text, base64-PNG matplotlib images, tracebacks), stopping
+  at `execute_reply`, bounded by the op deadline (no hang). `WS` added to allowed methods; wired
+  `coding-playground.run_code` (path /api/kernel/ws). WS ops are exempt from the HTTP contract check
+  (not in any /openapi.json). Declared the `websockets` dependency. Live-smoked run_code against the
+  real kernel (stdout + a rendered PNG). make verify PASS; decomposition eval 16/16. This closes the
+  capability gap: every HTTP endpoint (215/215) plus the one WebSocket capability are now exposed.
+
 
 - 2026-07-20 sse-streaming-transport (Phase 2 — final 100% capability coverage). Added a generic
   Server-Sent-Events transport: an op flagged `stream: "sse"` is consumed to completion via

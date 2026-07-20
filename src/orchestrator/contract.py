@@ -57,6 +57,8 @@ def check_op(op: AppOperation, snapshot: Snapshot) -> list[str]:
       * the app exposes that path but not with the op's HTTP method;
       * the op names a request/required field the endpoint does not accept (typo or stale field).
     """
+    if op.stream == "ws":
+        return []  # WebSocket ops are not in any /openapi.json — nothing to validate against
     problems: list[str] = []
     methods = snapshot.get(op.path)
     if methods is None:

@@ -12,3 +12,5 @@ diff_cover==9.1.1
 # httpx is used by the app-caller/executor to invoke the apps over HTTP.
 anthropic==0.109.1
 httpx==0.28.1
+# websockets powers the live-kernel transport (coding-playground run_code over WS).
+websockets==12.0

@@ -24,7 +24,7 @@ from typing import Any
 REGISTRY_SCHEMA_VERSION = 1
 DEFAULT_REGISTRY_PATH = Path(__file__).resolve().parents[2] / "registry" / "apps.json"
 
-_ALLOWED_METHODS = frozenset({"GET", "POST", "PUT", "PATCH", "DELETE"})
+_ALLOWED_METHODS = frozenset({"GET", "POST", "PUT", "PATCH", "DELETE", "WS"})
 _ALLOWED_IDEMPOTENCY = frozenset({"supported", "none"})
 
 

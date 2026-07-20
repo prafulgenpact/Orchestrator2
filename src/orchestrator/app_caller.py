@@ -14,6 +14,7 @@ from dataclasses import dataclass
 from typing import Any
 
 import httpx
+import websockets
 
 from orchestrator.launcher import ensure_started
 from orchestrator.registry import AppEntry, AppOperation
@@ -139,6 +140,47 @@ async def _consume_sse(
     return await run_with_deadline(run(), timeout_s)
 
 
+async def _consume_ws(base_url: str, op: AppOperation, args: dict[str, Any]) -> dict[str, Any]:
+    """Run code in the app's live kernel over WebSocket and assemble the streamed output.
+
+    Sends one ``execute`` request and reads frames until ``execute_reply``: ``stream`` /
+    ``execute_result`` text is concatenated into ``text``, ``display_data`` images (base64 PNG) go
+    into ``images``, and an ``error`` frame's traceback lands in ``error``. Bounded by the op's hard
+    deadline so a wedged kernel can never hang the run (the anti-hang guarantee).
+    """
+    ws_url = "ws" + base_url[len("http") :] + op.path  # http->ws, https->wss
+
+    async def run() -> dict[str, Any]:
+        text_parts: list[str] = []
+        images: list[str] = []
+        error: str | None = None
+        async with websockets.connect(ws_url, max_size=None) as ws:
+            await ws.send(json.dumps({"type": "execute", "code": args.get("code", "")}))
+            while True:
+                frame = json.loads(await ws.recv())
+                msg_type = frame.get("type")
+                content = frame.get("content")
+                if msg_type in ("stream", "execute_result") and isinstance(content, dict):
+                    if content.get("type") == "text":
+                        text_parts.append(str(content.get("content", "")))
+                elif msg_type == "display_data" and isinstance(content, dict):
+                    if content.get("type") == "image":
+                        images.append(str(content.get("content", "")))
+                elif msg_type == "error":
+                    detail = content.get("content") if isinstance(content, dict) else content
+                    error = str(detail) or "kernel error"
+                elif msg_type == "execute_reply":
+                    break
+        data: dict[str, Any] = {"text": "".join(text_parts)}
+        if images:
+            data["images"] = images
+        if error:
+            data["error"] = error
+        return data
+
+    return await run_with_deadline(run(), op.timeout_s)
+
+
 async def _resolve_base_url(app: AppEntry, client: httpx.AsyncClient, launcher_url: str) -> str:
     """Prefer the launcher's live backend_port; fall back to the registry port."""
     launcher_id = _LAUNCHER_APP_ID.get(app.id, app.id)
@@ -254,6 +296,15 @@ async def call_operation(
         # a shared ``endpoints`` means repeated calls (esp. the poll loop) skip the duplicate pings.
         if not await eps.ensure_healthy(base_url, app, client):
             raise ConnectionError(f"health check failed for {app.id} at {base_url}{app.health}")
+        if op.stream == "ws":
+            # Live-kernel WebSocket op: no HTTP request is built; run code + assemble the stream.
+            ws_data = await _consume_ws(base_url, op, args)
+            cb.record_success(key)
+            ws_url = "ws" + base_url[len("http") :] + op.path
+            return CallResult(
+                app.id, op.name, ws_url, True, 200, ws_data, None, time.monotonic() - start
+            )
+
         url, params, body = _build_request(base_url, op, args)
 
         if op.stream == "sse":

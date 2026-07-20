@@ -578,6 +578,22 @@
           "request_fields": []
         },
         {
+          "name": "run_code",
+          "description": "Run arbitrary Python in the live Jupyter kernel; returns stdout, result text, and any rendered matplotlib images (base64 PNG). Use for free-form analysis/plots not covered by a fixed EDA/viz/ML operation.",
+          "method": "WS",
+          "path": "/api/kernel/ws",
+          "timeout_s": 300,
+          "destructive": false,
+          "idempotency": "none",
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": ["code"],
+          "required_fields": ["code"],
+          "stream": "ws"
+        },
+        {
           "name": "start_kernel",
           "description": "Start the Jupyter kernel if not running.",
           "method": "POST",

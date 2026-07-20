@@ -31,6 +31,8 @@ def _op_cases() -> list:
             continue
         snap = load_snapshot(path)
         for op in app.operations:
+            if op.stream == "ws":
+                continue  # WebSocket ops are not HTTP endpoints; not in any /openapi.json
             cases.append(pytest.param(app.id, op, snap, id=f"{app.id}:{op.name}"))
     return cases
 
