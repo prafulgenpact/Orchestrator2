@@ -147,7 +147,7 @@ def test_real_registry_call_specs_complete() -> None:
         assert app.base_url == f"http://127.0.0.1:{app.port}", app.id
         assert app.operations, app.id
         for op in app.operations:
-            assert op.method in {"GET", "POST", "PUT", "PATCH", "DELETE"}, (app.id, op.name)
+            assert op.method in {"GET", "POST", "PUT", "PATCH", "DELETE", "WS"}, (app.id, op.name)
             assert op.path.startswith("/"), (app.id, op.name)
             assert op.timeout_s > 0, (app.id, op.name)
             assert op.idempotency in {"supported", "none"}, (app.id, op.name)
