@@ -30,8 +30,14 @@
           "timeout_s": 30,
           "destructive": false,
           "idempotency": "none",
-          "retry": { "transient_max": 0, "backoff_s": 0 },
-          "request_fields": ["code", "timeout"]
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": [
+            "code",
+            "timeout"
+          ]
         },
         {
           "name": "ask_question",
@@ -41,8 +47,16 @@
           "timeout_s": 90,
           "destructive": false,
           "idempotency": "supported",
-          "retry": { "transient_max": 2, "backoff_s": 5 },
-          "request_fields": ["question", "concept_title", "track_name", "theory_context"]
+          "retry": {
+            "transient_max": 2,
+            "backoff_s": 5
+          },
+          "request_fields": [
+            "question",
+            "concept_title",
+            "track_name",
+            "theory_context"
+          ]
         }
       ]
     },
@@ -77,8 +91,14 @@
           "timeout_s": 30,
           "destructive": false,
           "idempotency": "supported",
-          "retry": { "transient_max": 2, "backoff_s": 3 },
-          "request_fields": ["query", "max_results"]
+          "retry": {
+            "transient_max": 2,
+            "backoff_s": 3
+          },
+          "request_fields": [
+            "query",
+            "max_results"
+          ]
         },
         {
           "name": "search_papers_by_topic",
@@ -88,8 +108,14 @@
           "timeout_s": 30,
           "destructive": false,
           "idempotency": "supported",
-          "retry": { "transient_max": 2, "backoff_s": 3 },
-          "request_fields": ["topic", "max_results"]
+          "retry": {
+            "transient_max": 2,
+            "backoff_s": 3
+          },
+          "request_fields": [
+            "topic",
+            "max_results"
+          ]
         },
         {
           "name": "get_paper_by_id",
@@ -99,8 +125,13 @@
           "timeout_s": 30,
           "destructive": false,
           "idempotency": "supported",
-          "retry": { "transient_max": 2, "backoff_s": 3 },
-          "request_fields": ["arxiv_id"]
+          "retry": {
+            "transient_max": 2,
+            "backoff_s": 3
+          },
+          "request_fields": [
+            "arxiv_id"
+          ]
         },
         {
           "name": "analyze_paper",
@@ -110,8 +141,15 @@
           "timeout_s": 90,
           "destructive": false,
           "idempotency": "supported",
-          "retry": { "transient_max": 2, "backoff_s": 5 },
-          "request_fields": ["arxiv_id", "mode", "question"]
+          "retry": {
+            "transient_max": 2,
+            "backoff_s": 5
+          },
+          "request_fields": [
+            "arxiv_id",
+            "mode",
+            "question"
+          ]
         },
         {
           "name": "chat_about_paper",
@@ -121,19 +159,30 @@
           "timeout_s": 90,
           "destructive": false,
           "idempotency": "supported",
-          "retry": { "transient_max": 2, "backoff_s": 5 },
-          "request_fields": ["messages", "arxiv_id"]
+          "retry": {
+            "transient_max": 2,
+            "backoff_s": 5
+          },
+          "request_fields": [
+            "messages",
+            "arxiv_id"
+          ]
         },
         {
           "name": "fetch_url_paper",
-          "description": "Fetch and parse a paper from an arbitrary URL (PDF/HTML) — no LLM. Chain into analyze_url_paper.",
+          "description": "Fetch and parse a paper from an arbitrary URL (PDF/HTML) \u2014 no LLM. Chain into analyze_url_paper.",
           "method": "POST",
           "path": "/api/url-paper/fetch",
           "timeout_s": 45,
           "destructive": false,
           "idempotency": "supported",
-          "retry": { "transient_max": 2, "backoff_s": 3 },
-          "request_fields": ["url"]
+          "retry": {
+            "transient_max": 2,
+            "backoff_s": 3
+          },
+          "request_fields": [
+            "url"
+          ]
         },
         {
           "name": "analyze_url_paper",
@@ -143,8 +192,349 @@
           "timeout_s": 90,
           "destructive": false,
           "idempotency": "supported",
-          "retry": { "transient_max": 2, "backoff_s": 5 },
-          "request_fields": ["url", "title", "content", "mode", "question"]
+          "retry": {
+            "transient_max": 2,
+            "backoff_s": 5
+          },
+          "request_fields": [
+            "url",
+            "title",
+            "content",
+            "mode",
+            "question"
+          ]
+        },
+        {
+          "name": "get_db_tables",
+          "description": "List Tables",
+          "method": "GET",
+          "path": "/api/db/tables",
+          "timeout_s": 20,
+          "destructive": false,
+          "idempotency": "supported",
+          "retry": {
+            "transient_max": 2,
+            "backoff_s": 3
+          },
+          "request_fields": [],
+          "required_fields": []
+        },
+        {
+          "name": "get_db_tables_2",
+          "description": "Get Table Data",
+          "method": "GET",
+          "path": "/api/db/tables/{table_name}",
+          "timeout_s": 20,
+          "destructive": false,
+          "idempotency": "supported",
+          "retry": {
+            "transient_max": 2,
+            "backoff_s": 3
+          },
+          "request_fields": [
+            "table_name",
+            "limit",
+            "offset"
+          ],
+          "required_fields": [
+            "table_name"
+          ]
+        },
+        {
+          "name": "get_favorites",
+          "description": "List Favorites",
+          "method": "GET",
+          "path": "/api/favorites/",
+          "timeout_s": 20,
+          "destructive": false,
+          "idempotency": "supported",
+          "retry": {
+            "transient_max": 2,
+            "backoff_s": 3
+          },
+          "request_fields": [],
+          "required_fields": []
+        },
+        {
+          "name": "post_favorites",
+          "description": "Add Favorite",
+          "method": "POST",
+          "path": "/api/favorites/",
+          "timeout_s": 60,
+          "destructive": false,
+          "idempotency": "none",
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": [
+            "paper_id"
+          ],
+          "required_fields": [
+            "paper_id"
+          ]
+        },
+        {
+          "name": "delete_favorites",
+          "description": "Remove Favorite",
+          "method": "DELETE",
+          "path": "/api/favorites/{favorite_id}",
+          "timeout_s": 60,
+          "destructive": true,
+          "idempotency": "none",
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": [
+            "favorite_id"
+          ],
+          "required_fields": [
+            "favorite_id"
+          ]
+        },
+        {
+          "name": "put_favorites",
+          "description": "Update Favorite",
+          "method": "PUT",
+          "path": "/api/favorites/{favorite_id}",
+          "timeout_s": 60,
+          "destructive": false,
+          "idempotency": "none",
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": [
+            "favorite_id",
+            "is_read"
+          ],
+          "required_fields": [
+            "favorite_id",
+            "is_read"
+          ]
+        },
+        {
+          "name": "post_implement_chat",
+          "description": "Api Chat",
+          "method": "POST",
+          "path": "/api/implement/chat",
+          "timeout_s": 60,
+          "destructive": false,
+          "idempotency": "none",
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": [
+            "concept",
+            "paper_title",
+            "messages"
+          ],
+          "required_fields": [
+            "concept",
+            "paper_title",
+            "messages"
+          ]
+        },
+        {
+          "name": "post_implement_hint",
+          "description": "Api Get Hint",
+          "method": "POST",
+          "path": "/api/implement/hint",
+          "timeout_s": 60,
+          "destructive": false,
+          "idempotency": "none",
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": [
+            "concept",
+            "code",
+            "error",
+            "step_description"
+          ],
+          "required_fields": [
+            "concept",
+            "code",
+            "error"
+          ]
+        },
+        {
+          "name": "post_implement_plan",
+          "description": "Api Generate Plan",
+          "method": "POST",
+          "path": "/api/implement/plan",
+          "timeout_s": 60,
+          "destructive": false,
+          "idempotency": "none",
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": [
+            "concept",
+            "paper_title",
+            "paper_abstract"
+          ],
+          "required_fields": [
+            "concept",
+            "paper_title",
+            "paper_abstract"
+          ]
+        },
+        {
+          "name": "post_implement_run",
+          "description": "Api Run Code",
+          "method": "POST",
+          "path": "/api/implement/run",
+          "timeout_s": 60,
+          "destructive": false,
+          "idempotency": "none",
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": [
+            "code",
+            "timeout"
+          ],
+          "required_fields": [
+            "code"
+          ]
+        },
+        {
+          "name": "post_implement_verify",
+          "description": "Api Verify",
+          "method": "POST",
+          "path": "/api/implement/verify",
+          "timeout_s": 60,
+          "destructive": false,
+          "idempotency": "none",
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": [
+            "concept",
+            "code",
+            "output",
+            "paper_title"
+          ],
+          "required_fields": [
+            "concept",
+            "code",
+            "output",
+            "paper_title"
+          ]
+        },
+        {
+          "name": "get_luminaries",
+          "description": "List Luminaries",
+          "method": "GET",
+          "path": "/api/luminaries/",
+          "timeout_s": 20,
+          "destructive": false,
+          "idempotency": "supported",
+          "retry": {
+            "transient_max": 2,
+            "backoff_s": 3
+          },
+          "request_fields": [],
+          "required_fields": []
+        },
+        {
+          "name": "get_luminaries_papers",
+          "description": "Get Luminary Papers",
+          "method": "GET",
+          "path": "/api/luminaries/{author_id}/papers",
+          "timeout_s": 20,
+          "destructive": false,
+          "idempotency": "supported",
+          "retry": {
+            "transient_max": 2,
+            "backoff_s": 3
+          },
+          "request_fields": [
+            "author_id"
+          ],
+          "required_fields": [
+            "author_id"
+          ]
+        },
+        {
+          "name": "post_papers_by_title",
+          "description": "Search By Title",
+          "method": "POST",
+          "path": "/api/papers/by-title",
+          "timeout_s": 60,
+          "destructive": false,
+          "idempotency": "none",
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": [
+            "query",
+            "max_results"
+          ],
+          "required_fields": [
+            "query"
+          ]
+        },
+        {
+          "name": "get_papers_revolutionary",
+          "description": "Get Revolutionary Papers",
+          "method": "GET",
+          "path": "/api/papers/revolutionary",
+          "timeout_s": 20,
+          "destructive": false,
+          "idempotency": "supported",
+          "retry": {
+            "transient_max": 2,
+            "backoff_s": 3
+          },
+          "request_fields": [],
+          "required_fields": []
+        },
+        {
+          "name": "post_seed_revolutionary",
+          "description": "Trigger Seed",
+          "method": "POST",
+          "path": "/api/seed-revolutionary",
+          "timeout_s": 300,
+          "destructive": false,
+          "idempotency": "none",
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": [],
+          "required_fields": []
+        },
+        {
+          "name": "post_url_paper_chat",
+          "description": "Chat Url Paper",
+          "method": "POST",
+          "path": "/api/url-paper/chat",
+          "timeout_s": 60,
+          "destructive": false,
+          "idempotency": "none",
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": [
+            "title",
+            "content",
+            "messages"
+          ],
+          "required_fields": [
+            "title",
+            "content",
+            "messages"
+          ]
         }
       ]
     },
@@ -167,8 +557,8 @@
       ],
       "fallback": false,
       "when_not": [
-        "does NOT run arbitrary Python over REST (the kernel is WebSocket-only) — to execute a code snippet use simulated-learning",
-        "EDA operates on a dataset by id — first find the dataset via list_datasets/preview_dataset if the id is unknown"
+        "does NOT run arbitrary Python over REST (the kernel is WebSocket-only) \u2014 to execute a code snippet use simulated-learning",
+        "EDA operates on a dataset by id \u2014 first find the dataset via list_datasets/preview_dataset if the id is unknown"
       ],
       "port": 8003,
       "health": "/health",
@@ -181,7 +571,10 @@
           "timeout_s": 20,
           "destructive": false,
           "idempotency": "supported",
-          "retry": { "transient_max": 2, "backoff_s": 3 },
+          "retry": {
+            "transient_max": 2,
+            "backoff_s": 3
+          },
           "request_fields": []
         },
         {
@@ -192,18 +585,24 @@
           "timeout_s": 30,
           "destructive": false,
           "idempotency": "none",
-          "retry": { "transient_max": 0, "backoff_s": 0 },
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
           "request_fields": []
         },
         {
           "name": "restart_kernel",
-          "description": "Restart the kernel — clears all in-memory state.",
+          "description": "Restart the kernel \u2014 clears all in-memory state.",
           "method": "POST",
           "path": "/api/kernel/restart",
           "timeout_s": 30,
           "destructive": true,
           "idempotency": "none",
-          "retry": { "transient_max": 0, "backoff_s": 0 },
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
           "request_fields": []
         },
         {
@@ -214,7 +613,10 @@
           "timeout_s": 20,
           "destructive": false,
           "idempotency": "none",
-          "retry": { "transient_max": 0, "backoff_s": 0 },
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
           "request_fields": []
         },
         {
@@ -225,7 +627,10 @@
           "timeout_s": 20,
           "destructive": false,
           "idempotency": "supported",
-          "retry": { "transient_max": 2, "backoff_s": 3 },
+          "retry": {
+            "transient_max": 2,
+            "backoff_s": 3
+          },
           "request_fields": []
         },
         {
@@ -236,8 +641,14 @@
           "timeout_s": 20,
           "destructive": false,
           "idempotency": "supported",
-          "retry": { "transient_max": 2, "backoff_s": 3 },
-          "request_fields": ["dataset_id", "n_rows"]
+          "retry": {
+            "transient_max": 2,
+            "backoff_s": 3
+          },
+          "request_fields": [
+            "dataset_id",
+            "n_rows"
+          ]
         },
         {
           "name": "eda_summary",
@@ -247,9 +658,16 @@
           "timeout_s": 30,
           "destructive": false,
           "idempotency": "supported",
-          "retry": { "transient_max": 2, "backoff_s": 3 },
-          "request_fields": ["dataset_id"],
-          "required_fields": ["dataset_id"]
+          "retry": {
+            "transient_max": 2,
+            "backoff_s": 3
+          },
+          "request_fields": [
+            "dataset_id"
+          ],
+          "required_fields": [
+            "dataset_id"
+          ]
         },
         {
           "name": "eda_dtypes_missing",
@@ -259,21 +677,38 @@
           "timeout_s": 30,
           "destructive": false,
           "idempotency": "supported",
-          "retry": { "transient_max": 2, "backoff_s": 3 },
-          "request_fields": ["dataset_id"],
-          "required_fields": ["dataset_id"]
+          "retry": {
+            "transient_max": 2,
+            "backoff_s": 3
+          },
+          "request_fields": [
+            "dataset_id"
+          ],
+          "required_fields": [
+            "dataset_id"
+          ]
         },
         {
           "name": "eda_distribution",
-          "description": "Distribution of one column as a chart — a histogram (plot_type=histogram, default) or a box plot (plot_type=box).",
+          "description": "Distribution of one column as a chart \u2014 a histogram (plot_type=histogram, default) or a box plot (plot_type=box).",
           "method": "GET",
           "path": "/api/eda/{dataset_id}/distribution",
           "timeout_s": 30,
           "destructive": false,
           "idempotency": "supported",
-          "retry": { "transient_max": 2, "backoff_s": 3 },
-          "request_fields": ["dataset_id", "column", "plot_type"],
-          "required_fields": ["dataset_id", "column"],
+          "retry": {
+            "transient_max": 2,
+            "backoff_s": 3
+          },
+          "request_fields": [
+            "dataset_id",
+            "column",
+            "plot_type"
+          ],
+          "required_fields": [
+            "dataset_id",
+            "column"
+          ],
           "produces": "chart"
         },
         {
@@ -284,9 +719,16 @@
           "timeout_s": 30,
           "destructive": false,
           "idempotency": "supported",
-          "retry": { "transient_max": 2, "backoff_s": 3 },
-          "request_fields": ["dataset_id"],
-          "required_fields": ["dataset_id"],
+          "retry": {
+            "transient_max": 2,
+            "backoff_s": 3
+          },
+          "request_fields": [
+            "dataset_id"
+          ],
+          "required_fields": [
+            "dataset_id"
+          ],
           "produces": "chart"
         },
         {
@@ -297,9 +739,21 @@
           "timeout_s": 30,
           "destructive": false,
           "idempotency": "supported",
-          "retry": { "transient_max": 2, "backoff_s": 3 },
-          "request_fields": ["dataset_id", "x", "y", "color"],
-          "required_fields": ["dataset_id", "x", "y"],
+          "retry": {
+            "transient_max": 2,
+            "backoff_s": 3
+          },
+          "request_fields": [
+            "dataset_id",
+            "x",
+            "y",
+            "color"
+          ],
+          "required_fields": [
+            "dataset_id",
+            "x",
+            "y"
+          ],
           "produces": "chart"
         },
         {
@@ -310,9 +764,18 @@
           "timeout_s": 30,
           "destructive": false,
           "idempotency": "supported",
-          "retry": { "transient_max": 2, "backoff_s": 3 },
-          "request_fields": ["dataset_id", "target"],
-          "required_fields": ["dataset_id", "target"],
+          "retry": {
+            "transient_max": 2,
+            "backoff_s": 3
+          },
+          "request_fields": [
+            "dataset_id",
+            "target"
+          ],
+          "required_fields": [
+            "dataset_id",
+            "target"
+          ],
           "produces": "chart"
         },
         {
@@ -323,9 +786,1133 @@
           "timeout_s": 30,
           "destructive": false,
           "idempotency": "supported",
-          "retry": { "transient_max": 2, "backoff_s": 3 },
-          "request_fields": ["dataset_id", "column", "method"],
-          "required_fields": ["dataset_id", "column"]
+          "retry": {
+            "transient_max": 2,
+            "backoff_s": 3
+          },
+          "request_fields": [
+            "dataset_id",
+            "column",
+            "method"
+          ],
+          "required_fields": [
+            "dataset_id",
+            "column"
+          ]
+        },
+        {
+          "name": "post_chat_send",
+          "description": "Send Message",
+          "method": "POST",
+          "path": "/api/chat/send",
+          "timeout_s": 60,
+          "destructive": false,
+          "idempotency": "none",
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": [
+            "message",
+            "active_section",
+            "extra_context",
+            "history"
+          ],
+          "required_fields": [
+            "message"
+          ]
+        },
+        {
+          "name": "post_code_complete",
+          "description": "Api Complete Code",
+          "method": "POST",
+          "path": "/api/code-complete/",
+          "timeout_s": 60,
+          "destructive": false,
+          "idempotency": "none",
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": [
+            "code_before",
+            "code_after",
+            "language"
+          ],
+          "required_fields": [
+            "code_before"
+          ]
+        },
+        {
+          "name": "post_datasets_upload",
+          "description": "Upload Dataset",
+          "method": "POST",
+          "path": "/api/datasets/upload",
+          "timeout_s": 60,
+          "destructive": false,
+          "idempotency": "none",
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": [
+            "file"
+          ],
+          "required_fields": [
+            "file"
+          ]
+        },
+        {
+          "name": "get_datasets_load_code",
+          "description": "Get Dataset Load Code",
+          "method": "GET",
+          "path": "/api/datasets/{dataset_id}/load-code",
+          "timeout_s": 20,
+          "destructive": false,
+          "idempotency": "supported",
+          "retry": {
+            "transient_max": 2,
+            "backoff_s": 3
+          },
+          "request_fields": [
+            "dataset_id"
+          ],
+          "required_fields": [
+            "dataset_id"
+          ]
+        },
+        {
+          "name": "post_debug_analyze",
+          "description": "Post Analyze",
+          "method": "POST",
+          "path": "/api/debug/analyze",
+          "timeout_s": 300,
+          "destructive": false,
+          "idempotency": "none",
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": [
+            "error_text",
+            "code"
+          ],
+          "required_fields": [
+            "error_text"
+          ]
+        },
+        {
+          "name": "get_debug_pitfalls",
+          "description": "List Pitfalls",
+          "method": "GET",
+          "path": "/api/debug/pitfalls",
+          "timeout_s": 20,
+          "destructive": false,
+          "idempotency": "supported",
+          "retry": {
+            "transient_max": 2,
+            "backoff_s": 3
+          },
+          "request_fields": [],
+          "required_fields": []
+        },
+        {
+          "name": "get_debug_pitfalls_2",
+          "description": "Pitfall Detail",
+          "method": "GET",
+          "path": "/api/debug/pitfalls/{pitfall_id}",
+          "timeout_s": 20,
+          "destructive": false,
+          "idempotency": "supported",
+          "retry": {
+            "transient_max": 2,
+            "backoff_s": 3
+          },
+          "request_fields": [
+            "pitfall_id"
+          ],
+          "required_fields": [
+            "pitfall_id"
+          ]
+        },
+        {
+          "name": "post_dl_rl_dl_generate_code",
+          "description": "Post Dl Generate Code",
+          "method": "POST",
+          "path": "/api/dl-rl/dl/generate-code",
+          "timeout_s": 300,
+          "destructive": false,
+          "idempotency": "none",
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": [
+            "dataset_id",
+            "model_id",
+            "target_col",
+            "test_size",
+            "params"
+          ],
+          "required_fields": [
+            "dataset_id",
+            "model_id",
+            "target_col"
+          ]
+        },
+        {
+          "name": "get_dl_rl_dl_models",
+          "description": "List Dl Models",
+          "method": "GET",
+          "path": "/api/dl-rl/dl/models",
+          "timeout_s": 20,
+          "destructive": false,
+          "idempotency": "supported",
+          "retry": {
+            "transient_max": 2,
+            "backoff_s": 3
+          },
+          "request_fields": [],
+          "required_fields": []
+        },
+        {
+          "name": "get_dl_rl_dl_models_params",
+          "description": "Dl Model Params",
+          "method": "GET",
+          "path": "/api/dl-rl/dl/models/{model_id}/params",
+          "timeout_s": 20,
+          "destructive": false,
+          "idempotency": "supported",
+          "retry": {
+            "transient_max": 2,
+            "backoff_s": 3
+          },
+          "request_fields": [
+            "model_id"
+          ],
+          "required_fields": [
+            "model_id"
+          ]
+        },
+        {
+          "name": "post_dl_rl_dl_train",
+          "description": "Post Dl Train",
+          "method": "POST",
+          "path": "/api/dl-rl/dl/train",
+          "timeout_s": 300,
+          "destructive": false,
+          "idempotency": "none",
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": [
+            "dataset_id",
+            "model_id",
+            "target_col",
+            "test_size",
+            "params"
+          ],
+          "required_fields": [
+            "dataset_id",
+            "model_id",
+            "target_col"
+          ]
+        },
+        {
+          "name": "get_dl_rl_rl_envs",
+          "description": "List Rl Envs",
+          "method": "GET",
+          "path": "/api/dl-rl/rl/envs",
+          "timeout_s": 20,
+          "destructive": false,
+          "idempotency": "supported",
+          "retry": {
+            "transient_max": 2,
+            "backoff_s": 3
+          },
+          "request_fields": [],
+          "required_fields": []
+        },
+        {
+          "name": "post_dl_rl_rl_generate_code",
+          "description": "Post Rl Generate Code",
+          "method": "POST",
+          "path": "/api/dl-rl/rl/generate-code",
+          "timeout_s": 300,
+          "destructive": false,
+          "idempotency": "none",
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": [
+            "env_id",
+            "model_id",
+            "params"
+          ],
+          "required_fields": [
+            "env_id",
+            "model_id"
+          ]
+        },
+        {
+          "name": "get_dl_rl_rl_models",
+          "description": "List Rl Models",
+          "method": "GET",
+          "path": "/api/dl-rl/rl/models",
+          "timeout_s": 20,
+          "destructive": false,
+          "idempotency": "supported",
+          "retry": {
+            "transient_max": 2,
+            "backoff_s": 3
+          },
+          "request_fields": [],
+          "required_fields": []
+        },
+        {
+          "name": "get_dl_rl_rl_models_params",
+          "description": "Rl Model Params",
+          "method": "GET",
+          "path": "/api/dl-rl/rl/models/{model_id}/params",
+          "timeout_s": 20,
+          "destructive": false,
+          "idempotency": "supported",
+          "retry": {
+            "transient_max": 2,
+            "backoff_s": 3
+          },
+          "request_fields": [
+            "model_id"
+          ],
+          "required_fields": [
+            "model_id"
+          ]
+        },
+        {
+          "name": "post_dl_rl_rl_train",
+          "description": "Post Rl Train",
+          "method": "POST",
+          "path": "/api/dl-rl/rl/train",
+          "timeout_s": 300,
+          "destructive": false,
+          "idempotency": "none",
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": [
+            "env_id",
+            "model_id",
+            "params"
+          ],
+          "required_fields": [
+            "env_id",
+            "model_id"
+          ]
+        },
+        {
+          "name": "get_learn_paths",
+          "description": "List Paths",
+          "method": "GET",
+          "path": "/api/learn/paths",
+          "timeout_s": 20,
+          "destructive": false,
+          "idempotency": "supported",
+          "retry": {
+            "transient_max": 2,
+            "backoff_s": 3
+          },
+          "request_fields": [],
+          "required_fields": []
+        },
+        {
+          "name": "get_learn_paths_topics",
+          "description": "List Topics",
+          "method": "GET",
+          "path": "/api/learn/paths/{path_id}/topics",
+          "timeout_s": 20,
+          "destructive": false,
+          "idempotency": "supported",
+          "retry": {
+            "transient_max": 2,
+            "backoff_s": 3
+          },
+          "request_fields": [
+            "path_id"
+          ],
+          "required_fields": [
+            "path_id"
+          ]
+        },
+        {
+          "name": "get_learn_paths_topics_2",
+          "description": "Topic Detail",
+          "method": "GET",
+          "path": "/api/learn/paths/{path_id}/topics/{topic_id}",
+          "timeout_s": 20,
+          "destructive": false,
+          "idempotency": "supported",
+          "retry": {
+            "transient_max": 2,
+            "backoff_s": 3
+          },
+          "request_fields": [
+            "path_id",
+            "topic_id"
+          ],
+          "required_fields": [
+            "path_id",
+            "topic_id"
+          ]
+        },
+        {
+          "name": "get_learn_snippets",
+          "description": "List Snippets",
+          "method": "GET",
+          "path": "/api/learn/snippets",
+          "timeout_s": 20,
+          "destructive": false,
+          "idempotency": "supported",
+          "retry": {
+            "transient_max": 2,
+            "backoff_s": 3
+          },
+          "request_fields": [
+            "q"
+          ],
+          "required_fields": []
+        },
+        {
+          "name": "post_llm_generate_code",
+          "description": "Post Llm Generate Code",
+          "method": "POST",
+          "path": "/api/llm/generate-code",
+          "timeout_s": 300,
+          "destructive": false,
+          "idempotency": "none",
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": [
+            "model_id",
+            "params"
+          ],
+          "required_fields": [
+            "model_id"
+          ]
+        },
+        {
+          "name": "get_llm_models",
+          "description": "List Llm Models",
+          "method": "GET",
+          "path": "/api/llm/models",
+          "timeout_s": 20,
+          "destructive": false,
+          "idempotency": "supported",
+          "retry": {
+            "transient_max": 2,
+            "backoff_s": 3
+          },
+          "request_fields": [],
+          "required_fields": []
+        },
+        {
+          "name": "get_llm_models_params",
+          "description": "Llm Model Params",
+          "method": "GET",
+          "path": "/api/llm/models/{model_id}/params",
+          "timeout_s": 20,
+          "destructive": false,
+          "idempotency": "supported",
+          "retry": {
+            "transient_max": 2,
+            "backoff_s": 3
+          },
+          "request_fields": [
+            "model_id"
+          ],
+          "required_fields": [
+            "model_id"
+          ]
+        },
+        {
+          "name": "post_llm_run",
+          "description": "Post Llm Run",
+          "method": "POST",
+          "path": "/api/llm/run",
+          "timeout_s": 60,
+          "destructive": false,
+          "idempotency": "none",
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": [
+            "model_id",
+            "params"
+          ],
+          "required_fields": [
+            "model_id"
+          ]
+        },
+        {
+          "name": "get_mdp_gym_mapping",
+          "description": "Gym Mdp Map",
+          "method": "GET",
+          "path": "/api/mdp/gym-mapping/{env_id}",
+          "timeout_s": 20,
+          "destructive": false,
+          "idempotency": "supported",
+          "retry": {
+            "transient_max": 2,
+            "backoff_s": 3
+          },
+          "request_fields": [
+            "env_id"
+          ],
+          "required_fields": [
+            "env_id"
+          ]
+        },
+        {
+          "name": "get_mdp_list",
+          "description": "List Mdps",
+          "method": "GET",
+          "path": "/api/mdp/list",
+          "timeout_s": 20,
+          "destructive": false,
+          "idempotency": "supported",
+          "retry": {
+            "transient_max": 2,
+            "backoff_s": 3
+          },
+          "request_fields": [],
+          "required_fields": []
+        },
+        {
+          "name": "post_mdp_solve",
+          "description": "Solve Mdp",
+          "method": "POST",
+          "path": "/api/mdp/solve",
+          "timeout_s": 300,
+          "destructive": false,
+          "idempotency": "none",
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": [
+            "mdp_id",
+            "algorithm",
+            "gamma",
+            "max_iters"
+          ],
+          "required_fields": [
+            "mdp_id"
+          ]
+        },
+        {
+          "name": "get_mdp",
+          "description": "Mdp Detail",
+          "method": "GET",
+          "path": "/api/mdp/{mdp_id}",
+          "timeout_s": 20,
+          "destructive": false,
+          "idempotency": "supported",
+          "retry": {
+            "transient_max": 2,
+            "backoff_s": 3
+          },
+          "request_fields": [
+            "mdp_id"
+          ],
+          "required_fields": [
+            "mdp_id"
+          ]
+        },
+        {
+          "name": "post_ml_generate_code",
+          "description": "Post Generate Code",
+          "method": "POST",
+          "path": "/api/ml/generate-code",
+          "timeout_s": 300,
+          "destructive": false,
+          "idempotency": "none",
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": [
+            "dataset_id",
+            "model_id",
+            "target_col",
+            "test_size",
+            "params"
+          ],
+          "required_fields": [
+            "dataset_id",
+            "model_id",
+            "target_col"
+          ]
+        },
+        {
+          "name": "get_ml_models",
+          "description": "List Models",
+          "method": "GET",
+          "path": "/api/ml/models",
+          "timeout_s": 20,
+          "destructive": false,
+          "idempotency": "supported",
+          "retry": {
+            "transient_max": 2,
+            "backoff_s": 3
+          },
+          "request_fields": [],
+          "required_fields": []
+        },
+        {
+          "name": "get_ml_models_params",
+          "description": "Model Params",
+          "method": "GET",
+          "path": "/api/ml/models/{model_id}/params",
+          "timeout_s": 20,
+          "destructive": false,
+          "idempotency": "supported",
+          "retry": {
+            "transient_max": 2,
+            "backoff_s": 3
+          },
+          "request_fields": [
+            "model_id"
+          ],
+          "required_fields": [
+            "model_id"
+          ]
+        },
+        {
+          "name": "post_ml_train",
+          "description": "Post Train",
+          "method": "POST",
+          "path": "/api/ml/train",
+          "timeout_s": 300,
+          "destructive": false,
+          "idempotency": "none",
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": [
+            "dataset_id",
+            "model_id",
+            "target_col",
+            "test_size",
+            "params"
+          ],
+          "required_fields": [
+            "dataset_id",
+            "model_id",
+            "target_col"
+          ]
+        },
+        {
+          "name": "post_ml_train_unsupervised",
+          "description": "Post Train Unsupervised",
+          "method": "POST",
+          "path": "/api/ml/train-unsupervised",
+          "timeout_s": 300,
+          "destructive": false,
+          "idempotency": "none",
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": [
+            "dataset_id",
+            "model_id",
+            "target_col",
+            "params"
+          ],
+          "required_fields": [
+            "dataset_id",
+            "model_id"
+          ]
+        },
+        {
+          "name": "get_notebooks_list",
+          "description": "Api List Notebooks",
+          "method": "GET",
+          "path": "/api/notebooks/list",
+          "timeout_s": 20,
+          "destructive": false,
+          "idempotency": "supported",
+          "retry": {
+            "transient_max": 2,
+            "backoff_s": 3
+          },
+          "request_fields": [],
+          "required_fields": []
+        },
+        {
+          "name": "post_notebooks_save",
+          "description": "Api Save Notebook",
+          "method": "POST",
+          "path": "/api/notebooks/save",
+          "timeout_s": 60,
+          "destructive": false,
+          "idempotency": "none",
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": [
+            "notebook_id",
+            "name",
+            "cells"
+          ],
+          "required_fields": [
+            "cells"
+          ]
+        },
+        {
+          "name": "delete_notebooks",
+          "description": "Api Delete Notebook",
+          "method": "DELETE",
+          "path": "/api/notebooks/{notebook_id}",
+          "timeout_s": 60,
+          "destructive": true,
+          "idempotency": "none",
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": [
+            "notebook_id"
+          ],
+          "required_fields": [
+            "notebook_id"
+          ]
+        },
+        {
+          "name": "get_notebooks",
+          "description": "Api Load Notebook",
+          "method": "GET",
+          "path": "/api/notebooks/{notebook_id}",
+          "timeout_s": 20,
+          "destructive": false,
+          "idempotency": "supported",
+          "retry": {
+            "transient_max": 2,
+            "backoff_s": 3
+          },
+          "request_fields": [
+            "notebook_id"
+          ],
+          "required_fields": [
+            "notebook_id"
+          ]
+        },
+        {
+          "name": "put_notebooks_rename",
+          "description": "Api Rename Notebook",
+          "method": "PUT",
+          "path": "/api/notebooks/{notebook_id}/rename",
+          "timeout_s": 60,
+          "destructive": false,
+          "idempotency": "none",
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": [
+            "notebook_id",
+            "name"
+          ],
+          "required_fields": [
+            "notebook_id",
+            "name"
+          ]
+        },
+        {
+          "name": "post_preprocessing_balance",
+          "description": "Post Balance",
+          "method": "POST",
+          "path": "/api/preprocessing/{dataset_id}/balance",
+          "timeout_s": 60,
+          "destructive": false,
+          "idempotency": "none",
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": [
+            "dataset_id",
+            "target_col",
+            "method"
+          ],
+          "required_fields": [
+            "dataset_id",
+            "target_col"
+          ]
+        },
+        {
+          "name": "get_preprocessing_columns",
+          "description": "Get Columns",
+          "method": "GET",
+          "path": "/api/preprocessing/{dataset_id}/columns",
+          "timeout_s": 20,
+          "destructive": false,
+          "idempotency": "supported",
+          "retry": {
+            "transient_max": 2,
+            "backoff_s": 3
+          },
+          "request_fields": [
+            "dataset_id"
+          ],
+          "required_fields": [
+            "dataset_id"
+          ]
+        },
+        {
+          "name": "post_preprocessing_encode",
+          "description": "Post Encode",
+          "method": "POST",
+          "path": "/api/preprocessing/{dataset_id}/encode",
+          "timeout_s": 60,
+          "destructive": false,
+          "idempotency": "none",
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": [
+            "dataset_id",
+            "columns",
+            "method"
+          ],
+          "required_fields": [
+            "dataset_id",
+            "columns"
+          ]
+        },
+        {
+          "name": "post_preprocessing_impute",
+          "description": "Post Impute",
+          "method": "POST",
+          "path": "/api/preprocessing/{dataset_id}/impute",
+          "timeout_s": 60,
+          "destructive": false,
+          "idempotency": "none",
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": [
+            "dataset_id",
+            "strategies"
+          ],
+          "required_fields": [
+            "dataset_id",
+            "strategies"
+          ]
+        },
+        {
+          "name": "post_preprocessing_scale",
+          "description": "Post Scale",
+          "method": "POST",
+          "path": "/api/preprocessing/{dataset_id}/scale",
+          "timeout_s": 60,
+          "destructive": false,
+          "idempotency": "none",
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": [
+            "dataset_id",
+            "columns",
+            "method"
+          ],
+          "required_fields": [
+            "dataset_id",
+            "columns"
+          ]
+        },
+        {
+          "name": "post_preprocessing_split",
+          "description": "Post Split",
+          "method": "POST",
+          "path": "/api/preprocessing/{dataset_id}/split",
+          "timeout_s": 60,
+          "destructive": false,
+          "idempotency": "none",
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": [
+            "dataset_id",
+            "target_col",
+            "test_size",
+            "stratify"
+          ],
+          "required_fields": [
+            "dataset_id",
+            "target_col"
+          ]
+        },
+        {
+          "name": "get_tips",
+          "description": "List Tips",
+          "method": "GET",
+          "path": "/api/tips",
+          "timeout_s": 20,
+          "destructive": false,
+          "idempotency": "supported",
+          "retry": {
+            "transient_max": 2,
+            "backoff_s": 3
+          },
+          "request_fields": [
+            "category"
+          ],
+          "required_fields": []
+        },
+        {
+          "name": "get_tips_categories",
+          "description": "List Tip Categories",
+          "method": "GET",
+          "path": "/api/tips/categories",
+          "timeout_s": 20,
+          "destructive": false,
+          "idempotency": "supported",
+          "retry": {
+            "transient_max": 2,
+            "backoff_s": 3
+          },
+          "request_fields": [],
+          "required_fields": []
+        },
+        {
+          "name": "get_tips_shortcuts",
+          "description": "List Shortcuts",
+          "method": "GET",
+          "path": "/api/tips/shortcuts",
+          "timeout_s": 20,
+          "destructive": false,
+          "idempotency": "supported",
+          "retry": {
+            "transient_max": 2,
+            "backoff_s": 3
+          },
+          "request_fields": [],
+          "required_fields": []
+        },
+        {
+          "name": "post_viz_classification_metrics",
+          "description": "Post Classification Metrics",
+          "method": "POST",
+          "path": "/api/viz/classification-metrics",
+          "timeout_s": 60,
+          "destructive": false,
+          "idempotency": "none",
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": [
+            "dataset_id",
+            "model_id",
+            "target_col",
+            "test_size",
+            "params"
+          ],
+          "required_fields": [
+            "dataset_id",
+            "model_id",
+            "target_col"
+          ]
+        },
+        {
+          "name": "post_viz_compare",
+          "description": "Post Compare",
+          "method": "POST",
+          "path": "/api/viz/compare",
+          "timeout_s": 300,
+          "destructive": false,
+          "idempotency": "none",
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": [
+            "dataset_id",
+            "target_col",
+            "model_ids",
+            "test_size",
+            "params_list"
+          ],
+          "required_fields": [
+            "dataset_id",
+            "target_col",
+            "model_ids"
+          ]
+        },
+        {
+          "name": "post_viz_cross_validation",
+          "description": "Post Cross Val",
+          "method": "POST",
+          "path": "/api/viz/cross-validation",
+          "timeout_s": 60,
+          "destructive": false,
+          "idempotency": "none",
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": [
+            "dataset_id",
+            "model_id",
+            "target_col",
+            "params",
+            "cv"
+          ],
+          "required_fields": [
+            "dataset_id",
+            "model_id",
+            "target_col"
+          ]
+        },
+        {
+          "name": "post_viz_decision_boundary",
+          "description": "Post Decision Boundary",
+          "method": "POST",
+          "path": "/api/viz/decision-boundary",
+          "timeout_s": 60,
+          "destructive": false,
+          "idempotency": "none",
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": [
+            "dataset_id",
+            "model_id",
+            "target_col",
+            "feature_x",
+            "feature_y",
+            "params"
+          ],
+          "required_fields": [
+            "dataset_id",
+            "model_id",
+            "target_col",
+            "feature_x",
+            "feature_y"
+          ]
+        },
+        {
+          "name": "post_viz_learning_curve",
+          "description": "Post Learning Curve",
+          "method": "POST",
+          "path": "/api/viz/learning-curve",
+          "timeout_s": 60,
+          "destructive": false,
+          "idempotency": "none",
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": [
+            "dataset_id",
+            "model_id",
+            "target_col",
+            "params",
+            "cv"
+          ],
+          "required_fields": [
+            "dataset_id",
+            "model_id",
+            "target_col"
+          ]
+        },
+        {
+          "name": "post_viz_pr_curve",
+          "description": "Post Pr Curve",
+          "method": "POST",
+          "path": "/api/viz/pr-curve",
+          "timeout_s": 60,
+          "destructive": false,
+          "idempotency": "none",
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": [
+            "dataset_id",
+            "model_id",
+            "target_col",
+            "test_size",
+            "params"
+          ],
+          "required_fields": [
+            "dataset_id",
+            "model_id",
+            "target_col"
+          ]
+        },
+        {
+          "name": "post_viz_regression_plots",
+          "description": "Post Regression Plots",
+          "method": "POST",
+          "path": "/api/viz/regression-plots",
+          "timeout_s": 60,
+          "destructive": false,
+          "idempotency": "none",
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": [
+            "dataset_id",
+            "model_id",
+            "target_col",
+            "test_size",
+            "params"
+          ],
+          "required_fields": [
+            "dataset_id",
+            "model_id",
+            "target_col"
+          ]
+        },
+        {
+          "name": "post_viz_roc",
+          "description": "Post Roc",
+          "method": "POST",
+          "path": "/api/viz/roc",
+          "timeout_s": 60,
+          "destructive": false,
+          "idempotency": "none",
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": [
+            "dataset_id",
+            "model_id",
+            "target_col",
+            "test_size",
+            "params"
+          ],
+          "required_fields": [
+            "dataset_id",
+            "model_id",
+            "target_col"
+          ]
         }
       ]
     },
@@ -359,7 +1946,10 @@
           "timeout_s": 20,
           "destructive": false,
           "idempotency": "supported",
-          "retry": { "transient_max": 2, "backoff_s": 3 },
+          "retry": {
+            "transient_max": 2,
+            "backoff_s": 3
+          },
           "request_fields": []
         },
         {
@@ -370,8 +1960,13 @@
           "timeout_s": 90,
           "destructive": false,
           "idempotency": "supported",
-          "retry": { "transient_max": 2, "backoff_s": 5 },
-          "request_fields": ["provider"]
+          "retry": {
+            "transient_max": 2,
+            "backoff_s": 5
+          },
+          "request_fields": [
+            "provider"
+          ]
         },
         {
           "name": "get_trends",
@@ -381,8 +1976,50 @@
           "timeout_s": 90,
           "destructive": false,
           "idempotency": "supported",
-          "retry": { "transient_max": 2, "backoff_s": 5 },
-          "request_fields": ["provider"]
+          "retry": {
+            "transient_max": 2,
+            "backoff_s": 5
+          },
+          "request_fields": [
+            "provider"
+          ]
+        },
+        {
+          "name": "post_dismiss",
+          "description": "Dismiss Item",
+          "method": "POST",
+          "path": "/api/dismiss",
+          "timeout_s": 60,
+          "destructive": false,
+          "idempotency": "none",
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": [
+            "url"
+          ],
+          "required_fields": [
+            "url"
+          ]
+        },
+        {
+          "name": "post_refresh",
+          "description": "Trigger Refresh",
+          "method": "POST",
+          "path": "/api/refresh",
+          "timeout_s": 300,
+          "destructive": false,
+          "idempotency": "none",
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": [
+            "provider",
+            "preferences"
+          ],
+          "required_fields": []
         }
       ]
     },
@@ -417,7 +2054,10 @@
           "timeout_s": 180,
           "destructive": false,
           "idempotency": "supported",
-          "retry": { "transient_max": 1, "backoff_s": 10 },
+          "retry": {
+            "transient_max": 1,
+            "backoff_s": 10
+          },
           "request_fields": []
         },
         {
@@ -428,7 +2068,10 @@
           "timeout_s": 120,
           "destructive": false,
           "idempotency": "supported",
-          "retry": { "transient_max": 1, "backoff_s": 10 },
+          "retry": {
+            "transient_max": 1,
+            "backoff_s": 10
+          },
           "request_fields": []
         },
         {
@@ -439,7 +2082,10 @@
           "timeout_s": 120,
           "destructive": false,
           "idempotency": "supported",
-          "retry": { "transient_max": 1, "backoff_s": 10 },
+          "retry": {
+            "transient_max": 1,
+            "backoff_s": 10
+          },
           "request_fields": []
         },
         {
@@ -450,8 +2096,53 @@
           "timeout_s": 20,
           "destructive": false,
           "idempotency": "supported",
-          "retry": { "transient_max": 2, "backoff_s": 3 },
+          "retry": {
+            "transient_max": 2,
+            "backoff_s": 3
+          },
           "request_fields": []
+        },
+        {
+          "name": "get_feedback",
+          "description": "Get Feedback",
+          "method": "GET",
+          "path": "/api/feedback",
+          "timeout_s": 20,
+          "destructive": false,
+          "idempotency": "supported",
+          "retry": {
+            "transient_max": 2,
+            "backoff_s": 3
+          },
+          "request_fields": [],
+          "required_fields": []
+        },
+        {
+          "name": "post_feedback",
+          "description": "Submit Feedback",
+          "method": "POST",
+          "path": "/api/feedback",
+          "timeout_s": 60,
+          "destructive": false,
+          "idempotency": "none",
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": [
+            "url",
+            "title",
+            "category",
+            "source",
+            "vote"
+          ],
+          "required_fields": [
+            "url",
+            "title",
+            "category",
+            "source",
+            "vote"
+          ]
         }
       ]
     },
@@ -469,7 +2160,7 @@
       ],
       "fallback": false,
       "when_not": [
-        "only Transformers and LLMs (Stanford CME 295) — for statistics use stats-teacher, for other topics use teach-me"
+        "only Transformers and LLMs (Stanford CME 295) \u2014 for statistics use stats-teacher, for other topics use teach-me"
       ],
       "port": 8006,
       "health": "/api/health",
@@ -482,8 +2173,13 @@
           "timeout_s": 90,
           "destructive": false,
           "idempotency": "supported",
-          "retry": { "transient_max": 2, "backoff_s": 5 },
-          "request_fields": ["messages"]
+          "retry": {
+            "transient_max": 2,
+            "backoff_s": 5
+          },
+          "request_fields": [
+            "messages"
+          ]
         }
       ]
     },
@@ -500,23 +2196,40 @@
       ],
       "fallback": false,
       "when_not": [
-        "only statistics — for LLM or transformer topics use stanford-llm, for other topics use teach-me"
+        "only statistics \u2014 for LLM or transformer topics use stanford-llm, for other topics use teach-me"
       ],
       "port": 8007,
       "health": "/api/health",
       "operations": [
         {
           "name": "ask_question",
-          "description": "Answer a stats question grounded in a course module with conversation context (LLM). Streams text/plain chunks — aggregate the body, not JSON.",
+          "description": "Answer a stats question grounded in a course module with conversation context (LLM). Streams text/plain chunks \u2014 aggregate the body, not JSON.",
           "method": "POST",
           "path": "/api/qa",
           "timeout_s": 90,
           "destructive": false,
           "idempotency": "supported",
-          "retry": { "transient_max": 2, "backoff_s": 5 },
-          "request_fields": ["question", "module_id", "module_title", "module_part", "conversation_history"],
-          "required_fields": ["module_id", "module_title", "module_part"],
-          "defaults": { "module_id": 1, "module_title": "General Statistics", "module_part": "Overview" }
+          "retry": {
+            "transient_max": 2,
+            "backoff_s": 5
+          },
+          "request_fields": [
+            "question",
+            "module_id",
+            "module_title",
+            "module_part",
+            "conversation_history"
+          ],
+          "required_fields": [
+            "module_id",
+            "module_title",
+            "module_part"
+          ],
+          "defaults": {
+            "module_id": 1,
+            "module_title": "General Statistics",
+            "module_part": "Overview"
+          }
         }
       ]
     },
@@ -537,7 +2250,7 @@
       ],
       "fallback": false,
       "when_not": [
-        "not for LLM/transformer questions (use stanford-llm) or statistics (use stats-teacher) — those specialists fit better",
+        "not for LLM/transformer questions (use stanford-llm) or statistics (use stats-teacher) \u2014 those specialists fit better",
         "use Teach Me for general topics that have no dedicated specialist app"
       ],
       "port": 8008,
@@ -551,7 +2264,10 @@
           "timeout_s": 20,
           "destructive": false,
           "idempotency": "supported",
-          "retry": { "transient_max": 2, "backoff_s": 3 },
+          "retry": {
+            "transient_max": 2,
+            "backoff_s": 3
+          },
           "request_fields": []
         },
         {
@@ -562,19 +2278,29 @@
           "timeout_s": 20,
           "destructive": false,
           "idempotency": "supported",
-          "retry": { "transient_max": 2, "backoff_s": 3 },
-          "request_fields": ["topic_id"]
+          "retry": {
+            "transient_max": 2,
+            "backoff_s": 3
+          },
+          "request_fields": [
+            "topic_id"
+          ]
         },
         {
           "name": "create_topic",
-          "description": "Start a new topic — generates concept map + first lesson via a multi-agent pipeline (long-running).",
+          "description": "Start a new topic \u2014 generates concept map + first lesson via a multi-agent pipeline (long-running).",
           "method": "POST",
           "path": "/topics",
           "timeout_s": 600,
           "destructive": false,
           "idempotency": "none",
-          "retry": { "transient_max": 0, "backoff_s": 0 },
-          "request_fields": ["title"]
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": [
+            "title"
+          ]
         },
         {
           "name": "send_user_message",
@@ -584,8 +2310,72 @@
           "timeout_s": 300,
           "destructive": false,
           "idempotency": "none",
-          "retry": { "transient_max": 0, "backoff_s": 0 },
-          "request_fields": ["topic_id", "content"]
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": [
+            "topic_id",
+            "content"
+          ]
+        },
+        {
+          "name": "get_preferences",
+          "description": "Get Preferences",
+          "method": "GET",
+          "path": "/preferences",
+          "timeout_s": 20,
+          "destructive": false,
+          "idempotency": "supported",
+          "retry": {
+            "transient_max": 2,
+            "backoff_s": 3
+          },
+          "request_fields": [],
+          "required_fields": []
+        },
+        {
+          "name": "post_topics_advance",
+          "description": "Advance Concept",
+          "method": "POST",
+          "path": "/topics/{topic_id}/advance",
+          "timeout_s": 60,
+          "destructive": false,
+          "idempotency": "none",
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": [
+            "topic_id"
+          ],
+          "required_fields": [
+            "topic_id"
+          ]
+        },
+        {
+          "name": "post_topics_feedback",
+          "description": "Submit Feedback",
+          "method": "POST",
+          "path": "/topics/{topic_id}/feedback",
+          "timeout_s": 60,
+          "destructive": false,
+          "idempotency": "none",
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": [
+            "topic_id",
+            "message_id",
+            "feedback_type",
+            "complexity_rating",
+            "free_text"
+          ],
+          "required_fields": [
+            "topic_id",
+            "feedback_type"
+          ]
         }
       ]
     },
@@ -606,7 +2396,7 @@
       ],
       "fallback": false,
       "when_not": [
-        "only for GitHub repositories — not for research papers (use arxiv-papers) or general web search"
+        "only for GitHub repositories \u2014 not for research papers (use arxiv-papers) or general web search"
       ],
       "port": 8009,
       "health": "/api/repos/",
@@ -619,19 +2409,28 @@
           "timeout_s": 20,
           "destructive": false,
           "idempotency": "supported",
-          "retry": { "transient_max": 2, "backoff_s": 3 },
+          "retry": {
+            "transient_max": 2,
+            "backoff_s": 3
+          },
           "request_fields": []
         },
         {
           "name": "ingest_repository",
-          "description": "Clone, parse, chunk, embed and index a GitHub repo — synchronous and long-running.",
+          "description": "Clone, parse, chunk, embed and index a GitHub repo \u2014 synchronous and long-running.",
           "method": "POST",
           "path": "/api/repos/",
           "timeout_s": 180,
           "destructive": false,
           "idempotency": "none",
-          "retry": { "transient_max": 0, "backoff_s": 0 },
-          "request_fields": ["url", "options"]
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": [
+            "url",
+            "options"
+          ]
         },
         {
           "name": "list_learnings",
@@ -641,8 +2440,13 @@
           "timeout_s": 20,
           "destructive": false,
           "idempotency": "supported",
-          "retry": { "transient_max": 2, "backoff_s": 3 },
-          "request_fields": ["repo_id"]
+          "retry": {
+            "transient_max": 2,
+            "backoff_s": 3
+          },
+          "request_fields": [
+            "repo_id"
+          ]
         },
         {
           "name": "search_learnings",
@@ -652,8 +2456,536 @@
           "timeout_s": 20,
           "destructive": false,
           "idempotency": "supported",
-          "retry": { "transient_max": 2, "backoff_s": 3 },
-          "request_fields": ["q"]
+          "retry": {
+            "transient_max": 2,
+            "backoff_s": 3
+          },
+          "request_fields": [
+            "q"
+          ]
+        },
+        {
+          "name": "get_chat_sessions",
+          "description": "List all chat sessions",
+          "method": "GET",
+          "path": "/api/chat/sessions",
+          "timeout_s": 20,
+          "destructive": false,
+          "idempotency": "supported",
+          "retry": {
+            "transient_max": 2,
+            "backoff_s": 3
+          },
+          "request_fields": [],
+          "required_fields": []
+        },
+        {
+          "name": "post_chat_sessions",
+          "description": "Create a new chat session",
+          "method": "POST",
+          "path": "/api/chat/sessions",
+          "timeout_s": 60,
+          "destructive": false,
+          "idempotency": "none",
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": [
+            "id",
+            "repo_id",
+            "title",
+            "context_type",
+            "messages",
+            "created_at"
+          ],
+          "required_fields": [
+            "title"
+          ]
+        },
+        {
+          "name": "delete_chat_sessions",
+          "description": "Delete a chat session",
+          "method": "DELETE",
+          "path": "/api/chat/sessions/{session_id}",
+          "timeout_s": 60,
+          "destructive": true,
+          "idempotency": "none",
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": [
+            "session_id"
+          ],
+          "required_fields": [
+            "session_id"
+          ]
+        },
+        {
+          "name": "get_chat_sessions_2",
+          "description": "Get a chat session with messages",
+          "method": "GET",
+          "path": "/api/chat/sessions/{session_id}",
+          "timeout_s": 20,
+          "destructive": false,
+          "idempotency": "supported",
+          "retry": {
+            "transient_max": 2,
+            "backoff_s": 3
+          },
+          "request_fields": [
+            "session_id"
+          ],
+          "required_fields": [
+            "session_id"
+          ]
+        },
+        {
+          "name": "post_help_chat",
+          "description": "Help Chat Endpoint",
+          "method": "POST",
+          "path": "/api/help/chat",
+          "timeout_s": 60,
+          "destructive": false,
+          "idempotency": "none",
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": [
+            "message",
+            "page_context",
+            "screen_data"
+          ],
+          "required_fields": [
+            "message"
+          ]
+        },
+        {
+          "name": "get_learning_paths",
+          "description": "List all learning paths",
+          "method": "GET",
+          "path": "/api/learning-paths/",
+          "timeout_s": 20,
+          "destructive": false,
+          "idempotency": "supported",
+          "retry": {
+            "transient_max": 2,
+            "backoff_s": 3
+          },
+          "request_fields": [],
+          "required_fields": []
+        },
+        {
+          "name": "post_learning_paths",
+          "description": "Create a learning path",
+          "method": "POST",
+          "path": "/api/learning-paths/",
+          "timeout_s": 60,
+          "destructive": false,
+          "idempotency": "none",
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": [
+            "title",
+            "description",
+            "repo_ids",
+            "difficulty"
+          ],
+          "required_fields": [
+            "title",
+            "description",
+            "repo_ids",
+            "difficulty"
+          ]
+        },
+        {
+          "name": "post_learning_paths_generate",
+          "description": "Auto-generate a learning path",
+          "method": "POST",
+          "path": "/api/learning-paths/generate",
+          "timeout_s": 300,
+          "destructive": false,
+          "idempotency": "none",
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": [
+            "topic",
+            "repo_ids",
+            "difficulty"
+          ],
+          "required_fields": [
+            "topic",
+            "difficulty"
+          ]
+        },
+        {
+          "name": "delete_learning_paths",
+          "description": "Delete a learning path",
+          "method": "DELETE",
+          "path": "/api/learning-paths/{path_id}",
+          "timeout_s": 60,
+          "destructive": true,
+          "idempotency": "none",
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": [
+            "path_id"
+          ],
+          "required_fields": [
+            "path_id"
+          ]
+        },
+        {
+          "name": "get_learning_paths_2",
+          "description": "Get a learning path",
+          "method": "GET",
+          "path": "/api/learning-paths/{path_id}",
+          "timeout_s": 20,
+          "destructive": false,
+          "idempotency": "supported",
+          "retry": {
+            "transient_max": 2,
+            "backoff_s": 3
+          },
+          "request_fields": [
+            "path_id"
+          ],
+          "required_fields": [
+            "path_id"
+          ]
+        },
+        {
+          "name": "post_learnings_extract",
+          "description": "Trigger learning extraction for a repository",
+          "method": "POST",
+          "path": "/api/learnings/extract/{repo_id}",
+          "timeout_s": 300,
+          "destructive": false,
+          "idempotency": "none",
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": [
+            "repo_id"
+          ],
+          "required_fields": [
+            "repo_id"
+          ]
+        },
+        {
+          "name": "delete_learnings",
+          "description": "Delete a learning",
+          "method": "DELETE",
+          "path": "/api/learnings/{learning_id}",
+          "timeout_s": 60,
+          "destructive": true,
+          "idempotency": "none",
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": [
+            "learning_id"
+          ],
+          "required_fields": [
+            "learning_id"
+          ]
+        },
+        {
+          "name": "get_patterns",
+          "description": "List all patterns",
+          "method": "GET",
+          "path": "/api/patterns/",
+          "timeout_s": 20,
+          "destructive": false,
+          "idempotency": "supported",
+          "retry": {
+            "transient_max": 2,
+            "backoff_s": 3
+          },
+          "request_fields": [
+            "category"
+          ],
+          "required_fields": []
+        },
+        {
+          "name": "get_patterns_categories",
+          "description": "List distinct pattern categories",
+          "method": "GET",
+          "path": "/api/patterns/categories",
+          "timeout_s": 20,
+          "destructive": false,
+          "idempotency": "supported",
+          "retry": {
+            "transient_max": 2,
+            "backoff_s": 3
+          },
+          "request_fields": [],
+          "required_fields": []
+        },
+        {
+          "name": "post_patterns_detect_cross",
+          "description": "Detect cross-repo patterns",
+          "method": "POST",
+          "path": "/api/patterns/detect-cross",
+          "timeout_s": 300,
+          "destructive": false,
+          "idempotency": "none",
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": [],
+          "required_fields": []
+        },
+        {
+          "name": "post_patterns_detect",
+          "description": "Detect patterns in a repository",
+          "method": "POST",
+          "path": "/api/patterns/detect/{repo_id}",
+          "timeout_s": 300,
+          "destructive": false,
+          "idempotency": "none",
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": [
+            "repo_id"
+          ],
+          "required_fields": [
+            "repo_id"
+          ]
+        },
+        {
+          "name": "get_patterns_search",
+          "description": "Search patterns",
+          "method": "GET",
+          "path": "/api/patterns/search",
+          "timeout_s": 20,
+          "destructive": false,
+          "idempotency": "supported",
+          "retry": {
+            "transient_max": 2,
+            "backoff_s": 3
+          },
+          "request_fields": [
+            "q"
+          ],
+          "required_fields": [
+            "q"
+          ]
+        },
+        {
+          "name": "delete_repos",
+          "description": "Delete a repository",
+          "method": "DELETE",
+          "path": "/api/repos/{repo_id}",
+          "timeout_s": 60,
+          "destructive": true,
+          "idempotency": "none",
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": [
+            "repo_id"
+          ],
+          "required_fields": [
+            "repo_id"
+          ]
+        },
+        {
+          "name": "get_repos",
+          "description": "Get repository details",
+          "method": "GET",
+          "path": "/api/repos/{repo_id}",
+          "timeout_s": 20,
+          "destructive": false,
+          "idempotency": "supported",
+          "retry": {
+            "transient_max": 2,
+            "backoff_s": 3
+          },
+          "request_fields": [
+            "repo_id"
+          ],
+          "required_fields": [
+            "repo_id"
+          ]
+        },
+        {
+          "name": "get_repos_file",
+          "description": "Get file content",
+          "method": "GET",
+          "path": "/api/repos/{repo_id}/file",
+          "timeout_s": 20,
+          "destructive": false,
+          "idempotency": "supported",
+          "retry": {
+            "transient_max": 2,
+            "backoff_s": 3
+          },
+          "request_fields": [
+            "repo_id",
+            "path"
+          ],
+          "required_fields": [
+            "repo_id",
+            "path"
+          ]
+        },
+        {
+          "name": "get_repos_files",
+          "description": "Get repository file tree",
+          "method": "GET",
+          "path": "/api/repos/{repo_id}/files",
+          "timeout_s": 20,
+          "destructive": false,
+          "idempotency": "supported",
+          "retry": {
+            "transient_max": 2,
+            "backoff_s": 3
+          },
+          "request_fields": [
+            "repo_id"
+          ],
+          "required_fields": [
+            "repo_id"
+          ]
+        },
+        {
+          "name": "get_snippets",
+          "description": "List snippets",
+          "method": "GET",
+          "path": "/api/snippets/",
+          "timeout_s": 20,
+          "destructive": false,
+          "idempotency": "supported",
+          "retry": {
+            "transient_max": 2,
+            "backoff_s": 3
+          },
+          "request_fields": [
+            "repo_id",
+            "language",
+            "tags"
+          ],
+          "required_fields": []
+        },
+        {
+          "name": "post_snippets",
+          "description": "Create a new snippet",
+          "method": "POST",
+          "path": "/api/snippets/",
+          "timeout_s": 60,
+          "destructive": false,
+          "idempotency": "none",
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": [
+            "repo_id",
+            "title",
+            "code",
+            "language",
+            "file_path",
+            "start_line",
+            "end_line",
+            "explanation",
+            "tags"
+          ],
+          "required_fields": [
+            "repo_id",
+            "title",
+            "code"
+          ]
+        },
+        {
+          "name": "get_snippets_search",
+          "description": "Search snippets",
+          "method": "GET",
+          "path": "/api/snippets/search",
+          "timeout_s": 20,
+          "destructive": false,
+          "idempotency": "supported",
+          "retry": {
+            "transient_max": 2,
+            "backoff_s": 3
+          },
+          "request_fields": [
+            "q"
+          ],
+          "required_fields": [
+            "q"
+          ]
+        },
+        {
+          "name": "delete_snippets",
+          "description": "Delete a snippet",
+          "method": "DELETE",
+          "path": "/api/snippets/{snippet_id}",
+          "timeout_s": 60,
+          "destructive": true,
+          "idempotency": "none",
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": [
+            "snippet_id"
+          ],
+          "required_fields": [
+            "snippet_id"
+          ]
+        },
+        {
+          "name": "get_snippets_2",
+          "description": "Get a snippet",
+          "method": "GET",
+          "path": "/api/snippets/{snippet_id}",
+          "timeout_s": 20,
+          "destructive": false,
+          "idempotency": "supported",
+          "retry": {
+            "transient_max": 2,
+            "backoff_s": 3
+          },
+          "request_fields": [
+            "snippet_id"
+          ],
+          "required_fields": [
+            "snippet_id"
+          ]
+        },
+        {
+          "name": "put_snippets",
+          "description": "Update a snippet",
+          "method": "PUT",
+          "path": "/api/snippets/{snippet_id}",
+          "timeout_s": 60,
+          "destructive": false,
+          "idempotency": "none",
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": [
+            "snippet_id"
+          ],
+          "required_fields": [
+            "snippet_id"
+          ]
         }
       ]
     },
@@ -675,7 +3007,7 @@
       ],
       "fallback": false,
       "when_not": [
-        "for drafting or refining personal blog posts in the user's voice — not for long-form cited research reports (use research-assistant)"
+        "for drafting or refining personal blog posts in the user's voice \u2014 not for long-form cited research reports (use research-assistant)"
       ],
       "port": 8010,
       "health": "/api/health",
@@ -688,7 +3020,10 @@
           "timeout_s": 20,
           "destructive": false,
           "idempotency": "supported",
-          "retry": { "transient_max": 2, "backoff_s": 3 },
+          "retry": {
+            "transient_max": 2,
+            "backoff_s": 3
+          },
           "request_fields": []
         },
         {
@@ -699,8 +3034,13 @@
           "timeout_s": 20,
           "destructive": false,
           "idempotency": "supported",
-          "retry": { "transient_max": 2, "backoff_s": 3 },
-          "request_fields": ["blog_id"]
+          "retry": {
+            "transient_max": 2,
+            "backoff_s": 3
+          },
+          "request_fields": [
+            "blog_id"
+          ]
         },
         {
           "name": "suggest_topics",
@@ -710,8 +3050,13 @@
           "timeout_s": 90,
           "destructive": false,
           "idempotency": "supported",
-          "retry": { "transient_max": 2, "backoff_s": 5 },
-          "request_fields": ["limit"]
+          "retry": {
+            "transient_max": 2,
+            "backoff_s": 5
+          },
+          "request_fields": [
+            "limit"
+          ]
         },
         {
           "name": "generate_blog_async",
@@ -721,16 +3066,28 @@
           "timeout_s": 30,
           "destructive": false,
           "idempotency": "none",
-          "retry": { "transient_max": 0, "backoff_s": 0 },
-          "request_fields": ["topic"],
-          "required_fields": ["topic"],
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": [
+            "topic"
+          ],
+          "required_fields": [
+            "topic"
+          ],
           "poll": {
             "poll_op": "get_run",
             "run_id_field": "run_id",
             "run_id_arg": "run_id",
             "status_path": "status",
-            "done_values": ["done"],
-            "failed_values": ["failed", "cancelled"],
+            "done_values": [
+              "done"
+            ],
+            "failed_values": [
+              "failed",
+              "cancelled"
+            ],
             "result_path": "result.content"
           }
         },
@@ -742,16 +3099,30 @@
           "timeout_s": 30,
           "destructive": false,
           "idempotency": "none",
-          "retry": { "transient_max": 0, "backoff_s": 0 },
-          "request_fields": ["blog_id", "instruction"],
-          "required_fields": ["blog_id", "instruction"],
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": [
+            "blog_id",
+            "instruction"
+          ],
+          "required_fields": [
+            "blog_id",
+            "instruction"
+          ],
           "poll": {
             "poll_op": "get_run",
             "run_id_field": "run_id",
             "run_id_arg": "run_id",
             "status_path": "status",
-            "done_values": ["done"],
-            "failed_values": ["failed", "cancelled"],
+            "done_values": [
+              "done"
+            ],
+            "failed_values": [
+              "failed",
+              "cancelled"
+            ],
             "result_path": "result.content"
           }
         },
@@ -763,8 +3134,589 @@
           "timeout_s": 20,
           "destructive": false,
           "idempotency": "supported",
-          "retry": { "transient_max": 2, "backoff_s": 3 },
-          "request_fields": ["run_id"]
+          "retry": {
+            "transient_max": 2,
+            "backoff_s": 3
+          },
+          "request_fields": [
+            "run_id"
+          ]
+        },
+        {
+          "name": "post_blog_generate",
+          "description": "Api Generate",
+          "method": "POST",
+          "path": "/api/blog/generate",
+          "timeout_s": 300,
+          "destructive": false,
+          "idempotency": "none",
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": [
+            "topic",
+            "model",
+            "research",
+            "research_depth",
+            "thinking_depth",
+            "verification",
+            "word_count_target",
+            "audience"
+          ],
+          "required_fields": [
+            "topic"
+          ]
+        },
+        {
+          "name": "post_blog_import",
+          "description": "Api Import Blog",
+          "method": "POST",
+          "path": "/api/blog/import",
+          "timeout_s": 60,
+          "destructive": false,
+          "idempotency": "none",
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": [
+            "content",
+            "title",
+            "run_critique"
+          ],
+          "required_fields": [
+            "content"
+          ]
+        },
+        {
+          "name": "delete_blog",
+          "description": "Api Delete Blog",
+          "method": "DELETE",
+          "path": "/api/blog/{blog_id}",
+          "timeout_s": 60,
+          "destructive": true,
+          "idempotency": "none",
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": [
+            "blog_id"
+          ],
+          "required_fields": [
+            "blog_id"
+          ]
+        },
+        {
+          "name": "patch_blog",
+          "description": "Api Patch Blog",
+          "method": "PATCH",
+          "path": "/api/blog/{blog_id}",
+          "timeout_s": 60,
+          "destructive": false,
+          "idempotency": "none",
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": [
+            "blog_id",
+            "status",
+            "tags",
+            "pinned",
+            "title"
+          ],
+          "required_fields": [
+            "blog_id"
+          ]
+        },
+        {
+          "name": "post_blog_cover_image",
+          "description": "Api Cover Image",
+          "method": "POST",
+          "path": "/api/blog/{blog_id}/cover-image",
+          "timeout_s": 300,
+          "destructive": false,
+          "idempotency": "none",
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": [
+            "blog_id",
+            "prompt",
+            "style"
+          ],
+          "required_fields": [
+            "blog_id"
+          ]
+        },
+        {
+          "name": "post_blog_iterate",
+          "description": "Api Iterate",
+          "method": "POST",
+          "path": "/api/blog/{blog_id}/iterate",
+          "timeout_s": 60,
+          "destructive": false,
+          "idempotency": "none",
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": [
+            "blog_id",
+            "instruction",
+            "model"
+          ],
+          "required_fields": [
+            "blog_id",
+            "instruction"
+          ]
+        },
+        {
+          "name": "post_blog_iterate_paragraph",
+          "description": "Api Iterate Paragraph",
+          "method": "POST",
+          "path": "/api/blog/{blog_id}/iterate/paragraph",
+          "timeout_s": 60,
+          "destructive": false,
+          "idempotency": "none",
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": [
+            "blog_id",
+            "paragraph_index",
+            "instruction",
+            "model"
+          ],
+          "required_fields": [
+            "blog_id",
+            "paragraph_index",
+            "instruction"
+          ]
+        },
+        {
+          "name": "post_blog_manual_edit",
+          "description": "Api Manual Edit",
+          "method": "POST",
+          "path": "/api/blog/{blog_id}/manual_edit",
+          "timeout_s": 60,
+          "destructive": false,
+          "idempotency": "none",
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": [
+            "blog_id",
+            "content"
+          ],
+          "required_fields": [
+            "blog_id",
+            "content"
+          ]
+        },
+        {
+          "name": "post_blog_publish_wordpress",
+          "description": "Api Wp Publish Blog",
+          "method": "POST",
+          "path": "/api/blog/{blog_id}/publish/wordpress",
+          "timeout_s": 300,
+          "destructive": false,
+          "idempotency": "none",
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": [
+            "blog_id",
+            "status",
+            "categories",
+            "tags"
+          ],
+          "required_fields": [
+            "blog_id"
+          ]
+        },
+        {
+          "name": "post_blog_restore",
+          "description": "Api Restore Version",
+          "method": "POST",
+          "path": "/api/blog/{blog_id}/restore/{version_num}",
+          "timeout_s": 60,
+          "destructive": false,
+          "idempotency": "none",
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": [
+            "blog_id",
+            "version_num"
+          ],
+          "required_fields": [
+            "blog_id",
+            "version_num"
+          ]
+        },
+        {
+          "name": "post_blog_wordpress_unpublish",
+          "description": "Api Wp Unpublish Blog",
+          "method": "POST",
+          "path": "/api/blog/{blog_id}/wordpress/unpublish",
+          "timeout_s": 300,
+          "destructive": false,
+          "idempotency": "none",
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": [
+            "blog_id"
+          ],
+          "required_fields": [
+            "blog_id"
+          ]
+        },
+        {
+          "name": "get_blogs_search",
+          "description": "Api Blogs Search",
+          "method": "GET",
+          "path": "/api/blogs/search",
+          "timeout_s": 20,
+          "destructive": false,
+          "idempotency": "supported",
+          "retry": {
+            "transient_max": 2,
+            "backoff_s": 3
+          },
+          "request_fields": [
+            "q",
+            "status",
+            "tag",
+            "limit"
+          ],
+          "required_fields": []
+        },
+        {
+          "name": "get_blogs_tags",
+          "description": "Api Blogs Tags",
+          "method": "GET",
+          "path": "/api/blogs/tags",
+          "timeout_s": 20,
+          "destructive": false,
+          "idempotency": "supported",
+          "retry": {
+            "transient_max": 2,
+            "backoff_s": 3
+          },
+          "request_fields": [],
+          "required_fields": []
+        },
+        {
+          "name": "get_blogs_cost",
+          "description": "Api Blog Cost",
+          "method": "GET",
+          "path": "/api/blogs/{blog_id}/cost",
+          "timeout_s": 20,
+          "destructive": false,
+          "idempotency": "supported",
+          "retry": {
+            "transient_max": 2,
+            "backoff_s": 3
+          },
+          "request_fields": [
+            "blog_id"
+          ],
+          "required_fields": [
+            "blog_id"
+          ]
+        },
+        {
+          "name": "get_models",
+          "description": "Models",
+          "method": "GET",
+          "path": "/api/models",
+          "timeout_s": 20,
+          "destructive": false,
+          "idempotency": "supported",
+          "retry": {
+            "transient_max": 2,
+            "backoff_s": 3
+          },
+          "request_fields": [],
+          "required_fields": []
+        },
+        {
+          "name": "get_runs",
+          "description": "Api List Runs",
+          "method": "GET",
+          "path": "/api/runs",
+          "timeout_s": 20,
+          "destructive": false,
+          "idempotency": "supported",
+          "retry": {
+            "transient_max": 2,
+            "backoff_s": 3
+          },
+          "request_fields": [],
+          "required_fields": []
+        },
+        {
+          "name": "post_runs_cancel",
+          "description": "Api Cancel Run",
+          "method": "POST",
+          "path": "/api/runs/{run_id}/cancel",
+          "timeout_s": 60,
+          "destructive": false,
+          "idempotency": "none",
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": [
+            "run_id"
+          ],
+          "required_fields": [
+            "run_id"
+          ]
+        },
+        {
+          "name": "get_style",
+          "description": "Api Get Style",
+          "method": "GET",
+          "path": "/api/style",
+          "timeout_s": 20,
+          "destructive": false,
+          "idempotency": "supported",
+          "retry": {
+            "transient_max": 2,
+            "backoff_s": 3
+          },
+          "request_fields": [],
+          "required_fields": []
+        },
+        {
+          "name": "put_style",
+          "description": "Api Put Style",
+          "method": "PUT",
+          "path": "/api/style",
+          "timeout_s": 60,
+          "destructive": false,
+          "idempotency": "none",
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": [
+            "seed_rules",
+            "learned_traits",
+            "vocabulary_preferences",
+            "sample_snippets",
+            "updated_at"
+          ],
+          "required_fields": []
+        },
+        {
+          "name": "post_style_critique",
+          "description": "Api Style Critique",
+          "method": "POST",
+          "path": "/api/style/critique",
+          "timeout_s": 60,
+          "destructive": false,
+          "idempotency": "none",
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": [
+            "text"
+          ],
+          "required_fields": [
+            "text"
+          ]
+        },
+        {
+          "name": "get_style_drift",
+          "description": "Api Style Drift",
+          "method": "GET",
+          "path": "/api/style/drift",
+          "timeout_s": 20,
+          "destructive": false,
+          "idempotency": "supported",
+          "retry": {
+            "transient_max": 2,
+            "backoff_s": 3
+          },
+          "request_fields": [],
+          "required_fields": []
+        },
+        {
+          "name": "post_style_reset",
+          "description": "Api Reset Style",
+          "method": "POST",
+          "path": "/api/style/reset",
+          "timeout_s": 60,
+          "destructive": false,
+          "idempotency": "none",
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": [],
+          "required_fields": []
+        },
+        {
+          "name": "post_style_sample",
+          "description": "Api Add Sample",
+          "method": "POST",
+          "path": "/api/style/sample",
+          "timeout_s": 60,
+          "destructive": false,
+          "idempotency": "none",
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": [
+            "text",
+            "label"
+          ],
+          "required_fields": [
+            "text"
+          ]
+        },
+        {
+          "name": "post_style_samples_bulk",
+          "description": "Api Bulk Samples",
+          "method": "POST",
+          "path": "/api/style/samples/bulk",
+          "timeout_s": 60,
+          "destructive": false,
+          "idempotency": "none",
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": [
+            "samples"
+          ],
+          "required_fields": [
+            "samples"
+          ]
+        },
+        {
+          "name": "delete_style_trait",
+          "description": "Api Delete Style Trait",
+          "method": "DELETE",
+          "path": "/api/style/trait/{trait_index}",
+          "timeout_s": 60,
+          "destructive": true,
+          "idempotency": "none",
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": [
+            "trait_index"
+          ],
+          "required_fields": [
+            "trait_index"
+          ]
+        },
+        {
+          "name": "patch_style_trait",
+          "description": "Api Patch Style Trait",
+          "method": "PATCH",
+          "path": "/api/style/trait/{trait_index}",
+          "timeout_s": 60,
+          "destructive": false,
+          "idempotency": "none",
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": [
+            "trait_index",
+            "trait",
+            "evidence_count"
+          ],
+          "required_fields": [
+            "trait_index"
+          ]
+        },
+        {
+          "name": "get_topics_recent",
+          "description": "Api Topics Recent",
+          "method": "GET",
+          "path": "/api/topics/recent",
+          "timeout_s": 20,
+          "destructive": false,
+          "idempotency": "supported",
+          "retry": {
+            "transient_max": 2,
+            "backoff_s": 3
+          },
+          "request_fields": [
+            "limit"
+          ],
+          "required_fields": []
+        },
+        {
+          "name": "get_wordpress_config",
+          "description": "Api Wp Get Config",
+          "method": "GET",
+          "path": "/api/wordpress/config",
+          "timeout_s": 20,
+          "destructive": false,
+          "idempotency": "supported",
+          "retry": {
+            "transient_max": 2,
+            "backoff_s": 3
+          },
+          "request_fields": [],
+          "required_fields": []
+        },
+        {
+          "name": "post_wordpress_config",
+          "description": "Api Wp Set Config",
+          "method": "POST",
+          "path": "/api/wordpress/config",
+          "timeout_s": 60,
+          "destructive": false,
+          "idempotency": "none",
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": [
+            "site_url",
+            "username",
+            "app_password"
+          ],
+          "required_fields": [
+            "site_url",
+            "username",
+            "app_password"
+          ]
+        },
+        {
+          "name": "post_wordpress_test",
+          "description": "Api Wp Test",
+          "method": "POST",
+          "path": "/api/wordpress/test",
+          "timeout_s": 60,
+          "destructive": false,
+          "idempotency": "none",
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": [],
+          "required_fields": []
         }
       ]
     },
@@ -784,7 +3736,7 @@
       ],
       "fallback": false,
       "when_not": [
-        "for long-form cited research synthesis — not for short personal blog posts (use blogs-playground)"
+        "for long-form cited research synthesis \u2014 not for short personal blog posts (use blogs-playground)"
       ],
       "port": 8011,
       "health": "/api/health",
@@ -797,16 +3749,28 @@
           "timeout_s": 30,
           "destructive": false,
           "idempotency": "none",
-          "retry": { "transient_max": 0, "backoff_s": 0 },
-          "request_fields": ["topic"],
-          "required_fields": ["topic"],
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": [
+            "topic"
+          ],
+          "required_fields": [
+            "topic"
+          ],
           "poll": {
             "poll_op": "get_run",
             "run_id_field": "run_id",
             "run_id_arg": "run_id",
             "status_path": "run.status",
-            "done_values": ["complete"],
-            "failed_values": ["error", "cancelled"],
+            "done_values": [
+              "complete"
+            ],
+            "failed_values": [
+              "error",
+              "cancelled"
+            ],
             "result_path": "versions.-1.output_md"
           }
         },
@@ -818,7 +3782,10 @@
           "timeout_s": 20,
           "destructive": false,
           "idempotency": "supported",
-          "retry": { "transient_max": 2, "backoff_s": 3 },
+          "retry": {
+            "transient_max": 2,
+            "backoff_s": 3
+          },
           "request_fields": []
         },
         {
@@ -829,8 +3796,13 @@
           "timeout_s": 20,
           "destructive": false,
           "idempotency": "supported",
-          "retry": { "transient_max": 2, "backoff_s": 3 },
-          "request_fields": ["run_id"]
+          "retry": {
+            "transient_max": 2,
+            "backoff_s": 3
+          },
+          "request_fields": [
+            "run_id"
+          ]
         },
         {
           "name": "cancel_run",
@@ -840,8 +3812,13 @@
           "timeout_s": 20,
           "destructive": false,
           "idempotency": "none",
-          "retry": { "transient_max": 0, "backoff_s": 0 },
-          "request_fields": ["run_id"]
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": [
+            "run_id"
+          ]
         },
         {
           "name": "list_notes",
@@ -851,8 +3828,13 @@
           "timeout_s": 20,
           "destructive": false,
           "idempotency": "supported",
-          "retry": { "transient_max": 2, "backoff_s": 3 },
-          "request_fields": ["q"]
+          "retry": {
+            "transient_max": 2,
+            "backoff_s": 3
+          },
+          "request_fields": [
+            "q"
+          ]
         },
         {
           "name": "list_corpus_documents",
@@ -862,7 +3844,10 @@
           "timeout_s": 20,
           "destructive": false,
           "idempotency": "supported",
-          "retry": { "transient_max": 2, "backoff_s": 3 },
+          "retry": {
+            "transient_max": 2,
+            "backoff_s": 3
+          },
           "request_fields": []
         },
         {
@@ -873,8 +3858,13 @@
           "timeout_s": 120,
           "destructive": false,
           "idempotency": "none",
-          "retry": { "transient_max": 0, "backoff_s": 0 },
-          "request_fields": ["file"]
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": [
+            "file"
+          ]
         },
         {
           "name": "delete_corpus_document",
@@ -884,8 +3874,347 @@
           "timeout_s": 20,
           "destructive": true,
           "idempotency": "none",
-          "retry": { "transient_max": 0, "backoff_s": 0 },
-          "request_fields": ["doc_id"]
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": [
+            "doc_id"
+          ]
+        },
+        {
+          "name": "get_bridges",
+          "description": "Bridges List",
+          "method": "GET",
+          "path": "/api/bridges",
+          "timeout_s": 20,
+          "destructive": false,
+          "idempotency": "supported",
+          "retry": {
+            "transient_max": 2,
+            "backoff_s": 3
+          },
+          "request_fields": [],
+          "required_fields": []
+        },
+        {
+          "name": "post_bridges_regenerate",
+          "description": "Bridges Regenerate",
+          "method": "POST",
+          "path": "/api/bridges/regenerate",
+          "timeout_s": 300,
+          "destructive": false,
+          "idempotency": "none",
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": [],
+          "required_fields": []
+        },
+        {
+          "name": "delete_bridges",
+          "description": "Bridges Dismiss",
+          "method": "DELETE",
+          "path": "/api/bridges/{bridge_id}",
+          "timeout_s": 60,
+          "destructive": true,
+          "idempotency": "none",
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": [
+            "bridge_id"
+          ],
+          "required_fields": [
+            "bridge_id"
+          ]
+        },
+        {
+          "name": "post_corpus_reindex",
+          "description": "Corpus Reindex",
+          "method": "POST",
+          "path": "/api/corpus/reindex",
+          "timeout_s": 300,
+          "destructive": false,
+          "idempotency": "none",
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": [
+            "force"
+          ],
+          "required_fields": []
+        },
+        {
+          "name": "get_corpus_chunk",
+          "description": "Corpus Chunk",
+          "method": "GET",
+          "path": "/api/corpus/{doc_id}/chunk/{idx}",
+          "timeout_s": 20,
+          "destructive": false,
+          "idempotency": "supported",
+          "retry": {
+            "transient_max": 2,
+            "backoff_s": 3
+          },
+          "request_fields": [
+            "doc_id",
+            "idx",
+            "neighbors"
+          ],
+          "required_fields": [
+            "doc_id",
+            "idx"
+          ]
+        },
+        {
+          "name": "get_disagreements",
+          "description": "Disagreements List",
+          "method": "GET",
+          "path": "/api/disagreements",
+          "timeout_s": 20,
+          "destructive": false,
+          "idempotency": "supported",
+          "retry": {
+            "transient_max": 2,
+            "backoff_s": 3
+          },
+          "request_fields": [],
+          "required_fields": []
+        },
+        {
+          "name": "post_disagreements",
+          "description": "Disagreement Create",
+          "method": "POST",
+          "path": "/api/disagreements",
+          "timeout_s": 60,
+          "destructive": false,
+          "idempotency": "none",
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": [
+            "quote",
+            "run_id",
+            "version",
+            "correction"
+          ],
+          "required_fields": [
+            "quote"
+          ]
+        },
+        {
+          "name": "delete_disagreements",
+          "description": "Disagreement Delete",
+          "method": "DELETE",
+          "path": "/api/disagreements/{did}",
+          "timeout_s": 60,
+          "destructive": true,
+          "idempotency": "none",
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": [
+            "did"
+          ],
+          "required_fields": [
+            "did"
+          ]
+        },
+        {
+          "name": "get_graph",
+          "description": "Graph",
+          "method": "GET",
+          "path": "/api/graph",
+          "timeout_s": 20,
+          "destructive": false,
+          "idempotency": "supported",
+          "retry": {
+            "transient_max": 2,
+            "backoff_s": 3
+          },
+          "request_fields": [],
+          "required_fields": []
+        },
+        {
+          "name": "post_notes",
+          "description": "Notes Create",
+          "method": "POST",
+          "path": "/api/notes",
+          "timeout_s": 60,
+          "destructive": false,
+          "idempotency": "none",
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": [
+            "text",
+            "run_id",
+            "version",
+            "context_before",
+            "context_after",
+            "source_url",
+            "tags"
+          ],
+          "required_fields": [
+            "text"
+          ]
+        },
+        {
+          "name": "delete_notes",
+          "description": "Notes Delete",
+          "method": "DELETE",
+          "path": "/api/notes/{note_id}",
+          "timeout_s": 60,
+          "destructive": true,
+          "idempotency": "none",
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": [
+            "note_id"
+          ],
+          "required_fields": [
+            "note_id"
+          ]
+        },
+        {
+          "name": "post_quiz_grade",
+          "description": "Quiz Grade",
+          "method": "POST",
+          "path": "/api/quiz/grade",
+          "timeout_s": 60,
+          "destructive": false,
+          "idempotency": "none",
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": [
+            "run_id",
+            "question",
+            "user_answer"
+          ],
+          "required_fields": [
+            "run_id",
+            "question",
+            "user_answer"
+          ]
+        },
+        {
+          "name": "post_quiz_questions",
+          "description": "Quiz Questions",
+          "method": "POST",
+          "path": "/api/quiz/{run_id}/questions",
+          "timeout_s": 60,
+          "destructive": false,
+          "idempotency": "none",
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": [
+            "run_id"
+          ],
+          "required_fields": [
+            "run_id"
+          ]
+        },
+        {
+          "name": "get_review_queue",
+          "description": "Review Queue",
+          "method": "GET",
+          "path": "/api/review/queue",
+          "timeout_s": 20,
+          "destructive": false,
+          "idempotency": "supported",
+          "retry": {
+            "transient_max": 2,
+            "backoff_s": 3
+          },
+          "request_fields": [],
+          "required_fields": []
+        },
+        {
+          "name": "post_review_done",
+          "description": "Review Done",
+          "method": "POST",
+          "path": "/api/review/{concept_id}/done",
+          "timeout_s": 60,
+          "destructive": false,
+          "idempotency": "none",
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": [
+            "concept_id"
+          ],
+          "required_fields": [
+            "concept_id"
+          ]
+        },
+        {
+          "name": "post_review_refresh",
+          "description": "Review Refresh",
+          "method": "POST",
+          "path": "/api/review/{concept_id}/refresh",
+          "timeout_s": 300,
+          "destructive": false,
+          "idempotency": "none",
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": [
+            "concept_id"
+          ],
+          "required_fields": [
+            "concept_id"
+          ]
+        },
+        {
+          "name": "get_sources_trust",
+          "description": "List Trust",
+          "method": "GET",
+          "path": "/api/sources/trust",
+          "timeout_s": 20,
+          "destructive": false,
+          "idempotency": "supported",
+          "retry": {
+            "transient_max": 2,
+            "backoff_s": 3
+          },
+          "request_fields": [],
+          "required_fields": []
+        },
+        {
+          "name": "post_sources_trust",
+          "description": "Set Trust",
+          "method": "POST",
+          "path": "/api/sources/trust",
+          "timeout_s": 60,
+          "destructive": false,
+          "idempotency": "none",
+          "retry": {
+            "transient_max": 0,
+            "backoff_s": 0
+          },
+          "request_fields": [
+            "url",
+            "score"
+          ],
+          "required_fields": [
+            "url",
+            "score"
+          ]
         }
       ]
     },

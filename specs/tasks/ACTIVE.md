@@ -1,1 +1,1 @@
-20260720-api-contract-guardrail.md
+20260720-expose-all-capabilities.md

@@ -1,8 +1,19 @@
 # Project State — A multi agent orchestrator system calling relevant apps basis intent recognition
 
-Last updated: 2026-07-20 (api-contract-guardrail task)
+Last updated: 2026-07-20 (expose-all-capabilities task)
 
 ## Done (most recent first)
+
+- 2026-07-20 expose-all-capabilities (Phase 2 — capability coverage). Wired every non-internal,
+  non-streaming endpoint of all 11 apps as a registry operation, generated directly from each app's
+  live OpenAPI (accurate method/path/fields; DELETE marked destructive; heavy paths given longer
+  timeouts). Registry grew 53 -> 207 ops (+154). Now every plain-JSON capability is exposed; the
+  only remaining gaps are 8 deferred streaming endpoints (SSE/WS, need transport code — follow-on
+  tasks). New coverage ratchet `tests/unit/test_registry_coverage.py` asserts no non-streaming
+  endpoint is left unwired (fails if a refreshed snapshot adds one). All 154 new ops pass the
+  contract guardrail (they were generated from the same OpenAPI it validates against). make verify
+  PASS; decomposition eval still 16/16 (app-level routing unaffected).
+
 
 - 2026-07-20 api-contract-guardrail (Phase 2 — guardrail #8: registry vs live app APIs). Wiring a
   registry op with a wrong method/path/field can no longer be sealed. New `contract.py`
