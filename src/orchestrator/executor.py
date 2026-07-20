@@ -21,7 +21,7 @@ import httpx
 from orchestrator.app_caller import AppEndpoints, CallResult, call_operation
 from orchestrator.grounding import check_relevance
 from orchestrator.llm.base import LLMClient, LLMError
-from orchestrator.models import Plan, PlanResult, Subtask, SubtaskResult
+from orchestrator.models import Artifact, Plan, PlanResult, Subtask, SubtaskResult
 from orchestrator.registry import AppEntry, AppOperation, Registry
 from orchestrator.render import compute_waves
 from orchestrator.resilience import CircuitBreaker, run_with_deadline
@@ -244,8 +244,26 @@ async def _run_app_op(
             result.duration_s,
         )
     return SubtaskResult(
-        sub.id, app.id, app.name, "ok", op.name, result.data, source, None, result.duration_s
+        sub.id,
+        app.id,
+        app.name,
+        "ok",
+        op.name,
+        result.data,
+        source,
+        None,
+        result.duration_s,
+        artifacts=_chart_artifacts(op, sub, result.data),
     )
+
+
+def _chart_artifacts(op: AppOperation, sub: Subtask, data: Any) -> tuple[Artifact, ...]:
+    """Keep a chart-producing op's output as a first-class chart artifact (so it is rendered to an
+    openable file, never truncated). Only when the op declares ``produces: "chart"`` and returned a
+    dict-shaped spec — anything else flows through as ordinary output."""
+    if op.produces != "chart" or not isinstance(data, dict) or data.get("error"):
+        return ()
+    return (Artifact(kind="chart", title=sub.title, spec=data, subtask_id=sub.id),)
 
 
 def _dig(obj: Any, dotted_path: str) -> Any:

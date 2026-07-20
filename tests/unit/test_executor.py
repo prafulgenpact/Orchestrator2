@@ -121,6 +121,38 @@ def _independent_plan(n: int) -> Plan:
     return _plan(*subs)
 
 
+def _coding_sub(title: str = "plot cylinders") -> Subtask:
+    app = AppSelection("coding-playground", "Coding Playground", "because", 0.9, False)
+    return Subtask("t1", title, "plot the distribution of cylinders", (), app)
+
+
+def test_chart_op_attaches_artifact(monkeypatch: pytest.MonkeyPatch, fake_llm: MakeLLM) -> None:
+    box = {"type": "box", "column": "cylinders", "q1": 4, "median": 4, "q3": 8}
+
+    async def _call(app: Any, op: Any, _args: Any, **_kw: Any) -> CallResult:
+        return CallResult(app.id, op.name, "http://x", True, 200, box, None, 0.01)
+
+    monkeypatch.setattr("orchestrator.executor.call_operation", _call)
+    sel = '{"operation": "eda_distribution", "arguments": {"dataset_id": "auto-mpg", "column": "cylinders", "plot_type": "box"}}'  # noqa: E501
+    r = _run(_plan(_coding_sub()), fake_llm([sel, _RELEVANT])).results[0]
+    assert r.status == "ok"
+    assert len(r.artifacts) == 1
+    assert r.artifacts[0].kind == "chart" and r.artifacts[0].spec["type"] == "box"
+
+
+def test_non_chart_op_has_no_artifact(monkeypatch: pytest.MonkeyPatch, fake_llm: MakeLLM) -> None:
+    payload = {"column": "fare", "outlier_count": 3}
+
+    async def _call(app: Any, op: Any, _args: Any, **_kw: Any) -> CallResult:
+        return CallResult(app.id, op.name, "http://x", True, 200, payload, None, 0.01)
+
+    monkeypatch.setattr("orchestrator.executor.call_operation", _call)
+    sel = '{"operation": "eda_outliers", "arguments": {"dataset_id": "titanic", "column": "fare"}}'
+    r = _run(_plan(_coding_sub("find outliers")), fake_llm([sel, _RELEVANT])).results[0]
+    assert r.status == "ok"
+    assert r.artifacts == ()
+
+
 def test_wave_runs_subtasks_concurrently(monkeypatch: pytest.MonkeyPatch) -> None:
     # Independent subtasks in a wave must run in parallel (the plan already labels them
     # "(parallel)"). With the default cap (5) and a wave of 3, all three selections should be

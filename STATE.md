@@ -1,8 +1,22 @@
 # Project State — A multi agent orchestrator system calling relevant apps basis intent recognition
 
-Last updated: 2026-07-16 (stream-answer task)
+Last updated: 2026-07-20 (eda-charts task)
 
 ## Done (most recent first)
+
+- 2026-07-20 eda-charts (Phase 2 — capability coverage: the orchestrator can plot/analyze a
+  dataset). Wired coding-playground's 7 EDA endpoints (summary, dtypes-missing, distribution,
+  correlation, scatter, target-distribution, outliers) as HTTP operations. Added a declarative
+  `produces: str | None` field to `AppOperation` (registry.py) so an op can announce it emits a
+  chart; the executor's `_chart_artifacts` keeps a `produces == "chart"` op's error-free dict output
+  as a first-class `Artifact(kind="chart")` (rendered to an openable HTML file by last task's
+  artifacts.py, which also handles the `{labels, counts}` spec as bars for target-distribution).
+  distribution/correlation/scatter/target-distribution are flagged `produces: "chart"`. Proven
+  test-first (registry parses produces; chart-op attaches artifact, non-chart op does not;
+  labels+counts renders bars). The registry edit re-keyed every replay fixture, so all 16 eval
+  fixtures + the e2e fixture were re-recorded (16 orphaned old fixtures removed). Task Scope widened
+  to cover tests/e2e/fixtures/**, tests/eval/fixtures/**, .gitignore (RESUME.md + orchestrator-output/
+  ignored as scratch). make verify PASS; decomposition eval still 16/16.
 
 - 2026-07-16 stream-answer (Phase 2 — UX: the answer appears as it is written). The final answer
   now streams to stdout token-by-token instead of appearing only after the whole run.

@@ -15,6 +15,10 @@ reports/
 .verify.lock/
 .scaffold-backup/
 
+# session handoff notes + rendered chart output (both are scratch, not deliverables)
+RESUME.md
+orchestrator-output/
+
 # secrets & local overrides
 .env
 .env.*

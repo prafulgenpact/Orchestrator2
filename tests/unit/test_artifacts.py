@@ -60,6 +60,12 @@ def test_render_chart_html_correlation_heatmap() -> None:
     assert _self_contained(doc)
 
 
+def test_render_chart_html_labels_counts() -> None:
+    art = Artifact("chart", "target", {"labels": ["a", "b", "c"], "counts": [10, 5, 2]}, "t1")
+    doc = render_chart_html(art)
+    assert "<rect" in doc and _self_contained(doc)  # rendered as bars
+
+
 def test_render_chart_svg_unknown_shape_is_safe() -> None:
     art = Artifact("chart", "mystery", {"weird": 1}, "t1")
     svg = render_chart_svg(art)

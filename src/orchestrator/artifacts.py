@@ -181,14 +181,18 @@ def render_chart_svg(artifact: Artifact) -> str:
         return _scatter_svg(spec, title)
     if "columns" in spec and "values" in spec:
         return _heatmap_svg(spec, title)
+    if "labels" in spec and "counts" in spec:  # e.g. target-distribution class counts
+        return _bars_svg(spec.get("labels", []), spec.get("counts", []), title)
     return _svg_frame("", title)  # unknown shape: title-only frame (table shown in the HTML below)
 
 
 def render_chart_html(artifact: Artifact) -> str:
     """A complete, self-contained HTML document for the chart (inline SVG, no external refs)."""
     svg = render_chart_svg(artifact)
-    known = artifact.spec.get("type") in ("box", "histogram", "bar", "scatter") or (
-        "values" in artifact.spec
+    known = (
+        artifact.spec.get("type") in ("box", "histogram", "bar", "scatter")
+        or "values" in artifact.spec
+        or "counts" in artifact.spec
     )
     table = "" if known else _spec_table(artifact.spec)
     return (

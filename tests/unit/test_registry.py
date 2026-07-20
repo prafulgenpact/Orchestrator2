@@ -73,6 +73,22 @@ def test_loads_real_registry_with_all_apps() -> None:
     assert reg.fallback_id == "web-search"
 
 
+def test_operation_parses_produces() -> None:
+    # default None, and "chart" parsed from the registry (drives chart-artifact capture)
+    reg = load_registry()
+    coding = reg.get("coding-playground")
+    assert coding is not None
+
+    def _op(name: str) -> AppOperation:
+        op = coding.operation(name)
+        assert op is not None
+        return op
+
+    assert _op("eda_distribution").produces == "chart"
+    assert _op("eda_outliers").produces is None
+    assert _op("get_kernel_status").produces is None
+
+
 def test_get_returns_entry_or_none() -> None:
     reg = load_registry()
     entry = reg.get("arxiv-papers")
