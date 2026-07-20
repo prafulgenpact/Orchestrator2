@@ -153,6 +153,39 @@ def test_non_chart_op_has_no_artifact(monkeypatch: pytest.MonkeyPatch, fake_llm:
     assert r.artifacts == ()
 
 
+def test_viz_op_attaches_chart(monkeypatch: pytest.MonkeyPatch, fake_llm: MakeLLM) -> None:
+    roc = {
+        "curves": [{"class": "positive", "fpr": [0.0, 1.0], "tpr": [0.0, 1.0]}],
+        "auc_scores": {},
+    }
+
+    async def _call(app: Any, op: Any, _args: Any, **_kw: Any) -> CallResult:
+        return CallResult(app.id, op.name, "http://x", True, 200, roc, None, 0.01)
+
+    monkeypatch.setattr("orchestrator.executor.call_operation", _call)
+    sel = '{"operation": "post_viz_roc", "arguments": {"dataset_id": "titanic", "model_id": "logistic_regression", "target_col": "Survived"}}'  # noqa: E501
+    r = _run(_plan(_coding_sub("show the ROC curve")), fake_llm([sel, _RELEVANT])).results[0]
+    assert r.status == "ok"
+    assert len(r.artifacts) == 1 and r.artifacts[0].kind == "chart"
+    assert "curves" in r.artifacts[0].spec
+
+
+def test_run_code_images_attach_image_artifacts(
+    monkeypatch: pytest.MonkeyPatch, fake_llm: MakeLLM
+) -> None:
+    payload = {"text": "done", "images": ["QUJD", "REVG"]}  # two base64 PNGs
+
+    async def _call(app: Any, op: Any, _args: Any, **_kw: Any) -> CallResult:
+        return CallResult(app.id, op.name, "ws://x", True, 200, payload, None, 0.01)
+
+    monkeypatch.setattr("orchestrator.executor.call_operation", _call)
+    sel = '{"operation": "run_code", "arguments": {"code": "import matplotlib; ..."}}'
+    r = _run(_plan(_coding_sub("plot something custom")), fake_llm([sel, _RELEVANT])).results[0]
+    assert r.status == "ok"
+    assert [a.kind for a in r.artifacts] == ["image", "image"]
+    assert r.artifacts[0].spec["png_base64"] == "QUJD"
+
+
 def test_wave_runs_subtasks_concurrently(monkeypatch: pytest.MonkeyPatch) -> None:
     # Independent subtasks in a wave must run in parallel (the plan already labels them
     # "(parallel)"). With the default cap (5) and a wave of 3, all three selections should be

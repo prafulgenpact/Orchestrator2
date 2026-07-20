@@ -1,8 +1,21 @@
 # Project State — A multi agent orchestrator system calling relevant apps basis intent recognition
 
-Last updated: 2026-07-20 (ws-kernel-transport task)
+Last updated: 2026-07-20 (render-charts-images task)
 
 ## Done (most recent first)
+
+- 2026-07-20 render-charts-images (Phase 2 — make chart/plot outputs viewable, UI-ready). Two
+  mechanisms. (a) Spec charts: added a line/curve renderer to artifacts.py — ROC/PR `{curves:[...]}`
+  as multi-line (+ chance diagonal), learning-curve `{train_sizes,train_mean,val_mean}` as two lines,
+  classification `{confusion_matrix,classes}` as a heatmap — and flagged the 8 `post_viz_*` ops
+  `produces:"chart"`, so they now render to openable HTML instead of returning raw JSON. (b) Image
+  charts: `Artifact(kind="image")` carries a base64 PNG; the executor promotes any `data["images"]`
+  (e.g. run_code's matplotlib output) to image artifacts, and save_artifacts writes them as openable
+  `.png`. Artifacts carry the source data (spec/PNG), so a future UI renders inline with no backend
+  change (SVG -> DOM, PNG -> <img>). Renamed `_chart_artifacts` -> `_result_artifacts`. Live-smoked:
+  real ROC -> HTML with the curve; real kernel plot -> a valid 534x435 PNG. make verify PASS; eval
+  16/16.
+
 
 - 2026-07-20 ws-kernel-transport (Phase 2 — the last capability). Added a WebSocket transport so the
   orchestrator can run arbitrary Python in coding-playground's live Jupyter kernel: op flagged

@@ -589,8 +589,12 @@
             "transient_max": 0,
             "backoff_s": 0
           },
-          "request_fields": ["code"],
-          "required_fields": ["code"],
+          "request_fields": [
+            "code"
+          ],
+          "required_fields": [
+            "code"
+          ],
           "stream": "ws"
         },
         {
@@ -1750,7 +1754,8 @@
             "dataset_id",
             "model_id",
             "target_col"
-          ]
+          ],
+          "produces": "chart"
         },
         {
           "name": "post_viz_compare",
@@ -1775,7 +1780,8 @@
             "dataset_id",
             "target_col",
             "model_ids"
-          ]
+          ],
+          "produces": "chart"
         },
         {
           "name": "post_viz_cross_validation",
@@ -1800,7 +1806,8 @@
             "dataset_id",
             "model_id",
             "target_col"
-          ]
+          ],
+          "produces": "chart"
         },
         {
           "name": "post_viz_decision_boundary",
@@ -1828,7 +1835,8 @@
             "target_col",
             "feature_x",
             "feature_y"
-          ]
+          ],
+          "produces": "chart"
         },
         {
           "name": "post_viz_learning_curve",
@@ -1853,7 +1861,8 @@
             "dataset_id",
             "model_id",
             "target_col"
-          ]
+          ],
+          "produces": "chart"
         },
         {
           "name": "post_viz_pr_curve",
@@ -1878,7 +1887,8 @@
             "dataset_id",
             "model_id",
             "target_col"
-          ]
+          ],
+          "produces": "chart"
         },
         {
           "name": "post_viz_regression_plots",
@@ -1903,7 +1913,8 @@
             "dataset_id",
             "model_id",
             "target_col"
-          ]
+          ],
+          "produces": "chart"
         },
         {
           "name": "post_viz_roc",
@@ -1928,7 +1939,8 @@
             "dataset_id",
             "model_id",
             "target_col"
-          ]
+          ],
+          "produces": "chart"
         }
       ]
     },

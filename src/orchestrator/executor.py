@@ -253,17 +253,32 @@ async def _run_app_op(
         source,
         None,
         result.duration_s,
-        artifacts=_chart_artifacts(op, sub, result.data),
+        artifacts=_result_artifacts(op, sub, result.data),
     )
 
 
-def _chart_artifacts(op: AppOperation, sub: Subtask, data: Any) -> tuple[Artifact, ...]:
-    """Keep a chart-producing op's output as a first-class chart artifact (so it is rendered to an
-    openable file, never truncated). Only when the op declares ``produces: "chart"`` and returned a
-    dict-shaped spec — anything else flows through as ordinary output."""
-    if op.produces != "chart" or not isinstance(data, dict) or data.get("error"):
+def _result_artifacts(op: AppOperation, sub: Subtask, data: Any) -> tuple[Artifact, ...]:
+    """Promote non-text outputs to first-class artifacts so they are rendered to openable files
+    (and carried for a future UI), never truncated by the text caps:
+
+    * a chart spec — when the op declares ``produces: "chart"`` and returned an error-free dict;
+    * rendered images — any base64 PNG in ``data["images"]`` (e.g. the live kernel's matplotlib
+      output), one image artifact each.
+    """
+    if not isinstance(data, dict):
         return ()
-    return (Artifact(kind="chart", title=sub.title, spec=data, subtask_id=sub.id),)
+    artifacts: list[Artifact] = []
+    if op.produces == "chart" and not data.get("error"):
+        artifacts.append(Artifact(kind="chart", title=sub.title, spec=data, subtask_id=sub.id))
+    images = data.get("images")
+    if isinstance(images, list):
+        pngs = [img for img in images if isinstance(img, str) and img]
+        for idx, img in enumerate(pngs):
+            title = sub.title if len(pngs) == 1 else f"{sub.title} ({idx + 1})"
+            artifacts.append(
+                Artifact(kind="image", title=title, spec={"png_base64": img}, subtask_id=sub.id)
+            )
+    return tuple(artifacts)
 
 
 def _dig(obj: Any, dotted_path: str) -> Any:
