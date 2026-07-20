@@ -38,9 +38,9 @@ as a chart artifact that saves to an openable HTML file (built last task). Adds 
 
 ## Done
 
-All 4 acceptance criteria met; `make verify` PASS (proof `f5867695c405`), decomposition eval 16/16.
-Registry re-keyed the replay fixtures, so all 16 eval fixtures + 1 e2e fixture re-recorded and 16
-orphaned old fixtures removed (proven: eval stays 16/16 with 0 skips). Scope widened for fixture/
+All 4 acceptance criteria met; `make verify` PASS (see `proofs/latest.json`), decomposition eval
+16/16. Registry re-keyed the replay fixtures, so all 16 eval fixtures + 1 e2e fixture re-recorded and
+16 orphaned old fixtures removed (proven: eval stays 16/16 with 0 skips). Scope widened for fixture/
 housekeeping paths.
 
-Proof commit: <sha>   Auditor verdict: <pending>   Docs updated: STATE.md
+Proof commit: 97b9be1   Auditor verdict: <pending>   Docs updated: STATE.md
