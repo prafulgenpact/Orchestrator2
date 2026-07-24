@@ -1,1 +1,1 @@
-20260724-selector-schema-safety.md
+20260724-fallback-only-when-no-app.md

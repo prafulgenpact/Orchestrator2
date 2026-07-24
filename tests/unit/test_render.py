@@ -313,3 +313,22 @@ def test_execution_no_fallback_block_when_none() -> None:
     plan, result = _one_ok({"reply": "hi"})  # no note on the result
     out = render_execution(plan, result)
     assert "Heads up" not in out
+
+
+def test_failed_subtasks_surface_as_heads_up() -> None:
+    # A chosen app that failed must be flagged right under the answer (never hidden behind a
+    # confident synthesized answer built only from the ok results) — the Fix 2 honesty guarantee.
+    sub = _sub("t1")
+    plan = _plan((sub,))
+    res = _result(
+        "t1",
+        sub.app.app_id,
+        sub.app.app_name,
+        "error",
+        error="health check failed for arxiv-papers",
+    )
+    synth = Synthesis(answer="Partial answer.", mode="synthesized", sources=())
+    out = render_execution(plan, PlanResult(plan.task, plan.intent, (res,)), synth)
+    assert "Some parts of the task could not be completed" in out
+    assert "health check failed for arxiv-papers" in out
+    assert out.index("could not be completed") < out.index("Plan —")  # up front, not buried

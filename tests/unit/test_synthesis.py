@@ -21,6 +21,7 @@ def _res(
     operation: str | None = "op",
     source: str | None = None,
     app_name: str = "App",
+    error: str | None = None,
 ) -> SubtaskResult:
     return SubtaskResult(
         subtask_id=sub_id,
@@ -30,7 +31,7 @@ def _res(
         operation=operation,
         output=output,
         source=source,
-        error=None,
+        error=error,
         duration_s=1.0,
     )
 
@@ -52,17 +53,31 @@ def test_single_prose_result_is_verbatim(fake_llm: MakeLLM) -> None:
     assert client.requests == []  # proves no LLM call was made
 
 
-def test_no_ok_results_is_none(fake_llm: MakeLLM) -> None:
+def test_all_failed_answer_names_apps_and_reasons(fake_llm: MakeLLM) -> None:
+    # No ok result, but apps failed: the answer must honestly name each app and why — NOT a bland
+    # "no answer" and NEVER a web substitute (web is only the planner's no-app route).
     client = fake_llm([])  # none must make NO LLM call
     pr = _plan_result(
-        _res("t1", None, status="error", source="http://x"),
-        _res("t2", None, status="skipped"),
+        _res("t1", None, status="error", app_name="ArXiv Paper Guide", error="health check failed"),
+        _res(
+            "t2", None, status="skipped", app_name="Statistics Teacher", error="missing module_id"
+        ),
     )
     s = synthesize(client, pr, model="m")
     assert s.mode == "none"
-    assert "no answer" in s.answer.lower()
+    assert "could not be completed" in s.answer.lower()
+    assert "ArXiv Paper Guide" in s.answer and "health check failed" in s.answer
+    assert "Statistics Teacher" in s.answer and "missing module_id" in s.answer
     assert s.sources == ()
-    assert client.requests == []
+    assert client.requests == []  # honest failure is built in code, no LLM, no web
+
+
+def test_no_results_at_all_is_bland_none(fake_llm: MakeLLM) -> None:
+    # Degenerate case: a plan with zero results (nothing ran) keeps the plain message.
+    client = fake_llm([])
+    s = synthesize(client, _plan_result(), model="m")
+    assert s.mode == "none"
+    assert "no answer" in s.answer.lower()
 
 
 def test_multiple_results_are_synthesized(fake_llm: MakeLLM) -> None:

@@ -250,9 +250,11 @@ def test_execute_fallback_skipped(
     assert rc == 0
     assert "Web Search (fallback)" in out
     assert "not executed" in out
-    # no app produced a grounded result -> the Answer says so, with no synthesis LLM call
+    # The web fallback itself could not run (no key) -> the Answer honestly says so (naming the
+    # web-search app + the missing-key reason), with no synthesis LLM call.
     assert "Answer:" in out
-    assert "No app returned a grounded result" in out
+    assert "could not be completed" in out
+    assert "TAVILY_API_KEY" in out
 
 
 def test_execute_verbose_shows_operational_detail(
@@ -295,7 +297,13 @@ class _PlanThenLLMError:
         raise LLMError("selector call failed")
 
 
-def test_execute_llm_error_returns_4(capsys: pytest.CaptureFixture[str]) -> None:
+def test_execute_selector_error_is_honest_not_web(capsys: pytest.CaptureFixture[str]) -> None:
+    # A mid-execution selector LLM error is now handled HONESTLY per subtask: the chosen app is
+    # reported as unable to complete the task — never silently answered from the web, and the run
+    # does not crash. (Planner-stage LLM errors still exit 4: test_planner_failure_returns_4.)
     rc = main(["find moe papers", "--execute"], client=_PlanThenLLMError(_arxiv_plan_response()))
-    assert rc == 4
-    assert "error:" in capsys.readouterr().err
+    out = capsys.readouterr().out
+    assert rc == 0
+    assert "could not be completed" in out
+    assert "ArXiv Paper Guide" in out
+    assert "Web Search" not in out  # no web substitution

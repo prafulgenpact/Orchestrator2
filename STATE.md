@@ -1,8 +1,19 @@
 # Project State — A multi agent orchestrator system calling relevant apps basis intent recognition
 
-Last updated: 2026-07-24 (selector-schema-safety task)
+Last updated: 2026-07-24 (fallback-only-when-no-app task)
 
 ## Done (most recent first)
+
+- 2026-07-24 fallback-only-when-no-app (Fix 2 of the web-fallback deep-dive). Removed the runtime
+  "safety net" in executor._run_subtask that silently answered from the web whenever a CHOSEN app
+  failed/skipped/returned no_match. Web is now used ONLY when the planner routes a subtask to the
+  web-search app (no app fits) — the objective's one sanctioned web path. A chosen app that fails
+  is reported honestly: synthesis builds a grounded per-app failure answer ("This task could not
+  be completed by the selected apps: - <app> <reason>") instead of the bland none-line, and
+  render surfaces failures as a "⚠ Some parts of the task could not be completed" heads-up right
+  under the answer. Inverted the 4 web-safety-net executor tests (skip/error/no_match/selection
+  error now stay failed even with web available); kept the 4 planner-fallback tests. Live: "2022
+  World Cup final" still answered via web (planner route intact). make verify PASS; eval 16/16.
 
 - 2026-07-24 selector-schema-safety (Fix 1 of the web-fallback deep-dive). Root cause of "legit
   task -> 422 -> web fallback": the selector saw field NAMES only, so it filled a typed field with

@@ -143,11 +143,18 @@ def render_execution(
             lines.append("  Sources:")
             lines.extend(f"    - {src}" for src in synthesis.sources)
         lines.append("")
-    # Announce any fallback up front — the user must never have to dig for it (traceability).
-    fallbacks = [r.note for r in result.results if r.note]
-    if fallbacks:
-        lines.append("⚠ Heads up — some apps were substituted:")
-        lines.extend(f"  - {note}" for note in fallbacks)
+    # Announce any note up front — the user must never have to dig for it (traceability).
+    notes = [r.note for r in result.results if r.note]
+    if notes:
+        lines.append("⚠ Heads up:")
+        lines.extend(f"  - {note}" for note in notes)
+        lines.append("")
+    # Surface chosen-app failures right under the answer, so a partial failure is never hidden by
+    # a confident-looking synthesized answer (the answer is built only from the ok results).
+    failed = [r for r in result.results if r.status != "ok"]
+    if failed:
+        lines.append("⚠ Some parts of the task could not be completed:")
+        lines.extend(f"  - {r.app_name}: {r.error or r.status}" for r in failed)
         lines.append("")
     lines.append(f"Plan — {len(plan.subtasks)} subtask(s) in {len(waves)} step(s):")
     for step, wave in enumerate(waves, start=1):

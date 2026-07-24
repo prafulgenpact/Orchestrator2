@@ -370,10 +370,11 @@ def test_selection_llm_error_becomes_clean_error(
     assert "truncated" in (r.error or "")
 
 
-def test_selection_llm_error_triggers_disclosed_web_fallback(
+def test_selection_error_is_not_web_rescued(
     monkeypatch: pytest.MonkeyPatch, fake_llm: MakeLLM
 ) -> None:
-    # Same failure, but with the web enabled: the safety net answers and discloses the bypass.
+    # Even with the web AVAILABLE, a chosen app's selection failure is reported honestly and is
+    # NOT silently answered from the web (web is only the planner's no-app route).
     _web_ok(monkeypatch, "Web answer.")
 
     def _raise(*_a: Any, **_kw: Any) -> Any:
@@ -381,9 +382,9 @@ def test_selection_llm_error_triggers_disclosed_web_fallback(
 
     monkeypatch.setattr("orchestrator.executor.select_operation", _raise)
     r = _run(_plan(_sub("arxiv-papers", "ArXiv Paper Guide")), fake_llm([])).results[0]
-    assert r.status == "ok"
-    assert r.app_name == "Web Search (fallback)"
-    assert r.note is not None and "ArXiv Paper Guide" in r.note
+    assert r.status == "error"
+    assert r.app_name == "ArXiv Paper Guide"  # stays the chosen app, not the web
+    assert "truncated" in (r.error or "")
 
 
 def test_execute_call_failure_recorded(monkeypatch: pytest.MonkeyPatch, fake_llm: MakeLLM) -> None:
@@ -472,7 +473,9 @@ def test_execute_skips_failed_upstream(monkeypatch: pytest.MonkeyPatch, fake_llm
     assert "UPSTREAM" not in messages[1]  # t2's selection has no failed upstream
 
 
-# --- web safety net: fall back to the web when the CHOSEN app can't ground it ------------------
+# --- NO runtime web rescue: a CHOSEN app that fails is reported honestly, never web-substituted --
+# (Web is only the planner's no-app route — the _fallback_plan tests above. These prove a chosen
+# app's failure survives intact EVEN WHEN the web is available.)
 
 
 def _web_ok(monkeypatch: pytest.MonkeyPatch, answer: str = "Web answer.") -> None:
@@ -484,61 +487,36 @@ def _web_ok(monkeypatch: pytest.MonkeyPatch, answer: str = "Web answer.") -> Non
     monkeypatch.setattr("orchestrator.executor.search_web", _search)
 
 
-def test_web_safety_net_on_skip(monkeypatch: pytest.MonkeyPatch, fake_llm: MakeLLM) -> None:
+def test_app_skip_is_not_web_rescued(monkeypatch: pytest.MonkeyPatch, fake_llm: MakeLLM) -> None:
     _web_ok(monkeypatch, "Web answer for p-value.")
-    # _STATS_SUB with a blank module -> primary skips -> safety net -> web answers
+    # _STATS_SUB with a blank module -> required-field skip. The web is available, but the skip
+    # must stand: the app owns this subtask and honestly could not run it.
     r = _run(_plan(_STATS_SUB), fake_llm([_STATS_SELECT_BLANK])).results[0]
-    assert r.status == "ok"
-    assert r.app_name == "Web Search (fallback)"  # transparently attributed to the web
-    assert r.output == {"answer": "Web answer for p-value.", "citations": ["http://w"]}
-    assert r.source == "http://w"
+    assert r.status == "skipped"
+    assert r.app_name == "Statistics Teacher"  # NOT the web
+    assert "module_id" in (r.error or "")
 
 
-def test_web_safety_net_sets_disclosure_note(
-    monkeypatch: pytest.MonkeyPatch, fake_llm: MakeLLM
-) -> None:
-    _web_ok(monkeypatch)
-    r = _run(_plan(_STATS_SUB), fake_llm([_STATS_SELECT_BLANK])).results[0]
-    assert r.status == "ok"
-    assert r.note is not None
-    assert "Statistics Teacher" in r.note  # names the app that was bypassed
-    assert "web search" in r.note.lower()
-
-
-def test_web_safety_net_on_error(monkeypatch: pytest.MonkeyPatch, fake_llm: MakeLLM) -> None:
+def test_app_error_is_not_web_rescued(monkeypatch: pytest.MonkeyPatch, fake_llm: MakeLLM) -> None:
     _web_ok(monkeypatch)
     monkeypatch.setattr(
         "orchestrator.executor.call_operation", _stub_call(ok=False, error="retry: boom")
     )
     r = _run(_plan(_sub("arxiv-papers", "ArXiv Paper Guide")), fake_llm([_SELECT])).results[0]
-    assert r.status == "ok"
-    assert r.app_name == "Web Search (fallback)"
+    assert r.status == "error"
+    assert r.app_name == "ArXiv Paper Guide"  # NOT the web
+    assert "retry: boom" in (r.error or "")
 
 
-def test_web_safety_net_on_no_match(monkeypatch: pytest.MonkeyPatch, fake_llm: MakeLLM) -> None:
+def test_app_no_match_is_not_web_rescued(
+    monkeypatch: pytest.MonkeyPatch, fake_llm: MakeLLM
+) -> None:
     _web_ok(monkeypatch)
     monkeypatch.setattr("orchestrator.executor.call_operation", _stub_call())
-    # call ok, but relevance guard rejects -> no_match -> safety net -> web
+    # call ok, but the relevance guard rejects -> no_match. It stays no_match, not a web answer.
     r = _run(_plan(_sub("arxiv-papers", "ArXiv Paper Guide")), fake_llm([_SELECT, _IRRELEVANT]))
-    assert r.results[0].status == "ok"
-    assert r.results[0].app_name == "Web Search (fallback)"
-
-
-def test_web_safety_net_keeps_original_failure_when_web_fails(
-    monkeypatch: pytest.MonkeyPatch, fake_llm: MakeLLM
-) -> None:
-    monkeypatch.setattr("orchestrator.executor.resolve_search_key", lambda: "k")
-
-    async def _boom(_query: str, **_kw: Any) -> WebResult:
-        raise WebSearchError("down")
-
-    monkeypatch.setattr("orchestrator.executor.search_web", _boom)
-    monkeypatch.setattr(
-        "orchestrator.executor.call_operation", _stub_call(ok=False, error="retry: boom")
-    )
-    r = _run(_plan(_sub("arxiv-papers", "ArXiv Paper Guide")), fake_llm([_SELECT])).results[0]
-    assert r.status == "error"  # web also failed -> original failure preserved, not masked
-    assert "retry: boom" in (r.error or "")
+    assert r.results[0].status == "no_match"
+    assert r.results[0].app_name == "ArXiv Paper Guide"  # NOT the web
 
 
 # --- async-poll: drive a start-then-poll job to completion --------------------

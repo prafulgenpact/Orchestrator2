@@ -66,6 +66,28 @@ def _ok_results(plan_result: PlanResult) -> tuple[SubtaskResult, ...]:
     return tuple(r for r in plan_result.results if r.status == "ok")
 
 
+# Human, grounded phrasing for each way a chosen app can fail to deliver — so the answer explains
+# WHAT happened (never a web substitute, never a bland "no answer"). The concrete error detail
+# from the result is appended by the caller; these are the lead-ins.
+_FAILURE_LEADIN = {
+    "skipped": "needed information the task did not provide",
+    "no_match": "did not return results that matched the task",
+    "error": "could not complete the request",
+}
+
+
+def _failed_results(plan_result: PlanResult) -> tuple[SubtaskResult, ...]:
+    """Results from chosen apps that did NOT produce grounded data (error/skipped/no_match)."""
+    return tuple(r for r in plan_result.results if r.status != "ok")
+
+
+def _failure_line(r: SubtaskResult) -> str:
+    """One honest, grounded line: which app, and why it could not complete this subtask."""
+    lead = _FAILURE_LEADIN.get(r.status, "could not complete the request")
+    detail = f" ({r.error})" if r.error else ""
+    return f"- {r.app_name} {lead}{detail}"
+
+
 def _sources(ok: Sequence[SubtaskResult]) -> tuple[str, ...]:
     """Unique source URLs of the ok results, in order — provenance from code, not the model."""
     seen: list[str] = []
@@ -184,7 +206,15 @@ def synthesize(
     sources = _sources(ok)
     artifacts = _artifacts(ok)
     if not ok:
-        answer = "No app returned a grounded result for this task, so there is no answer."
+        # No app produced grounded data. Be honest about WHY (per app), not bland — and never
+        # reach for the web here: web is only the planner's no-app route, not a runtime rescue.
+        failed = _failed_results(plan_result)
+        if failed:
+            answer = "This task could not be completed by the selected apps:\n" + "\n".join(
+                _failure_line(r) for r in failed
+            )
+        else:
+            answer = "No app returned a grounded result for this task, so there is no answer."
         _emit(on_delta, answer)
         return Synthesis(answer=answer, mode="none", sources=())
     terminal = _dominant_terminal(ok, subtask_deps)

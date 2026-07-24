@@ -144,23 +144,15 @@ async def _run_subtask(
             0.0,
         )
     if app.fallback:
+        # Planner-routed web fallback: the planner decided NO app fits this subtask, so it is
+        # answered from the web by design (the objective's one sanctioned web path).
         return await _run_web_fallback(app, sub, http_client)
-    result = await _run_app_op(
+    # A CHOSEN app owns its subtask. If it fails/skips/returns no_match we report that honestly —
+    # we do NOT silently substitute a web answer wearing the app's badge. Web is only for subtasks
+    # the planner routed to it (above). An honest failure beats a masked one (accuracy first).
+    return await _run_app_op(
         app, sub, llm_client, http_client, model, breaker, upstream, endpoints, progress
     )
-    if result.status == "ok":
-        return result
-    # Safety net: the chosen app could not ground this subtask (skip/error/no_match). Rather than
-    # give up, answer it from the web — so "give it any task" holds even when the routed app can't
-    # deliver. Keep the original failure if the web can't help either (never mask it with worse).
-    fallback_app = next(entry for entry in registry.apps if entry.fallback)
-    web = await _run_web_fallback(fallback_app, sub, http_client)
-    if web.status == "ok":
-        # Announce the substitution so it is never silent (traceability).
-        reason = result.error or result.status
-        note = f"'{app.name}' could not handle this ({reason}); answered via web search instead"
-        return replace(web, note=note)
-    return result
 
 
 async def _run_app_op(
