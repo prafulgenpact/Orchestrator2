@@ -264,3 +264,55 @@ def test_select_can_use_upstream_id_as_argument(fake_llm: MakeLLM) -> None:
     assert op.name == "get_paper_by_id"
     assert args == {"arxiv_id": "2401.12345"}
     assert "2401.12345" in client.requests[0].messages[0]["content"]
+
+
+# --- schema-safety: the selector sees field TYPES and never sends a wrongly-typed value ---
+# Root cause of the "legit blog task -> 422 -> web fallback" bug (live proof 2026-07-13:
+# word_count_target: "short" against an integer field). The registry only knows field names;
+# types come from the committed OpenAPI snapshots.
+
+
+def _blogs() -> AppEntry:
+    app = REG.get("blogs-playground")
+    assert app is not None
+    return app
+
+
+def test_operations_view_includes_field_types() -> None:
+    # The model must SEE "limit: integer" to fill it correctly — names alone caused the 422s.
+    message = build_select_message(_blogs(), _blog_sub("Suggest", "suggest blog topics"))
+    assert "limit: integer" in message
+
+
+def test_numeric_string_coerced(fake_llm: MakeLLM) -> None:
+    # "5" for an integer field is safely convertible — coerce, don't punish.
+    client = fake_llm(['{"operation": "suggest_topics", "arguments": {"limit": "5"}}'])
+    op, args = select_operation(client, _blogs(), _blog_sub("Suggest", "suggest topics"), model="m")
+    assert op.name == "suggest_topics"
+    assert args == {"limit": 5}
+
+
+def test_wrong_type_optional_dropped(fake_llm: MakeLLM) -> None:
+    # An uncoercible value for an OPTIONAL typed field is dropped, so the app applies its own
+    # default instead of 422-ing the whole call into web fallback.
+    client = fake_llm(['{"operation": "suggest_topics", "arguments": {"limit": "many"}}'])
+    op, args = select_operation(client, _blogs(), _blog_sub("Suggest", "suggest topics"), model="m")
+    assert op.name == "suggest_topics"
+    assert "limit" not in args
+
+
+def test_wrong_type_required_dropped_causes_skip(fake_llm: MakeLLM) -> None:
+    # An uncoercible REQUIRED field is dropped too: the executor's missing-required skip then
+    # fires with an honest reason — an honest skip beats a garbage call every time.
+    client = fake_llm(
+        [
+            '{"operation": "post_blog_restore", '
+            '"arguments": {"blog_id": "b1", "version_num": "two"}}'
+        ]
+    )
+    op, args = select_operation(
+        client, _blogs(), _blog_sub("Restore", "restore version"), model="m"
+    )
+    assert op.name == "post_blog_restore"
+    assert "version_num" not in args  # dropped -> executor skips instead of 422
+    assert args["blog_id"] == "b1"

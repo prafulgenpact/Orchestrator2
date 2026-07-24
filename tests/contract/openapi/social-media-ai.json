@@ -2,19 +2,22 @@
   "/api/all": {
     "GET": {
       "params": [],
-      "required": []
+      "required": [],
+      "types": {}
     }
   },
   "/api/categories": {
     "GET": {
       "params": [],
-      "required": []
+      "required": [],
+      "types": {}
     }
   },
   "/api/feedback": {
     "GET": {
       "params": [],
-      "required": []
+      "required": [],
+      "types": {}
     },
     "POST": {
       "params": [
@@ -30,25 +33,35 @@
         "category",
         "source",
         "vote"
-      ]
+      ],
+      "types": {
+        "category": "string",
+        "source": "string",
+        "title": "string",
+        "url": "string",
+        "vote": "string"
+      }
     }
   },
   "/api/health": {
     "GET": {
       "params": [],
-      "required": []
+      "required": [],
+      "types": {}
     }
   },
   "/api/medium": {
     "GET": {
       "params": [],
-      "required": []
+      "required": [],
+      "types": {}
     }
   },
   "/api/twitter": {
     "GET": {
       "params": [],
-      "required": []
+      "required": [],
+      "types": {}
     }
   },
   "/{full_path}": {
@@ -58,7 +71,10 @@
       ],
       "required": [
         "full_path"
-      ]
+      ],
+      "types": {
+        "full_path": "string"
+      }
     }
   }
 }

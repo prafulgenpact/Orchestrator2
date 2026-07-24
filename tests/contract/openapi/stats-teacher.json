@@ -2,7 +2,8 @@
   "/api/health": {
     "GET": {
       "params": [],
-      "required": []
+      "required": [],
+      "types": {}
     }
   },
   "/api/qa": {
@@ -19,7 +20,14 @@
         "module_id",
         "module_title",
         "module_part"
-      ]
+      ],
+      "types": {
+        "conversation_history": "array",
+        "module_id": "integer",
+        "module_part": "string",
+        "module_title": "string",
+        "question": "string"
+      }
     }
   },
   "/{full_path}": {
@@ -29,7 +37,10 @@
       ],
       "required": [
         "full_path"
-      ]
+      ],
+      "types": {
+        "full_path": "string"
+      }
     }
   }
 }

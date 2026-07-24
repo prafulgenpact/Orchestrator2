@@ -262,6 +262,17 @@ def test_async_start_ops_have_minimal_request_fields() -> None:
         assert op.request_fields == fields, (app_id, op_name, op.request_fields)
 
 
+def test_blogs_single_generate_op() -> None:
+    """The two sync generate duplicates (post_blog_generate, post_blog_generate_streaming) are
+    gone: they exposed 7 type-risky fields the async op deliberately trims, so the selector's
+    op choice was a per-run lottery between a safe path and a 422->web-fallback path."""
+    reg = load_registry()
+    blogs = reg.get("blogs-playground")
+    assert blogs is not None
+    generate_ops = [op.name for op in blogs.operations if "generate" in op.name]
+    assert generate_ops == ["generate_blog_async"], generate_ops
+
+
 def test_async_specs_present() -> None:
     reg = load_registry()
     for app_id, op_name in [

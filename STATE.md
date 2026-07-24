@@ -1,8 +1,21 @@
 # Project State — A multi agent orchestrator system calling relevant apps basis intent recognition
 
-Last updated: 2026-07-20 (render-charts-images task)
+Last updated: 2026-07-24 (selector-schema-safety task)
 
 ## Done (most recent first)
+
+- 2026-07-24 selector-schema-safety (Fix 1 of the web-fallback deep-dive). Root cause of "legit
+  task -> 422 -> web fallback": the selector saw field NAMES only, so it filled a typed field with
+  a wrongly-typed value (live proof: word_count_target="short" for an integer field) and the app
+  422'd into web. Fix: (a) OpenAPI slim snapshots now carry a `types` map per endpoint
+  (contract.slim_from_openapi, resolving Optional[...] anyOf); (b) the selector's operation view
+  shows "field: type" and a new value gate (selector._enforce_field_types) coerces safe cases
+  ("5"->5, "true"->True) and DROPS the uncoercible — an optional field then uses the app default, a
+  required field trips the honest missing-input skip instead of a garbage call; (c) removed the two
+  unsafe sync blog-generate duplicates (post_blog_generate, post_blog_generate_streaming) so the
+  trimmed generate_blog_async is the only generate path (no more per-run op lottery). make verify
+  PASS; eval 16/16; live: short-blog produced BY Blogs Playground, no fallback. Supersedes
+  20260713-async-payload-fix.
 
 - 2026-07-20 render-charts-images (Phase 2 — make chart/plot outputs viewable, UI-ready). Two
   mechanisms. (a) Spec charts: added a line/curve renderer to artifacts.py — ROC/PR `{curves:[...]}`

@@ -7,7 +7,11 @@
       ],
       "required": [
         "description"
-      ]
+      ],
+      "types": {
+        "description": "string",
+        "language": "string"
+      }
     }
   },
   "/api/chat/code": {
@@ -20,7 +24,13 @@
       ],
       "required": [
         "message"
-      ]
+      ],
+      "types": {
+        "file_paths": "array",
+        "message": "string",
+        "repo_id": "string",
+        "session_id": "string"
+      }
     }
   },
   "/api/chat/cross-repo": {
@@ -33,7 +43,13 @@
       ],
       "required": [
         "message"
-      ]
+      ],
+      "types": {
+        "file_paths": "array",
+        "message": "string",
+        "repo_id": "string",
+        "session_id": "string"
+      }
     }
   },
   "/api/chat/repo": {
@@ -46,13 +62,20 @@
       ],
       "required": [
         "message"
-      ]
+      ],
+      "types": {
+        "file_paths": "array",
+        "message": "string",
+        "repo_id": "string",
+        "session_id": "string"
+      }
     }
   },
   "/api/chat/sessions": {
     "GET": {
       "params": [],
-      "required": []
+      "required": [],
+      "types": {}
     },
     "POST": {
       "params": [
@@ -65,7 +88,15 @@
       ],
       "required": [
         "title"
-      ]
+      ],
+      "types": {
+        "context_type": "string",
+        "created_at": "string",
+        "id": "string",
+        "messages": "array",
+        "repo_id": "string",
+        "title": "string"
+      }
     }
   },
   "/api/chat/sessions/{session_id}": {
@@ -75,7 +106,10 @@
       ],
       "required": [
         "session_id"
-      ]
+      ],
+      "types": {
+        "session_id": "string"
+      }
     },
     "GET": {
       "params": [
@@ -83,7 +117,10 @@
       ],
       "required": [
         "session_id"
-      ]
+      ],
+      "types": {
+        "session_id": "string"
+      }
     }
   },
   "/api/compare/": {
@@ -94,7 +131,11 @@
       ],
       "required": [
         "repo_ids"
-      ]
+      ],
+      "types": {
+        "aspects": "array",
+        "repo_ids": "array"
+      }
     }
   },
   "/api/help/chat": {
@@ -106,13 +147,19 @@
       ],
       "required": [
         "message"
-      ]
+      ],
+      "types": {
+        "message": "string",
+        "page_context": "string",
+        "screen_data": "string"
+      }
     }
   },
   "/api/learning-paths/": {
     "GET": {
       "params": [],
-      "required": []
+      "required": [],
+      "types": {}
     },
     "POST": {
       "params": [
@@ -126,7 +173,13 @@
         "description",
         "repo_ids",
         "difficulty"
-      ]
+      ],
+      "types": {
+        "description": "string",
+        "difficulty": "string",
+        "repo_ids": "array",
+        "title": "string"
+      }
     }
   },
   "/api/learning-paths/generate": {
@@ -139,7 +192,12 @@
       "required": [
         "topic",
         "difficulty"
-      ]
+      ],
+      "types": {
+        "difficulty": "string",
+        "repo_ids": "array",
+        "topic": "string"
+      }
     }
   },
   "/api/learning-paths/{path_id}": {
@@ -149,7 +207,10 @@
       ],
       "required": [
         "path_id"
-      ]
+      ],
+      "types": {
+        "path_id": "string"
+      }
     },
     "GET": {
       "params": [
@@ -157,7 +218,10 @@
       ],
       "required": [
         "path_id"
-      ]
+      ],
+      "types": {
+        "path_id": "string"
+      }
     }
   },
   "/api/learnings/": {
@@ -165,7 +229,10 @@
       "params": [
         "repo_id"
       ],
-      "required": []
+      "required": [],
+      "types": {
+        "repo_id": "string"
+      }
     }
   },
   "/api/learnings/extract/{repo_id}": {
@@ -175,7 +242,10 @@
       ],
       "required": [
         "repo_id"
-      ]
+      ],
+      "types": {
+        "repo_id": "string"
+      }
     }
   },
   "/api/learnings/search": {
@@ -185,7 +255,10 @@
       ],
       "required": [
         "q"
-      ]
+      ],
+      "types": {
+        "q": "string"
+      }
     }
   },
   "/api/learnings/{learning_id}": {
@@ -195,7 +268,10 @@
       ],
       "required": [
         "learning_id"
-      ]
+      ],
+      "types": {
+        "learning_id": "string"
+      }
     }
   },
   "/api/patterns/": {
@@ -203,19 +279,24 @@
       "params": [
         "category"
       ],
-      "required": []
+      "required": [],
+      "types": {
+        "category": "string"
+      }
     }
   },
   "/api/patterns/categories": {
     "GET": {
       "params": [],
-      "required": []
+      "required": [],
+      "types": {}
     }
   },
   "/api/patterns/detect-cross": {
     "POST": {
       "params": [],
-      "required": []
+      "required": [],
+      "types": {}
     }
   },
   "/api/patterns/detect/{repo_id}": {
@@ -225,7 +306,10 @@
       ],
       "required": [
         "repo_id"
-      ]
+      ],
+      "types": {
+        "repo_id": "string"
+      }
     }
   },
   "/api/patterns/search": {
@@ -235,13 +319,17 @@
       ],
       "required": [
         "q"
-      ]
+      ],
+      "types": {
+        "q": "string"
+      }
     }
   },
   "/api/repos/": {
     "GET": {
       "params": [],
-      "required": []
+      "required": [],
+      "types": {}
     },
     "POST": {
       "params": [
@@ -250,7 +338,11 @@
       ],
       "required": [
         "url"
-      ]
+      ],
+      "types": {
+        "options": "object",
+        "url": "string"
+      }
     }
   },
   "/api/repos/{repo_id}": {
@@ -260,7 +352,10 @@
       ],
       "required": [
         "repo_id"
-      ]
+      ],
+      "types": {
+        "repo_id": "string"
+      }
     },
     "GET": {
       "params": [
@@ -268,7 +363,10 @@
       ],
       "required": [
         "repo_id"
-      ]
+      ],
+      "types": {
+        "repo_id": "string"
+      }
     }
   },
   "/api/repos/{repo_id}/file": {
@@ -280,7 +378,11 @@
       "required": [
         "repo_id",
         "path"
-      ]
+      ],
+      "types": {
+        "path": "string",
+        "repo_id": "string"
+      }
     }
   },
   "/api/repos/{repo_id}/files": {
@@ -290,7 +392,10 @@
       ],
       "required": [
         "repo_id"
-      ]
+      ],
+      "types": {
+        "repo_id": "string"
+      }
     }
   },
   "/api/snippets/": {
@@ -300,7 +405,12 @@
         "language",
         "tags"
       ],
-      "required": []
+      "required": [],
+      "types": {
+        "language": "string",
+        "repo_id": "string",
+        "tags": "string"
+      }
     },
     "POST": {
       "params": [
@@ -318,7 +428,18 @@
         "repo_id",
         "title",
         "code"
-      ]
+      ],
+      "types": {
+        "code": "string",
+        "end_line": "integer",
+        "explanation": "string",
+        "file_path": "string",
+        "language": "string",
+        "repo_id": "string",
+        "start_line": "integer",
+        "tags": "array",
+        "title": "string"
+      }
     }
   },
   "/api/snippets/search": {
@@ -328,7 +449,10 @@
       ],
       "required": [
         "q"
-      ]
+      ],
+      "types": {
+        "q": "string"
+      }
     }
   },
   "/api/snippets/{snippet_id}": {
@@ -338,7 +462,10 @@
       ],
       "required": [
         "snippet_id"
-      ]
+      ],
+      "types": {
+        "snippet_id": "string"
+      }
     },
     "GET": {
       "params": [
@@ -346,7 +473,10 @@
       ],
       "required": [
         "snippet_id"
-      ]
+      ],
+      "types": {
+        "snippet_id": "string"
+      }
     },
     "PUT": {
       "params": [
@@ -354,7 +484,10 @@
       ],
       "required": [
         "snippet_id"
-      ]
+      ],
+      "types": {
+        "snippet_id": "string"
+      }
     }
   }
 }

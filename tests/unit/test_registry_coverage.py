@@ -20,6 +20,15 @@ _REGISTRY = load_registry()
 # non-internal endpoints must be exposed. A non-empty set here would carve out an exception.
 _DEFERRED_STREAMING: set[tuple[str, str]] = set()
 
+# Deliberately NOT selectable: unsafe duplicates of a safe pipeline. Both sync blog-generate
+# endpoints expose 7 type-risky fields that the trimmed generate_blog_async deliberately hides,
+# so offering them made op choice a lottery between a safe path and a 422->web-fallback path
+# (task 20260724-selector-schema-safety; guarded by test_blogs_single_generate_op).
+_DELIBERATELY_UNWIRED: set[tuple[str, str]] = {
+    ("POST", "/api/blog/generate"),
+    ("POST", "/api/blog/generate/streaming"),
+}
+
 
 def _is_internal(path: str) -> bool:
     p = path.lower()
@@ -41,7 +50,7 @@ def test_all_non_streaming_endpoints_wired() -> None:
                 continue
             for method in methods:
                 key = (method, endpoint_path)
-                if key in _DEFERRED_STREAMING or key in wired:
+                if key in _DEFERRED_STREAMING or key in _DELIBERATELY_UNWIRED or key in wired:
                     continue
                 unwired.append(f"{app.id}: {method} {endpoint_path}")
     assert not unwired, "unwired non-streaming endpoints:\n" + "\n".join(sorted(unwired))

@@ -2,7 +2,8 @@
   "/": {
     "GET": {
       "params": [],
-      "required": []
+      "required": [],
+      "types": {}
     }
   },
   "/api/chat/send": {
@@ -15,7 +16,13 @@
       ],
       "required": [
         "message"
-      ]
+      ],
+      "types": {
+        "active_section": "string",
+        "extra_context": "string",
+        "history": "array",
+        "message": "string"
+      }
     }
   },
   "/api/code-complete/": {
@@ -27,13 +34,19 @@
       ],
       "required": [
         "code_before"
-      ]
+      ],
+      "types": {
+        "code_after": "string",
+        "code_before": "string",
+        "language": "string"
+      }
     }
   },
   "/api/datasets/": {
     "GET": {
       "params": [],
-      "required": []
+      "required": [],
+      "types": {}
     }
   },
   "/api/datasets/upload": {
@@ -43,7 +56,10 @@
       ],
       "required": [
         "file"
-      ]
+      ],
+      "types": {
+        "file": "string"
+      }
     }
   },
   "/api/datasets/{dataset_id}/load-code": {
@@ -53,7 +69,10 @@
       ],
       "required": [
         "dataset_id"
-      ]
+      ],
+      "types": {
+        "dataset_id": "string"
+      }
     }
   },
   "/api/datasets/{dataset_id}/preview": {
@@ -64,7 +83,11 @@
       ],
       "required": [
         "dataset_id"
-      ]
+      ],
+      "types": {
+        "dataset_id": "string",
+        "n_rows": "integer"
+      }
     }
   },
   "/api/debug/analyze": {
@@ -75,13 +98,18 @@
       ],
       "required": [
         "error_text"
-      ]
+      ],
+      "types": {
+        "code": "string",
+        "error_text": "string"
+      }
     }
   },
   "/api/debug/pitfalls": {
     "GET": {
       "params": [],
-      "required": []
+      "required": [],
+      "types": {}
     }
   },
   "/api/debug/pitfalls/{pitfall_id}": {
@@ -91,7 +119,10 @@
       ],
       "required": [
         "pitfall_id"
-      ]
+      ],
+      "types": {
+        "pitfall_id": "string"
+      }
     }
   },
   "/api/dl-rl/dl/generate-code": {
@@ -107,13 +138,21 @@
         "dataset_id",
         "model_id",
         "target_col"
-      ]
+      ],
+      "types": {
+        "dataset_id": "string",
+        "model_id": "string",
+        "params": "object",
+        "target_col": "string",
+        "test_size": "number"
+      }
     }
   },
   "/api/dl-rl/dl/models": {
     "GET": {
       "params": [],
-      "required": []
+      "required": [],
+      "types": {}
     }
   },
   "/api/dl-rl/dl/models/{model_id}/params": {
@@ -123,7 +162,10 @@
       ],
       "required": [
         "model_id"
-      ]
+      ],
+      "types": {
+        "model_id": "string"
+      }
     }
   },
   "/api/dl-rl/dl/train": {
@@ -139,13 +181,21 @@
         "dataset_id",
         "model_id",
         "target_col"
-      ]
+      ],
+      "types": {
+        "dataset_id": "string",
+        "model_id": "string",
+        "params": "object",
+        "target_col": "string",
+        "test_size": "number"
+      }
     }
   },
   "/api/dl-rl/rl/envs": {
     "GET": {
       "params": [],
-      "required": []
+      "required": [],
+      "types": {}
     }
   },
   "/api/dl-rl/rl/generate-code": {
@@ -158,13 +208,19 @@
       "required": [
         "env_id",
         "model_id"
-      ]
+      ],
+      "types": {
+        "env_id": "string",
+        "model_id": "string",
+        "params": "object"
+      }
     }
   },
   "/api/dl-rl/rl/models": {
     "GET": {
       "params": [],
-      "required": []
+      "required": [],
+      "types": {}
     }
   },
   "/api/dl-rl/rl/models/{model_id}/params": {
@@ -174,7 +230,10 @@
       ],
       "required": [
         "model_id"
-      ]
+      ],
+      "types": {
+        "model_id": "string"
+      }
     }
   },
   "/api/dl-rl/rl/train": {
@@ -187,7 +246,12 @@
       "required": [
         "env_id",
         "model_id"
-      ]
+      ],
+      "types": {
+        "env_id": "string",
+        "model_id": "string",
+        "params": "object"
+      }
     }
   },
   "/api/eda/{dataset_id}/correlation": {
@@ -197,7 +261,10 @@
       ],
       "required": [
         "dataset_id"
-      ]
+      ],
+      "types": {
+        "dataset_id": "string"
+      }
     }
   },
   "/api/eda/{dataset_id}/distribution": {
@@ -210,7 +277,12 @@
       "required": [
         "dataset_id",
         "column"
-      ]
+      ],
+      "types": {
+        "column": "string",
+        "dataset_id": "string",
+        "plot_type": "string"
+      }
     }
   },
   "/api/eda/{dataset_id}/dtypes-missing": {
@@ -220,7 +292,10 @@
       ],
       "required": [
         "dataset_id"
-      ]
+      ],
+      "types": {
+        "dataset_id": "string"
+      }
     }
   },
   "/api/eda/{dataset_id}/outliers": {
@@ -233,7 +308,12 @@
       "required": [
         "dataset_id",
         "column"
-      ]
+      ],
+      "types": {
+        "column": "string",
+        "dataset_id": "string",
+        "method": "string"
+      }
     }
   },
   "/api/eda/{dataset_id}/scatter": {
@@ -248,7 +328,13 @@
         "dataset_id",
         "x",
         "y"
-      ]
+      ],
+      "types": {
+        "color": "string",
+        "dataset_id": "string",
+        "x": "string",
+        "y": "string"
+      }
     }
   },
   "/api/eda/{dataset_id}/summary": {
@@ -258,7 +344,10 @@
       ],
       "required": [
         "dataset_id"
-      ]
+      ],
+      "types": {
+        "dataset_id": "string"
+      }
     }
   },
   "/api/eda/{dataset_id}/target-distribution": {
@@ -270,37 +359,46 @@
       "required": [
         "dataset_id",
         "target"
-      ]
+      ],
+      "types": {
+        "dataset_id": "string",
+        "target": "string"
+      }
     }
   },
   "/api/kernel/interrupt": {
     "POST": {
       "params": [],
-      "required": []
+      "required": [],
+      "types": {}
     }
   },
   "/api/kernel/restart": {
     "POST": {
       "params": [],
-      "required": []
+      "required": [],
+      "types": {}
     }
   },
   "/api/kernel/start": {
     "POST": {
       "params": [],
-      "required": []
+      "required": [],
+      "types": {}
     }
   },
   "/api/kernel/status": {
     "GET": {
       "params": [],
-      "required": []
+      "required": [],
+      "types": {}
     }
   },
   "/api/learn/paths": {
     "GET": {
       "params": [],
-      "required": []
+      "required": [],
+      "types": {}
     }
   },
   "/api/learn/paths/{path_id}/topics": {
@@ -310,7 +408,10 @@
       ],
       "required": [
         "path_id"
-      ]
+      ],
+      "types": {
+        "path_id": "string"
+      }
     }
   },
   "/api/learn/paths/{path_id}/topics/{topic_id}": {
@@ -322,7 +423,11 @@
       "required": [
         "path_id",
         "topic_id"
-      ]
+      ],
+      "types": {
+        "path_id": "string",
+        "topic_id": "string"
+      }
     }
   },
   "/api/learn/snippets": {
@@ -330,7 +435,10 @@
       "params": [
         "q"
       ],
-      "required": []
+      "required": [],
+      "types": {
+        "q": "string"
+      }
     }
   },
   "/api/llm/generate-code": {
@@ -341,13 +449,18 @@
       ],
       "required": [
         "model_id"
-      ]
+      ],
+      "types": {
+        "model_id": "string",
+        "params": "object"
+      }
     }
   },
   "/api/llm/models": {
     "GET": {
       "params": [],
-      "required": []
+      "required": [],
+      "types": {}
     }
   },
   "/api/llm/models/{model_id}/params": {
@@ -357,7 +470,10 @@
       ],
       "required": [
         "model_id"
-      ]
+      ],
+      "types": {
+        "model_id": "string"
+      }
     }
   },
   "/api/llm/run": {
@@ -368,7 +484,11 @@
       ],
       "required": [
         "model_id"
-      ]
+      ],
+      "types": {
+        "model_id": "string",
+        "params": "object"
+      }
     }
   },
   "/api/mdp/gym-mapping/{env_id}": {
@@ -378,13 +498,17 @@
       ],
       "required": [
         "env_id"
-      ]
+      ],
+      "types": {
+        "env_id": "string"
+      }
     }
   },
   "/api/mdp/list": {
     "GET": {
       "params": [],
-      "required": []
+      "required": [],
+      "types": {}
     }
   },
   "/api/mdp/solve": {
@@ -397,7 +521,13 @@
       ],
       "required": [
         "mdp_id"
-      ]
+      ],
+      "types": {
+        "algorithm": "string",
+        "gamma": "number",
+        "max_iters": "integer",
+        "mdp_id": "string"
+      }
     }
   },
   "/api/mdp/{mdp_id}": {
@@ -407,7 +537,10 @@
       ],
       "required": [
         "mdp_id"
-      ]
+      ],
+      "types": {
+        "mdp_id": "string"
+      }
     }
   },
   "/api/ml/generate-code": {
@@ -423,13 +556,21 @@
         "dataset_id",
         "model_id",
         "target_col"
-      ]
+      ],
+      "types": {
+        "dataset_id": "string",
+        "model_id": "string",
+        "params": "object",
+        "target_col": "string",
+        "test_size": "number"
+      }
     }
   },
   "/api/ml/models": {
     "GET": {
       "params": [],
-      "required": []
+      "required": [],
+      "types": {}
     }
   },
   "/api/ml/models/{model_id}/params": {
@@ -439,7 +580,10 @@
       ],
       "required": [
         "model_id"
-      ]
+      ],
+      "types": {
+        "model_id": "string"
+      }
     }
   },
   "/api/ml/train": {
@@ -455,7 +599,14 @@
         "dataset_id",
         "model_id",
         "target_col"
-      ]
+      ],
+      "types": {
+        "dataset_id": "string",
+        "model_id": "string",
+        "params": "object",
+        "target_col": "string",
+        "test_size": "number"
+      }
     }
   },
   "/api/ml/train-unsupervised": {
@@ -469,13 +620,20 @@
       "required": [
         "dataset_id",
         "model_id"
-      ]
+      ],
+      "types": {
+        "dataset_id": "string",
+        "model_id": "string",
+        "params": "object",
+        "target_col": "string"
+      }
     }
   },
   "/api/notebooks/list": {
     "GET": {
       "params": [],
-      "required": []
+      "required": [],
+      "types": {}
     }
   },
   "/api/notebooks/save": {
@@ -487,7 +645,12 @@
       ],
       "required": [
         "cells"
-      ]
+      ],
+      "types": {
+        "cells": "array",
+        "name": "string",
+        "notebook_id": "string"
+      }
     }
   },
   "/api/notebooks/{notebook_id}": {
@@ -497,7 +660,10 @@
       ],
       "required": [
         "notebook_id"
-      ]
+      ],
+      "types": {
+        "notebook_id": "string"
+      }
     },
     "GET": {
       "params": [
@@ -505,7 +671,10 @@
       ],
       "required": [
         "notebook_id"
-      ]
+      ],
+      "types": {
+        "notebook_id": "string"
+      }
     }
   },
   "/api/notebooks/{notebook_id}/rename": {
@@ -517,7 +686,11 @@
       "required": [
         "notebook_id",
         "name"
-      ]
+      ],
+      "types": {
+        "name": "string",
+        "notebook_id": "string"
+      }
     }
   },
   "/api/preprocessing/{dataset_id}/balance": {
@@ -530,7 +703,12 @@
       "required": [
         "dataset_id",
         "target_col"
-      ]
+      ],
+      "types": {
+        "dataset_id": "string",
+        "method": "string",
+        "target_col": "string"
+      }
     }
   },
   "/api/preprocessing/{dataset_id}/columns": {
@@ -540,7 +718,10 @@
       ],
       "required": [
         "dataset_id"
-      ]
+      ],
+      "types": {
+        "dataset_id": "string"
+      }
     }
   },
   "/api/preprocessing/{dataset_id}/encode": {
@@ -553,7 +734,12 @@
       "required": [
         "dataset_id",
         "columns"
-      ]
+      ],
+      "types": {
+        "columns": "array",
+        "dataset_id": "string",
+        "method": "string"
+      }
     }
   },
   "/api/preprocessing/{dataset_id}/impute": {
@@ -565,7 +751,11 @@
       "required": [
         "dataset_id",
         "strategies"
-      ]
+      ],
+      "types": {
+        "dataset_id": "string",
+        "strategies": "object"
+      }
     }
   },
   "/api/preprocessing/{dataset_id}/scale": {
@@ -578,7 +768,12 @@
       "required": [
         "dataset_id",
         "columns"
-      ]
+      ],
+      "types": {
+        "columns": "array",
+        "dataset_id": "string",
+        "method": "string"
+      }
     }
   },
   "/api/preprocessing/{dataset_id}/split": {
@@ -592,7 +787,13 @@
       "required": [
         "dataset_id",
         "target_col"
-      ]
+      ],
+      "types": {
+        "dataset_id": "string",
+        "stratify": "boolean",
+        "target_col": "string",
+        "test_size": "number"
+      }
     }
   },
   "/api/tips": {
@@ -600,19 +801,24 @@
       "params": [
         "category"
       ],
-      "required": []
+      "required": [],
+      "types": {
+        "category": "string"
+      }
     }
   },
   "/api/tips/categories": {
     "GET": {
       "params": [],
-      "required": []
+      "required": [],
+      "types": {}
     }
   },
   "/api/tips/shortcuts": {
     "GET": {
       "params": [],
-      "required": []
+      "required": [],
+      "types": {}
     }
   },
   "/api/viz/classification-metrics": {
@@ -628,7 +834,14 @@
         "dataset_id",
         "model_id",
         "target_col"
-      ]
+      ],
+      "types": {
+        "dataset_id": "string",
+        "model_id": "string",
+        "params": "object",
+        "target_col": "string",
+        "test_size": "number"
+      }
     }
   },
   "/api/viz/compare": {
@@ -644,7 +857,14 @@
         "dataset_id",
         "target_col",
         "model_ids"
-      ]
+      ],
+      "types": {
+        "dataset_id": "string",
+        "model_ids": "array",
+        "params_list": "array",
+        "target_col": "string",
+        "test_size": "number"
+      }
     }
   },
   "/api/viz/cross-validation": {
@@ -660,7 +880,14 @@
         "dataset_id",
         "model_id",
         "target_col"
-      ]
+      ],
+      "types": {
+        "cv": "integer",
+        "dataset_id": "string",
+        "model_id": "string",
+        "params": "object",
+        "target_col": "string"
+      }
     }
   },
   "/api/viz/decision-boundary": {
@@ -679,7 +906,15 @@
         "target_col",
         "feature_x",
         "feature_y"
-      ]
+      ],
+      "types": {
+        "dataset_id": "string",
+        "feature_x": "string",
+        "feature_y": "string",
+        "model_id": "string",
+        "params": "object",
+        "target_col": "string"
+      }
     }
   },
   "/api/viz/learning-curve": {
@@ -695,7 +930,14 @@
         "dataset_id",
         "model_id",
         "target_col"
-      ]
+      ],
+      "types": {
+        "cv": "integer",
+        "dataset_id": "string",
+        "model_id": "string",
+        "params": "object",
+        "target_col": "string"
+      }
     }
   },
   "/api/viz/pr-curve": {
@@ -711,7 +953,14 @@
         "dataset_id",
         "model_id",
         "target_col"
-      ]
+      ],
+      "types": {
+        "dataset_id": "string",
+        "model_id": "string",
+        "params": "object",
+        "target_col": "string",
+        "test_size": "number"
+      }
     }
   },
   "/api/viz/regression-plots": {
@@ -727,7 +976,14 @@
         "dataset_id",
         "model_id",
         "target_col"
-      ]
+      ],
+      "types": {
+        "dataset_id": "string",
+        "model_id": "string",
+        "params": "object",
+        "target_col": "string",
+        "test_size": "number"
+      }
     }
   },
   "/api/viz/roc": {
@@ -743,13 +999,21 @@
         "dataset_id",
         "model_id",
         "target_col"
-      ]
+      ],
+      "types": {
+        "dataset_id": "string",
+        "model_id": "string",
+        "params": "object",
+        "target_col": "string",
+        "test_size": "number"
+      }
     }
   },
   "/health": {
     "GET": {
       "params": [],
-      "required": []
+      "required": [],
+      "types": {}
     }
   }
 }

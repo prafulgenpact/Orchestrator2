@@ -2,13 +2,15 @@
   "/preferences": {
     "GET": {
       "params": [],
-      "required": []
+      "required": [],
+      "types": {}
     }
   },
   "/topics": {
     "GET": {
       "params": [],
-      "required": []
+      "required": [],
+      "types": {}
     },
     "POST": {
       "params": [
@@ -16,7 +18,10 @@
       ],
       "required": [
         "title"
-      ]
+      ],
+      "types": {
+        "title": "string"
+      }
     }
   },
   "/topics/{topic_id}": {
@@ -26,7 +31,10 @@
       ],
       "required": [
         "topic_id"
-      ]
+      ],
+      "types": {
+        "topic_id": "integer"
+      }
     }
   },
   "/topics/{topic_id}/advance": {
@@ -36,7 +44,10 @@
       ],
       "required": [
         "topic_id"
-      ]
+      ],
+      "types": {
+        "topic_id": "integer"
+      }
     }
   },
   "/topics/{topic_id}/feedback": {
@@ -51,7 +62,14 @@
       "required": [
         "topic_id",
         "feedback_type"
-      ]
+      ],
+      "types": {
+        "complexity_rating": "integer",
+        "feedback_type": "string",
+        "free_text": "string",
+        "message_id": "integer",
+        "topic_id": "integer"
+      }
     }
   },
   "/topics/{topic_id}/messages": {
@@ -63,7 +81,11 @@
       "required": [
         "topic_id",
         "content"
-      ]
+      ],
+      "types": {
+        "content": "string",
+        "topic_id": "integer"
+      }
     }
   },
   "/{full_path}": {
@@ -73,7 +95,10 @@
       ],
       "required": [
         "full_path"
-      ]
+      ],
+      "types": {
+        "full_path": "string"
+      }
     }
   }
 }

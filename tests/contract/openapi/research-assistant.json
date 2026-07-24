@@ -2,19 +2,22 @@
   "/": {
     "GET": {
       "params": [],
-      "required": []
+      "required": [],
+      "types": {}
     }
   },
   "/api/bridges": {
     "GET": {
       "params": [],
-      "required": []
+      "required": [],
+      "types": {}
     }
   },
   "/api/bridges/regenerate": {
     "POST": {
       "params": [],
-      "required": []
+      "required": [],
+      "types": {}
     }
   },
   "/api/bridges/{bridge_id}": {
@@ -24,13 +27,17 @@
       ],
       "required": [
         "bridge_id"
-      ]
+      ],
+      "types": {
+        "bridge_id": "string"
+      }
     }
   },
   "/api/corpus": {
     "GET": {
       "params": [],
-      "required": []
+      "required": [],
+      "types": {}
     }
   },
   "/api/corpus/reindex": {
@@ -38,7 +45,10 @@
       "params": [
         "force"
       ],
-      "required": []
+      "required": [],
+      "types": {
+        "force": "boolean"
+      }
     }
   },
   "/api/corpus/upload": {
@@ -48,7 +58,10 @@
       ],
       "required": [
         "file"
-      ]
+      ],
+      "types": {
+        "file": "string"
+      }
     }
   },
   "/api/corpus/{doc_id}": {
@@ -58,7 +71,10 @@
       ],
       "required": [
         "doc_id"
-      ]
+      ],
+      "types": {
+        "doc_id": "string"
+      }
     }
   },
   "/api/corpus/{doc_id}/chunk/{idx}": {
@@ -71,13 +87,19 @@
       "required": [
         "doc_id",
         "idx"
-      ]
+      ],
+      "types": {
+        "doc_id": "string",
+        "idx": "integer",
+        "neighbors": "integer"
+      }
     }
   },
   "/api/disagreements": {
     "GET": {
       "params": [],
-      "required": []
+      "required": [],
+      "types": {}
     },
     "POST": {
       "params": [
@@ -88,7 +110,13 @@
       ],
       "required": [
         "quote"
-      ]
+      ],
+      "types": {
+        "correction": "string",
+        "quote": "string",
+        "run_id": "string",
+        "version": "integer"
+      }
     }
   },
   "/api/disagreements/{did}": {
@@ -98,19 +126,24 @@
       ],
       "required": [
         "did"
-      ]
+      ],
+      "types": {
+        "did": "string"
+      }
     }
   },
   "/api/graph": {
     "GET": {
       "params": [],
-      "required": []
+      "required": [],
+      "types": {}
     }
   },
   "/api/health": {
     "GET": {
       "params": [],
-      "required": []
+      "required": [],
+      "types": {}
     }
   },
   "/api/notes": {
@@ -118,7 +151,10 @@
       "params": [
         "q"
       ],
-      "required": []
+      "required": [],
+      "types": {
+        "q": "string"
+      }
     },
     "POST": {
       "params": [
@@ -132,7 +168,16 @@
       ],
       "required": [
         "text"
-      ]
+      ],
+      "types": {
+        "context_after": "string",
+        "context_before": "string",
+        "run_id": "string",
+        "source_url": "string",
+        "tags": "array",
+        "text": "string",
+        "version": "integer"
+      }
     }
   },
   "/api/notes/{note_id}": {
@@ -142,7 +187,10 @@
       ],
       "required": [
         "note_id"
-      ]
+      ],
+      "types": {
+        "note_id": "string"
+      }
     }
   },
   "/api/quiz/grade": {
@@ -156,7 +204,12 @@
         "run_id",
         "question",
         "user_answer"
-      ]
+      ],
+      "types": {
+        "question": "string",
+        "run_id": "string",
+        "user_answer": "string"
+      }
     }
   },
   "/api/quiz/{run_id}/questions": {
@@ -166,7 +219,10 @@
       ],
       "required": [
         "run_id"
-      ]
+      ],
+      "types": {
+        "run_id": "string"
+      }
     }
   },
   "/api/research": {
@@ -182,13 +238,23 @@
       ],
       "required": [
         "topic"
-      ]
+      ],
+      "types": {
+        "depth": "string",
+        "feedback": "string",
+        "feedback_span": "string",
+        "feedback_tag": "string",
+        "parent_run_id": "string",
+        "topic": "string",
+        "voice": "string"
+      }
     }
   },
   "/api/review/queue": {
     "GET": {
       "params": [],
-      "required": []
+      "required": [],
+      "types": {}
     }
   },
   "/api/review/{concept_id}/done": {
@@ -198,7 +264,10 @@
       ],
       "required": [
         "concept_id"
-      ]
+      ],
+      "types": {
+        "concept_id": "string"
+      }
     }
   },
   "/api/review/{concept_id}/refresh": {
@@ -208,13 +277,17 @@
       ],
       "required": [
         "concept_id"
-      ]
+      ],
+      "types": {
+        "concept_id": "string"
+      }
     }
   },
   "/api/runs": {
     "GET": {
       "params": [],
-      "required": []
+      "required": [],
+      "types": {}
     }
   },
   "/api/runs/{run_id}": {
@@ -224,7 +297,10 @@
       ],
       "required": [
         "run_id"
-      ]
+      ],
+      "types": {
+        "run_id": "string"
+      }
     }
   },
   "/api/runs/{run_id}/cancel": {
@@ -234,7 +310,10 @@
       ],
       "required": [
         "run_id"
-      ]
+      ],
+      "types": {
+        "run_id": "string"
+      }
     }
   },
   "/api/runs/{run_id}/events": {
@@ -244,13 +323,17 @@
       ],
       "required": [
         "run_id"
-      ]
+      ],
+      "types": {
+        "run_id": "string"
+      }
     }
   },
   "/api/sources/trust": {
     "GET": {
       "params": [],
-      "required": []
+      "required": [],
+      "types": {}
     },
     "POST": {
       "params": [
@@ -260,7 +343,11 @@
       "required": [
         "url",
         "score"
-      ]
+      ],
+      "types": {
+        "score": "integer",
+        "url": "string"
+      }
     }
   },
   "/api/stream/{run_id}": {
@@ -270,7 +357,10 @@
       ],
       "required": [
         "run_id"
-      ]
+      ],
+      "types": {
+        "run_id": "string"
+      }
     }
   }
 }

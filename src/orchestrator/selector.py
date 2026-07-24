@@ -12,6 +12,7 @@ from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
+from orchestrator.contract import field_types, load_snapshot, snapshot_path
 from orchestrator.llm.base import LLMClient, LLMRequest
 from orchestrator.models import Subtask, SubtaskResult
 from orchestrator.registry import AppEntry, AppOperation
@@ -81,13 +82,36 @@ def load_system_prompt() -> str:
     return _PROMPT_PATH.read_text()
 
 
+def _app_field_types(app: AppEntry) -> dict[str, dict[str, str]]:
+    """``{op.name: {field: json-type}}`` from the app's committed OpenAPI snapshot.
+
+    The registry keeps only field NAMES; the snapshot is where each field's real type lives.
+    Missing/unreadable snapshot (e.g. a brand-new app) → empty maps, view unchanged — types are
+    an additive hint, never a hard dependency.
+    """
+    try:
+        snapshot = load_snapshot(snapshot_path(app.id))
+    except (OSError, ValueError, json.JSONDecodeError):
+        return {}
+    return {op.name: field_types(op, snapshot) for op in app.operations}
+
+
 def _operations_view(app: AppEntry) -> list[dict[str, Any]]:
+    # request_fields carries "name: type" pairs when the type is known — the model fills a typed
+    # field correctly ("word_count_target: integer" → 800, not "short"), which is what keeps a
+    # perfectly legit task from 422-ing the app and falling back to the web.
+    types_by_op = _app_field_types(app)
+
+    def _fields(op: AppOperation) -> list[str]:
+        op_types = types_by_op.get(op.name, {})
+        return [f"{f}: {op_types[f]}" if f in op_types else f for f in op.request_fields]
+
     return [
         {
             "name": op.name,
             "description": op.description,
             "method": op.method,
-            "request_fields": list(op.request_fields),
+            "request_fields": _fields(op),
         }
         for op in app.operations
     ]
@@ -173,6 +197,75 @@ def _parse_selection(raw: str, app: AppEntry) -> tuple[AppOperation, dict[str, A
     return op, args
 
 
+def _coerce(value: Any, json_type: str) -> tuple[Any, bool]:
+    """(coerced_value, ok). Safe conversions only — anything lossy or ambiguous is not ok."""
+    if json_type == "integer":
+        if isinstance(value, bool):
+            return value, False
+        if isinstance(value, int):
+            return value, True
+        if isinstance(value, float) and value.is_integer():
+            return int(value), True
+        if isinstance(value, str):
+            try:
+                return int(value.strip()), True
+            except ValueError:
+                return value, False
+        return value, False
+    if json_type == "number":
+        if isinstance(value, bool):
+            return value, False
+        if isinstance(value, int | float):
+            return value, True
+        if isinstance(value, str):
+            try:
+                return float(value.strip()), True
+            except ValueError:
+                return value, False
+        return value, False
+    if json_type == "boolean":
+        if isinstance(value, bool):
+            return value, True
+        if isinstance(value, str):
+            lowered = value.strip().lower()
+            if lowered in ("true", "yes", "1"):
+                return True, True
+            if lowered in ("false", "no", "0"):
+                return False, True
+        return value, False
+    if json_type == "string":
+        if isinstance(value, str):
+            return value, True
+        if isinstance(value, int | float) and not isinstance(value, bool):
+            return str(value), True
+        return value, False
+    if json_type == "array":
+        return value, isinstance(value, list)
+    if json_type == "object":
+        return value, isinstance(value, dict)
+    return value, True  # unknown type name — pass through untouched
+
+
+def _enforce_field_types(args: dict[str, Any], types: dict[str, str]) -> None:
+    """Coerce safely-convertible argument values to their schema type; DROP the uncoercible.
+
+    This is the value-level gate the name-level grounding never had: a wrongly-typed value
+    (live proof: ``word_count_target: "short"`` for an integer field) would 422 the app and send
+    a perfectly legit task to the web. Dropping is honest in both cases — a dropped optional
+    field falls back to the app's own default; a dropped required field trips the executor's
+    existing "missing required input" skip instead of a garbage call.
+    """
+    for field in list(args):
+        json_type = types.get(field)
+        if json_type is None or args[field] is None:
+            continue
+        coerced, ok = _coerce(args[field], json_type)
+        if ok:
+            args[field] = coerced
+        else:
+            del args[field]
+
+
 def select_operation(
     client: LLMClient,
     app: AppEntry,
@@ -193,6 +286,7 @@ def select_operation(
     original SelectionError is preserved if every attempt fails.
     """
     system = load_system_prompt()
+    types_by_op = _app_field_types(app)
     messages: list[dict[str, str]] = [
         {"role": "user", "content": build_select_message(app, subtask, upstream)}
     ]
@@ -224,6 +318,8 @@ def select_operation(
                 }
             )
         else:
+            # Value-level gate: coerce/drop wrongly-typed arguments BEFORE they can 422 the app.
+            _enforce_field_types(args, types_by_op.get(op.name, {}))
             # Guarantee the primary input is present even if the model left it blank (deterministic,
             # grounded in the subtask) — a chosen app must run on the request, not fall back to web.
             _backfill_primary_fields(op, args, subtask)

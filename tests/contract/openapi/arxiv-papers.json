@@ -9,7 +9,12 @@
       "required": [
         "arxiv_id",
         "mode"
-      ]
+      ],
+      "types": {
+        "arxiv_id": "string",
+        "mode": "string",
+        "question": "string"
+      }
     }
   },
   "/api/ai/chat": {
@@ -20,13 +25,18 @@
       ],
       "required": [
         "messages"
-      ]
+      ],
+      "types": {
+        "arxiv_id": "string",
+        "messages": "array"
+      }
     }
   },
   "/api/db/tables": {
     "GET": {
       "params": [],
-      "required": []
+      "required": [],
+      "types": {}
     }
   },
   "/api/db/tables/{table_name}": {
@@ -38,13 +48,19 @@
       ],
       "required": [
         "table_name"
-      ]
+      ],
+      "types": {
+        "limit": "integer",
+        "offset": "integer",
+        "table_name": "string"
+      }
     }
   },
   "/api/favorites/": {
     "GET": {
       "params": [],
-      "required": []
+      "required": [],
+      "types": {}
     },
     "POST": {
       "params": [
@@ -52,7 +68,10 @@
       ],
       "required": [
         "paper_id"
-      ]
+      ],
+      "types": {
+        "paper_id": "string"
+      }
     }
   },
   "/api/favorites/{favorite_id}": {
@@ -62,7 +81,10 @@
       ],
       "required": [
         "favorite_id"
-      ]
+      ],
+      "types": {
+        "favorite_id": "integer"
+      }
     },
     "PUT": {
       "params": [
@@ -72,13 +94,18 @@
       "required": [
         "favorite_id",
         "is_read"
-      ]
+      ],
+      "types": {
+        "favorite_id": "integer",
+        "is_read": "boolean"
+      }
     }
   },
   "/api/health": {
     "GET": {
       "params": [],
-      "required": []
+      "required": [],
+      "types": {}
     }
   },
   "/api/implement/chat": {
@@ -92,7 +119,12 @@
         "concept",
         "paper_title",
         "messages"
-      ]
+      ],
+      "types": {
+        "concept": "string",
+        "messages": "array",
+        "paper_title": "string"
+      }
     }
   },
   "/api/implement/hint": {
@@ -107,7 +139,13 @@
         "concept",
         "code",
         "error"
-      ]
+      ],
+      "types": {
+        "code": "string",
+        "concept": "string",
+        "error": "string",
+        "step_description": "string"
+      }
     }
   },
   "/api/implement/plan": {
@@ -121,7 +159,12 @@
         "concept",
         "paper_title",
         "paper_abstract"
-      ]
+      ],
+      "types": {
+        "concept": "string",
+        "paper_abstract": "string",
+        "paper_title": "string"
+      }
     }
   },
   "/api/implement/run": {
@@ -132,7 +175,11 @@
       ],
       "required": [
         "code"
-      ]
+      ],
+      "types": {
+        "code": "string",
+        "timeout": "integer"
+      }
     }
   },
   "/api/implement/verify": {
@@ -148,13 +195,20 @@
         "code",
         "output",
         "paper_title"
-      ]
+      ],
+      "types": {
+        "code": "string",
+        "concept": "string",
+        "output": "string",
+        "paper_title": "string"
+      }
     }
   },
   "/api/luminaries/": {
     "GET": {
       "params": [],
-      "required": []
+      "required": [],
+      "types": {}
     }
   },
   "/api/luminaries/{author_id}/papers": {
@@ -164,7 +218,10 @@
       ],
       "required": [
         "author_id"
-      ]
+      ],
+      "types": {
+        "author_id": "integer"
+      }
     }
   },
   "/api/papers/by-id": {
@@ -174,7 +231,10 @@
       ],
       "required": [
         "arxiv_id"
-      ]
+      ],
+      "types": {
+        "arxiv_id": "string"
+      }
     }
   },
   "/api/papers/by-title": {
@@ -185,13 +245,18 @@
       ],
       "required": [
         "query"
-      ]
+      ],
+      "types": {
+        "max_results": "integer",
+        "query": "string"
+      }
     }
   },
   "/api/papers/revolutionary": {
     "GET": {
       "params": [],
-      "required": []
+      "required": [],
+      "types": {}
     }
   },
   "/api/papers/search": {
@@ -202,13 +267,18 @@
       ],
       "required": [
         "query"
-      ]
+      ],
+      "types": {
+        "max_results": "integer",
+        "query": "string"
+      }
     }
   },
   "/api/seed-revolutionary": {
     "POST": {
       "params": [],
-      "required": []
+      "required": [],
+      "types": {}
     }
   },
   "/api/topics/search": {
@@ -219,7 +289,11 @@
       ],
       "required": [
         "topic"
-      ]
+      ],
+      "types": {
+        "max_results": "integer",
+        "topic": "string"
+      }
     }
   },
   "/api/url-paper/analyze": {
@@ -236,7 +310,14 @@
         "title",
         "content",
         "mode"
-      ]
+      ],
+      "types": {
+        "content": "string",
+        "mode": "string",
+        "question": "string",
+        "title": "string",
+        "url": "string"
+      }
     }
   },
   "/api/url-paper/chat": {
@@ -250,7 +331,12 @@
         "title",
         "content",
         "messages"
-      ]
+      ],
+      "types": {
+        "content": "string",
+        "messages": "array",
+        "title": "string"
+      }
     }
   },
   "/api/url-paper/fetch": {
@@ -260,7 +346,10 @@
       ],
       "required": [
         "url"
-      ]
+      ],
+      "types": {
+        "url": "string"
+      }
     }
   }
 }

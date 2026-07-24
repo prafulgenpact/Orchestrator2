@@ -6,13 +6,17 @@
       ],
       "required": [
         "messages"
-      ]
+      ],
+      "types": {
+        "messages": "array"
+      }
     }
   },
   "/api/health": {
     "GET": {
       "params": [],
-      "required": []
+      "required": [],
+      "types": {}
     }
   }
 }

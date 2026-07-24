@@ -3282,32 +3282,6 @@
           ]
         },
         {
-          "name": "post_blog_generate",
-          "description": "Api Generate",
-          "method": "POST",
-          "path": "/api/blog/generate",
-          "timeout_s": 300,
-          "destructive": false,
-          "idempotency": "none",
-          "retry": {
-            "transient_max": 0,
-            "backoff_s": 0
-          },
-          "request_fields": [
-            "topic",
-            "model",
-            "research",
-            "research_depth",
-            "thinking_depth",
-            "verification",
-            "word_count_target",
-            "audience"
-          ],
-          "required_fields": [
-            "topic"
-          ]
-        },
-        {
           "name": "post_blog_import",
           "description": "Api Import Blog",
           "method": "POST",
@@ -3856,33 +3830,6 @@
           },
           "request_fields": [],
           "required_fields": []
-        },
-        {
-          "name": "post_blog_generate_streaming",
-          "description": "Generate a blog post, streamed token-by-token.",
-          "method": "POST",
-          "path": "/api/blog/generate/streaming",
-          "timeout_s": 300,
-          "destructive": false,
-          "idempotency": "none",
-          "retry": {
-            "transient_max": 0,
-            "backoff_s": 0
-          },
-          "request_fields": [
-            "topic",
-            "model",
-            "research",
-            "research_depth",
-            "thinking_depth",
-            "verification",
-            "word_count_target",
-            "audience"
-          ],
-          "required_fields": [
-            "topic"
-          ],
-          "stream": "sse"
         }
       ]
     },

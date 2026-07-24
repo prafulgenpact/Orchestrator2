@@ -13,7 +13,17 @@
       ],
       "required": [
         "topic"
-      ]
+      ],
+      "types": {
+        "audience": "string",
+        "model": "string",
+        "research": "boolean",
+        "research_depth": "string",
+        "thinking_depth": "string",
+        "topic": "string",
+        "verification": "string",
+        "word_count_target": "integer"
+      }
     }
   },
   "/api/blog/generate/async": {
@@ -30,7 +40,17 @@
       ],
       "required": [
         "topic"
-      ]
+      ],
+      "types": {
+        "audience": "string",
+        "model": "string",
+        "research": "boolean",
+        "research_depth": "string",
+        "thinking_depth": "string",
+        "topic": "string",
+        "verification": "string",
+        "word_count_target": "integer"
+      }
     }
   },
   "/api/blog/generate/streaming": {
@@ -47,7 +67,17 @@
       ],
       "required": [
         "topic"
-      ]
+      ],
+      "types": {
+        "audience": "string",
+        "model": "string",
+        "research": "boolean",
+        "research_depth": "string",
+        "thinking_depth": "string",
+        "topic": "string",
+        "verification": "string",
+        "word_count_target": "integer"
+      }
     }
   },
   "/api/blog/import": {
@@ -59,7 +89,12 @@
       ],
       "required": [
         "content"
-      ]
+      ],
+      "types": {
+        "content": "string",
+        "run_critique": "boolean",
+        "title": "string"
+      }
     }
   },
   "/api/blog/{blog_id}": {
@@ -69,7 +104,10 @@
       ],
       "required": [
         "blog_id"
-      ]
+      ],
+      "types": {
+        "blog_id": "string"
+      }
     },
     "GET": {
       "params": [
@@ -77,7 +115,10 @@
       ],
       "required": [
         "blog_id"
-      ]
+      ],
+      "types": {
+        "blog_id": "string"
+      }
     },
     "PATCH": {
       "params": [
@@ -89,7 +130,14 @@
       ],
       "required": [
         "blog_id"
-      ]
+      ],
+      "types": {
+        "blog_id": "string",
+        "pinned": "boolean",
+        "status": "string",
+        "tags": "array",
+        "title": "string"
+      }
     }
   },
   "/api/blog/{blog_id}/cover-image": {
@@ -101,7 +149,12 @@
       ],
       "required": [
         "blog_id"
-      ]
+      ],
+      "types": {
+        "blog_id": "string",
+        "prompt": "string",
+        "style": "string"
+      }
     }
   },
   "/api/blog/{blog_id}/iterate": {
@@ -114,7 +167,12 @@
       "required": [
         "blog_id",
         "instruction"
-      ]
+      ],
+      "types": {
+        "blog_id": "string",
+        "instruction": "string",
+        "model": "string"
+      }
     }
   },
   "/api/blog/{blog_id}/iterate/async": {
@@ -127,7 +185,12 @@
       "required": [
         "blog_id",
         "instruction"
-      ]
+      ],
+      "types": {
+        "blog_id": "string",
+        "instruction": "string",
+        "model": "string"
+      }
     }
   },
   "/api/blog/{blog_id}/iterate/paragraph": {
@@ -142,7 +205,13 @@
         "blog_id",
         "paragraph_index",
         "instruction"
-      ]
+      ],
+      "types": {
+        "blog_id": "string",
+        "instruction": "string",
+        "model": "string",
+        "paragraph_index": "integer"
+      }
     }
   },
   "/api/blog/{blog_id}/manual_edit": {
@@ -154,7 +223,11 @@
       "required": [
         "blog_id",
         "content"
-      ]
+      ],
+      "types": {
+        "blog_id": "string",
+        "content": "string"
+      }
     }
   },
   "/api/blog/{blog_id}/publish/wordpress": {
@@ -167,7 +240,13 @@
       ],
       "required": [
         "blog_id"
-      ]
+      ],
+      "types": {
+        "blog_id": "string",
+        "categories": "array",
+        "status": "string",
+        "tags": "array"
+      }
     }
   },
   "/api/blog/{blog_id}/restore/{version_num}": {
@@ -179,7 +258,11 @@
       "required": [
         "blog_id",
         "version_num"
-      ]
+      ],
+      "types": {
+        "blog_id": "string",
+        "version_num": "integer"
+      }
     }
   },
   "/api/blog/{blog_id}/wordpress/unpublish": {
@@ -189,13 +272,17 @@
       ],
       "required": [
         "blog_id"
-      ]
+      ],
+      "types": {
+        "blog_id": "string"
+      }
     }
   },
   "/api/blogs": {
     "GET": {
       "params": [],
-      "required": []
+      "required": [],
+      "types": {}
     }
   },
   "/api/blogs/search": {
@@ -206,13 +293,20 @@
         "tag",
         "limit"
       ],
-      "required": []
+      "required": [],
+      "types": {
+        "limit": "integer",
+        "q": "string",
+        "status": "string",
+        "tag": "string"
+      }
     }
   },
   "/api/blogs/tags": {
     "GET": {
       "params": [],
-      "required": []
+      "required": [],
+      "types": {}
     }
   },
   "/api/blogs/{blog_id}/cost": {
@@ -222,25 +316,31 @@
       ],
       "required": [
         "blog_id"
-      ]
+      ],
+      "types": {
+        "blog_id": "string"
+      }
     }
   },
   "/api/health": {
     "GET": {
       "params": [],
-      "required": []
+      "required": [],
+      "types": {}
     }
   },
   "/api/models": {
     "GET": {
       "params": [],
-      "required": []
+      "required": [],
+      "types": {}
     }
   },
   "/api/runs": {
     "GET": {
       "params": [],
-      "required": []
+      "required": [],
+      "types": {}
     }
   },
   "/api/runs/{run_id}": {
@@ -250,7 +350,10 @@
       ],
       "required": [
         "run_id"
-      ]
+      ],
+      "types": {
+        "run_id": "string"
+      }
     }
   },
   "/api/runs/{run_id}/cancel": {
@@ -260,13 +363,17 @@
       ],
       "required": [
         "run_id"
-      ]
+      ],
+      "types": {
+        "run_id": "string"
+      }
     }
   },
   "/api/style": {
     "GET": {
       "params": [],
-      "required": []
+      "required": [],
+      "types": {}
     },
     "PUT": {
       "params": [
@@ -276,7 +383,14 @@
         "sample_snippets",
         "updated_at"
       ],
-      "required": []
+      "required": [],
+      "types": {
+        "learned_traits": "array",
+        "sample_snippets": "array",
+        "seed_rules": "array",
+        "updated_at": "string",
+        "vocabulary_preferences": "object"
+      }
     }
   },
   "/api/style/critique": {
@@ -286,19 +400,24 @@
       ],
       "required": [
         "text"
-      ]
+      ],
+      "types": {
+        "text": "string"
+      }
     }
   },
   "/api/style/drift": {
     "GET": {
       "params": [],
-      "required": []
+      "required": [],
+      "types": {}
     }
   },
   "/api/style/reset": {
     "POST": {
       "params": [],
-      "required": []
+      "required": [],
+      "types": {}
     }
   },
   "/api/style/sample": {
@@ -309,7 +428,11 @@
       ],
       "required": [
         "text"
-      ]
+      ],
+      "types": {
+        "label": "string",
+        "text": "string"
+      }
     }
   },
   "/api/style/samples/bulk": {
@@ -319,7 +442,10 @@
       ],
       "required": [
         "samples"
-      ]
+      ],
+      "types": {
+        "samples": "array"
+      }
     }
   },
   "/api/style/trait/{trait_index}": {
@@ -329,7 +455,10 @@
       ],
       "required": [
         "trait_index"
-      ]
+      ],
+      "types": {
+        "trait_index": "integer"
+      }
     },
     "PATCH": {
       "params": [
@@ -339,7 +468,12 @@
       ],
       "required": [
         "trait_index"
-      ]
+      ],
+      "types": {
+        "evidence_count": "integer",
+        "trait": "string",
+        "trait_index": "integer"
+      }
     }
   },
   "/api/topics/recent": {
@@ -347,7 +481,10 @@
       "params": [
         "limit"
       ],
-      "required": []
+      "required": [],
+      "types": {
+        "limit": "integer"
+      }
     }
   },
   "/api/topics/suggestions": {
@@ -355,13 +492,17 @@
       "params": [
         "limit"
       ],
-      "required": []
+      "required": [],
+      "types": {
+        "limit": "integer"
+      }
     }
   },
   "/api/wordpress/config": {
     "GET": {
       "params": [],
-      "required": []
+      "required": [],
+      "types": {}
     },
     "POST": {
       "params": [
@@ -373,13 +514,19 @@
         "site_url",
         "username",
         "app_password"
-      ]
+      ],
+      "types": {
+        "app_password": "string",
+        "site_url": "string",
+        "username": "string"
+      }
     }
   },
   "/api/wordpress/test": {
     "POST": {
       "params": [],
-      "required": []
+      "required": [],
+      "types": {}
     }
   }
 }

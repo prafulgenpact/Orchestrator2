@@ -8,11 +8,15 @@ deterministically and offline (as a unit test, hence inside ``make verify``).
 
 Snapshot shape (one file per app, written by ``tools.refresh_openapi``)::
 
-    { "<path>": { "<METHOD>": { "params": [...all field names...], "required": [...] } } }
+    { "<path>": { "<METHOD>": { "params": [...], "required": [...], "types": {field: type} } } }
 
 ``params`` is every field a caller can send for that endpoint — path params + query params + request
 body properties — so an op field that is not in ``params`` is a typo or points at a field the API
-does not have. Kept pure (no I/O beyond ``load_snapshot``) so the matching logic is unit-testable.
+does not have. ``types`` maps each field to its JSON-schema type (integer/boolean/…) so the selector
+can fill values correctly instead of 422-ing the app with a wrongly-typed guess (live proof:
+"short blog" → ``word_count_target: "short"`` → 422 → web fallback). Older snapshots without
+``types`` stay valid. Kept pure (no I/O beyond ``load_snapshot``) so the matching logic is
+unit-testable.
 """
 
 from __future__ import annotations
@@ -23,8 +27,8 @@ from typing import Any
 
 from orchestrator.registry import AppOperation
 
-# A slim per-app contract: path -> METHOD -> {"params": [...], "required": [...]}.
-Snapshot = dict[str, dict[str, dict[str, list[str]]]]
+# A slim per-app contract: path -> METHOD -> {"params": [...], "required": [...], "types": {...}}.
+Snapshot = dict[str, dict[str, dict[str, Any]]]
 
 # Request-body media types we extract fields from (JSON, file uploads, HTML forms).
 _BODY_MEDIA = ("application/json", "multipart/form-data", "application/x-www-form-urlencoded")
@@ -87,12 +91,20 @@ def check_app(operations: tuple[AppOperation, ...], snapshot: Snapshot) -> list[
     return out
 
 
+def field_types(op: AppOperation, snapshot: Snapshot) -> dict[str, str]:
+    """The ``{field: json-type}`` map for one op's endpoint; empty when unknown (old snapshot)."""
+    endpoint = snapshot.get(op.path, {}).get(op.method.upper(), {})
+    types = endpoint.get("types")
+    return dict(types) if isinstance(types, dict) else {}
+
+
 def slim_from_openapi(openapi: dict[str, Any]) -> Snapshot:
     """Reduce a full OpenAPI document to the slim contract we validate against.
 
-    For each path+method: collect path/query parameter names (with their required flags) and, when a
-    JSON request body references a component schema, that schema's property names + required set.
-    Pure so ``tools.refresh_openapi`` and tests can both use it.
+    For each path+method: collect path/query parameter names (with their required flags), each
+    field's JSON-schema type, and, when a JSON request body references a component schema, that
+    schema's property names + required set. Pure so ``tools.refresh_openapi`` and tests can both
+    use it.
     """
     schemas = openapi.get("components", {}).get("schemas", {})
 
@@ -101,20 +113,39 @@ def slim_from_openapi(openapi: dict[str, Any]) -> Snapshot:
         comp: dict[str, Any] = schemas.get(ref.split("/")[-1], {}) if ref else schema
         return comp
 
-    def body_fields(operation: dict[str, Any]) -> tuple[list[str], list[str]]:
+    def _schema_type(schema: dict[str, Any] | None) -> str | None:
+        # FastAPI renders Optional[int] as anyOf[{integer},{null}] — take the first non-null arm.
+        if not isinstance(schema, dict):
+            return None
+        comp = _resolve(schema)
+        comp_type = comp.get("type")
+        if isinstance(comp_type, str):
+            return comp_type
+        for arm in comp.get("anyOf", []):
+            arm_type = _schema_type(arm)
+            if arm_type and arm_type != "null":
+                return arm_type
+        return None
+
+    def body_fields(operation: dict[str, Any]) -> tuple[list[str], list[str], dict[str, str]]:
         # A request body may be JSON, multipart (file uploads), or urlencoded — collect fields from
         # whichever content types are present, resolving a $ref or reading an inline schema.
         props: list[str] = []
         required: list[str] = []
+        types: dict[str, str] = {}
         content = operation.get("requestBody", {}).get("content", {})
         for media in _BODY_MEDIA:
             schema = content.get(media, {}).get("schema")
             if not schema:
                 continue
             comp = _resolve(schema)
-            props.extend(comp.get("properties", {}).keys())
+            for name, prop in comp.get("properties", {}).items():
+                props.append(name)
+                prop_type = _schema_type(prop)
+                if prop_type:
+                    types.setdefault(name, prop_type)
             required.extend(comp.get("required", []))
-        return props, required
+        return props, required, types
 
     slim: Snapshot = {}
     for path, methods in openapi.get("paths", {}).items():
@@ -122,6 +153,7 @@ def slim_from_openapi(openapi: dict[str, Any]) -> Snapshot:
             if method.upper() not in {"GET", "POST", "PUT", "PATCH", "DELETE"}:
                 continue
             params, required = [], []
+            types: dict[str, str] = {}
             for param in operation.get("parameters", []):
                 name = param.get("name")
                 if not name:
@@ -129,11 +161,17 @@ def slim_from_openapi(openapi: dict[str, Any]) -> Snapshot:
                 params.append(name)
                 if param.get("required"):
                     required.append(name)
-            bprops, breq = body_fields(operation)
+                param_type = _schema_type(param.get("schema"))
+                if param_type:
+                    types.setdefault(name, param_type)
+            bprops, breq, btypes = body_fields(operation)
             params.extend(bprops)
             required.extend(breq)
+            for name, prop_type in btypes.items():
+                types.setdefault(name, prop_type)
             slim.setdefault(path, {})[method.upper()] = {
                 "params": list(dict.fromkeys(params)),
                 "required": list(dict.fromkeys(required)),
+                "types": dict(sorted(types.items())),
             }
     return slim

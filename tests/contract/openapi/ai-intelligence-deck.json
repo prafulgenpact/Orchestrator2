@@ -2,7 +2,8 @@
   "/api/data": {
     "GET": {
       "params": [],
-      "required": []
+      "required": [],
+      "types": {}
     }
   },
   "/api/dismiss": {
@@ -12,7 +13,10 @@
       ],
       "required": [
         "url"
-      ]
+      ],
+      "types": {
+        "url": "string"
+      }
     }
   },
   "/api/refresh": {
@@ -21,7 +25,11 @@
         "provider",
         "preferences"
       ],
-      "required": []
+      "required": [],
+      "types": {
+        "preferences": "object",
+        "provider": "string"
+      }
     }
   },
   "/api/summary": {
@@ -29,7 +37,10 @@
       "params": [
         "provider"
       ],
-      "required": []
+      "required": [],
+      "types": {
+        "provider": "string"
+      }
     }
   },
   "/api/trends": {
@@ -37,13 +48,17 @@
       "params": [
         "provider"
       ],
-      "required": []
+      "required": [],
+      "types": {
+        "provider": "string"
+      }
     }
   },
   "/health": {
     "GET": {
       "params": [],
-      "required": []
+      "required": [],
+      "types": {}
     }
   },
   "/{full_path}": {
@@ -53,7 +68,10 @@
       ],
       "required": [
         "full_path"
-      ]
+      ],
+      "types": {
+        "full_path": "string"
+      }
     }
   }
 }

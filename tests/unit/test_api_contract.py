@@ -122,3 +122,47 @@ def test_slim_from_openapi_reads_json_multipart_and_params() -> None:
     assert set(slim["/train"]["POST"]["params"]) == {"a", "b"}
     assert slim["/train"]["POST"]["required"] == ["a"]
     assert slim["/upload"]["POST"]["params"] == ["file"]  # multipart body captured
+
+
+def test_slim_extracts_field_types() -> None:
+    """Field types survive slimming (they are what stops a "short"→integer-field 422): plain
+    types, $ref'd body properties, and FastAPI's Optional[...] anyOf all resolve."""
+    openapi = {
+        "paths": {
+            "/blog/generate": {
+                "post": {
+                    "requestBody": {
+                        "content": {
+                            "application/json": {"schema": {"$ref": "#/components/schemas/G"}}
+                        }
+                    }
+                }
+            },
+            "/topics": {
+                "get": {
+                    "parameters": [{"name": "limit", "schema": {"type": "integer"}}],
+                }
+            },
+        },
+        "components": {
+            "schemas": {
+                "G": {
+                    "properties": {
+                        "topic": {"type": "string"},
+                        "research": {"type": "boolean"},
+                        # FastAPI renders Optional[int] as anyOf[{integer},{null}]
+                        "word_count_target": {"anyOf": [{"type": "integer"}, {"type": "null"}]},
+                        "untyped": {},
+                    },
+                    "required": ["topic"],
+                }
+            }
+        },
+    }
+    slim = slim_from_openapi(openapi)
+    gen_types = slim["/blog/generate"]["POST"]["types"]
+    assert gen_types["topic"] == "string"
+    assert gen_types["research"] == "boolean"
+    assert gen_types["word_count_target"] == "integer"  # Optional[...] resolved
+    assert "untyped" not in gen_types  # no type info -> omitted, never guessed
+    assert slim["/topics"]["GET"]["types"] == {"limit": "integer"}

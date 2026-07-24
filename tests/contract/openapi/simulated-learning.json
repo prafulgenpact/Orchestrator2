@@ -12,7 +12,13 @@
         "concept_title",
         "track_name",
         "theory_context"
-      ]
+      ],
+      "types": {
+        "concept_title": "string",
+        "question": "string",
+        "theory_context": "string",
+        "track_name": "string"
+      }
     }
   },
   "/api/execute": {
@@ -23,13 +29,18 @@
       ],
       "required": [
         "code"
-      ]
+      ],
+      "types": {
+        "code": "string",
+        "timeout": "integer"
+      }
     }
   },
   "/api/health": {
     "GET": {
       "params": [],
-      "required": []
+      "required": [],
+      "types": {}
     }
   },
   "/{full_path}": {
@@ -39,7 +50,10 @@
       ],
       "required": [
         "full_path"
-      ]
+      ],
+      "types": {
+        "full_path": "string"
+      }
     }
   }
 }
