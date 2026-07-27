@@ -41,6 +41,18 @@ def test_request_hash_is_stable_and_distinct() -> None:
     assert len(request_hash(_req())) == 16
 
 
+def test_temperature_not_in_request_hash() -> None:
+    # Two requests differing ONLY in temperature must hash identically, so adding a temperature
+    # default (0.0) does not invalidate any recorded fixture — temperature doesn't change a replay.
+    from dataclasses import replace
+
+    base = _req()
+    hot = replace(base, temperature=1.0)
+    assert base.temperature == 0.0
+    assert request_hash(base) == request_hash(hot)
+    assert "temperature" not in base.to_dict()
+
+
 def test_replay_reads_a_fixture(tmp_path: Path) -> None:
     req = _req()
     (tmp_path / f"{request_hash(req)}.json").write_text(

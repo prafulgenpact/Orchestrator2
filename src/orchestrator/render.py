@@ -156,6 +156,13 @@ def render_execution(
         lines.append("⚠ Some parts of the task could not be completed:")
         lines.extend(f"  - {r.app_name}: {r.error or r.status}" for r in failed)
         lines.append("")
+    # Label web-sourced content explicitly: the answer body reads the same whether it came from a
+    # tuned app or the open web, so a web-sourced part must be called out (no app covered it).
+    web = [r for r in result.results if r.status == "ok" and r.operation == "web_search"]
+    if web:
+        lines.append("Answered from a web search (no specialized app covered this):")
+        lines.extend(f"  - {r.subtask_id}" for r in web)
+        lines.append("")
     lines.append(f"Plan — {len(plan.subtasks)} subtask(s) in {len(waves)} step(s):")
     for step, wave in enumerate(waves, start=1):
         lines.append(f"  Step {step}" + (" (parallel)" if len(wave) > 1 else "") + ":")
@@ -199,4 +206,7 @@ def render_execution(
             lines.append(f"       ⚠ {r.note}")
         if verbose:
             lines.append(f"       [op={r.operation}  status={r.status}  {r.duration_s:.2f}s]")
+            if r.args:
+                # Show exactly what the app was asked — so a guessed/defaulted input is auditable.
+                lines.append(f"       args: {json.dumps(r.args, default=str, ensure_ascii=False)}")
     return "\n".join(lines)

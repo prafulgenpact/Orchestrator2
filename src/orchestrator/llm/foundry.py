@@ -188,6 +188,7 @@ class FoundryClient:
             "max_tokens": request.max_tokens,
             "system": request.system,
             "messages": [dict(entry) for entry in request.messages],
+            "temperature": request.temperature,  # 0.0 by default -> deterministic runs
         }
         if request.tools:
             kwargs["tools"] = [dict(tool) for tool in request.tools]

@@ -1,8 +1,19 @@
 # Project State — A multi agent orchestrator system calling relevant apps basis intent recognition
 
-Last updated: 2026-07-27 (judge-warns-not-discards task)
+Last updated: 2026-07-27 (determinism-and-visibility task)
 
 ## Done (most recent first)
+
+- 2026-07-27 determinism-and-visibility (Fix 5 of the web-fallback deep-dive). Three
+  determinism/visibility improvements. (a) Determinism: LLMRequest gains `temperature: float = 0.0`
+  and FoundryClient passes it — every planner/selector/judge/synthesis call now runs at temp 0, so
+  the same task behaves the same way run-to-run (was the SDK default 1.0). temperature is
+  deliberately EXCLUDED from `to_dict()`/request_hash so recorded replay fixtures still resolve (it
+  doesn't change a replay). (b) Web labelling: render surfaces "Answered from a web search (no
+  specialized app covered this)" for any ok result with operation == "web_search" — a planner-routed
+  web answer is no longer indistinguishable from an app answer. (c) Auditability: SubtaskResult
+  carries `args` (the exact arguments sent to the app), threaded from the executor and printed under
+  `--verbose` — a guessed/defaulted input is now visible. make verify PASS; eval 16/16.
 
 - 2026-07-27 judge-warns-not-discards (Fix 3 of the web-fallback deep-dive). The relevance judge is
   now ADVISORY, not a deleter. Previously an LLM FAIL verdict dropped an app's output to no_match

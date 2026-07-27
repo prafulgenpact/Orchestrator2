@@ -188,7 +188,9 @@ async def _run_app_op(
             f"missing required input: {', '.join(missing)} — this app needs context "
             "the task did not provide"
         )
-        return SubtaskResult(sub.id, app.id, app.name, "skipped", op.name, None, None, reason, 0.0)
+        return SubtaskResult(
+            sub.id, app.id, app.name, "skipped", op.name, None, None, reason, 0.0, args=args
+        )
 
     if op.poll is not None:
         result = await _run_async(
@@ -216,6 +218,7 @@ async def _run_app_op(
             source,
             result.error,
             result.duration_s,
+            args=args,
         )
 
     # Grounding guard: the app returned data, but is it actually relevant to the task?
@@ -236,6 +239,7 @@ async def _run_app_op(
             source,
             reason or "the app returned no content",
             result.duration_s,
+            args=args,
         )
     # The judge is ADVISORY, not a deleter. If it flagged a non-empty result as a possible
     # mismatch, we KEEP the app's answer (the apps are tuned to the user — AC-4) and attach a
@@ -258,6 +262,7 @@ async def _run_app_op(
         result.duration_s,
         artifacts=_result_artifacts(op, sub, result.data),
         note=note,
+        args=args,
     )
 
 

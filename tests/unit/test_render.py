@@ -115,18 +115,21 @@ def _result(
     error: str | None = None,
     source: str | None = "http://127.0.0.1:8006/api/chat",
     note: str | None = None,
+    operation: str = "chat_with_assistant",
+    args: dict[str, object] | None = None,
 ) -> SubtaskResult:
     return SubtaskResult(
         subtask_id=sub_id,
         app_id=app_id,
         app_name=app_name,
         status=status,
-        operation="chat_with_assistant",
+        operation=operation,
         output=output,
         source=source,
         error=error,
         duration_s=1.23,
         note=note,
+        args=args,
     )
 
 
@@ -180,6 +183,60 @@ def test_execution_verbose_adds_detail() -> None:
     assert "op=chat_with_assistant" in out
     assert "status=ok" in out
     assert "1.23s" in out
+
+
+def test_verbose_shows_args() -> None:
+    # --verbose surfaces the exact arguments sent to the app, so a guessed/defaulted input is
+    # auditable rather than invisible.
+    sub = _sub("t1")
+    plan = _plan((sub,))
+    res = _result(
+        "t1",
+        sub.app.app_id,
+        sub.app.app_name,
+        "ok",
+        output={"reply": "hi"},
+        args={"question": "what is attention?", "module_id": 3},
+    )
+    out = render_execution(plan, PlanResult(plan.task, plan.intent, (res,)), verbose=True)
+    assert "args:" in out
+    assert '"module_id": 3' in out  # the concrete value the app was asked with
+
+
+def test_clean_hides_args() -> None:
+    sub = _sub("t1")
+    plan = _plan((sub,))
+    res = _result(
+        "t1",
+        sub.app.app_id,
+        sub.app.app_name,
+        "ok",
+        output={"reply": "hi"},
+        args={"question": "q"},
+    )
+    out = render_execution(plan, PlanResult(plan.task, plan.intent, (res,)))  # not verbose
+    assert "args:" not in out
+
+
+def test_web_sourced_answer_is_labelled() -> None:
+    # A planner-routed web answer reads like any app answer in the body; it must be labelled so the
+    # user knows no specialized app covered it.
+    fb = _app(app_id="web-search", name="Web Search (fallback)", fb=True)
+    sub = _sub("t1", app=fb)
+    plan = _plan((sub,))
+    res = _result(
+        "t1",
+        "web-search",
+        "Web Search (fallback)",
+        "ok",
+        output={"answer": "Argentina won."},
+        operation="web_search",
+        source="http://w",
+    )
+    synth = Synthesis(answer="Argentina won.", mode="synthesized", sources=("http://w",))
+    out = render_execution(plan, PlanResult(plan.task, plan.intent, (res,)), synth)
+    assert "Answered from a web search" in out
+    assert out.index("Answered from a web search") < out.index("Plan —")  # up front
 
 
 def test_execution_verbose_output_untruncated() -> None:

@@ -165,6 +165,7 @@ class SubtaskResult:
     duration_s: float
     note: str | None = None  # disclosure, e.g. "<app> couldn't answer; used web fallback"
     artifacts: tuple[Artifact, ...] = ()
+    args: dict[str, Any] | None = None  # the exact arguments sent to the app (auditability)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -179,6 +180,7 @@ class SubtaskResult:
             "duration_s": round(self.duration_s, 3),
             "note": self.note,
             "artifacts": [a.to_dict() for a in self.artifacts],
+            "args": self.args,
         }
 
 

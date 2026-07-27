@@ -20,6 +20,7 @@ from orchestrator.llm.foundry import (
     DEFAULT_LLM_TIMEOUT_S,
     DEFAULT_MODEL,
     FoundryClient,
+    FoundryCredentials,
     _extract_text,
     _parse_env_file,
     resolve_credentials,
@@ -200,6 +201,48 @@ def test_to_dict_omits_tool_fields_when_unset() -> None:
         "messages": [{"role": "user", "content": "hi"}],
         "max_tokens": req.max_tokens,
     }
+
+
+def test_default_temperature_is_zero() -> None:
+    req = LLMRequest(model="m", system="s", messages=({"role": "user", "content": "hi"},))
+    assert req.temperature == 0.0  # deterministic by default
+
+
+def test_request_temperature_is_sent(monkeypatch: pytest.MonkeyPatch) -> None:
+    # The temperature on the request must actually reach the Anthropic streaming call.
+    captured: dict[str, Any] = {}
+
+    class _Stream:
+        text_stream: tuple[str, ...] = ()
+
+        def __enter__(self) -> _Stream:
+            return self
+
+        def __exit__(self, *_a: object) -> bool:
+            return False
+
+        def get_final_message(self) -> _Msg:
+            return _Msg([_Block("text", text="ok")])
+
+    class _Messages:
+        def stream(self, **kwargs: Any) -> _Stream:
+            captured.update(kwargs)
+            return _Stream()
+
+    class _Client:
+        messages = _Messages()
+
+        def __init__(self, **_kw: Any) -> None:
+            pass
+
+    fake = types.SimpleNamespace(AnthropicFoundry=lambda **kw: _Client(**kw))
+    monkeypatch.setitem(sys.modules, "anthropic", fake)
+    client = FoundryClient(FoundryCredentials(api_key="k", base_url="http://x"))
+    out = client.complete(
+        LLMRequest(model="m", system="s", messages=({"role": "u", "content": "h"},))
+    )
+    assert out == "ok"
+    assert captured["temperature"] == 0.0
 
 
 def test_to_dict_includes_tool_fields_when_set() -> None:

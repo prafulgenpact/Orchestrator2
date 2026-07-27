@@ -1,6 +1,6 @@
 {
   "schema": "proof/v1",
-  "created_utc": "2026-07-27T05:47:14+00:00",
+  "created_utc": "2026-07-27T13:38:37+00:00",
   "result": "PASS",
   "failed_checks": [],
   "missing_required_checks": [],
@@ -12,9 +12,9 @@
     "e2e",
     "secrets"
   ],
-  "fingerprint": "6b853bdf71cbbe18b3a710531664399d35d2a913bd6eb628588cd847686a68f1",
+  "fingerprint": "77e49402ef8876098e12f79e404ad327c14d61b5101064824c17460e5208f0bc",
   "git": {
-    "commit": "2526facf2f3db3c5ccbc4c2cf64b6e928f8e5ac9",
+    "commit": "954d444dba423d8909f0a12310bb315a08b21817",
     "branch": "Orchestrator2",
     "dirty_tracked_files": true
   },
@@ -22,7 +22,7 @@
     {
       "name": "py-lint",
       "status": "pass",
-      "duration_s": 0,
+      "duration_s": 1,
       "evidence": "reports/py-lint.log"
     },
     {
@@ -40,7 +40,7 @@
     {
       "name": "py-unit",
       "status": "pass",
-      "duration_s": 5,
+      "duration_s": 6,
       "evidence": "reports/py-unit.log"
     },
     {
@@ -64,33 +64,33 @@
     {
       "name": "dep-audit",
       "status": "pass",
-      "duration_s": 26,
+      "duration_s": 19,
       "evidence": "reports/dep-audit.log"
     },
     {
       "name": "diff-cover",
       "status": "pass",
-      "duration_s": 1,
+      "duration_s": 0,
       "evidence": "reports/diff-cover.log"
     }
   ],
   "tests": {
     "unit": {
-      "tests": 821,
+      "tests": 827,
       "failures": 0,
       "errors": 0,
       "skipped": 0,
-      "time_s": 3.64
+      "time_s": 3.97
     },
     "e2e": {
       "tests": 2,
       "failures": 0,
       "errors": 0,
       "skipped": 0,
-      "time_s": 0.67
+      "time_s": 0.85
     },
     "web_e2e": null,
-    "coverage_pct": 95.73
+    "coverage_pct": 95.75
   },
   "environment": {
     "python": "Python 3.10.0",
@@ -99,5 +99,5 @@
     "pytest": "pytest 8.3.2",
     "os": "Darwin 25.5.0"
   },
-  "content_hash": "0d6c8718336fec043e93a66fbc311c830fa7a9cb2e15db5ad5f922da5f7c3e26"
+  "content_hash": "f68046f7a3b3b079b37c344a4186a2d2c4f7eba1058540d70e2866f578ff6c1c"
 }

@@ -1,1 +1,1 @@
-20260727-judge-warns-not-discards.md
+20260727-determinism-and-visibility.md

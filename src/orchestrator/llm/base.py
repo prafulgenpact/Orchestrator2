@@ -34,6 +34,11 @@ class LLMRequest:
     max_tokens: int = 8000
     tools: tuple[dict[str, Any], ...] = ()
     tool_choice: dict[str, Any] | None = None
+    # Default 0.0 so every call is as deterministic as the model allows — the same task decomposes,
+    # selects, and is judged the same way run-to-run, instead of the SDK default 1.0 (a per-run
+    # lottery). Deliberately NOT in to_dict below: temperature does not change a *replayed*
+    # response, so keeping it out of the request hash means recorded fixtures still resolve.
+    temperature: float = 0.0
 
     def to_dict(self) -> dict[str, Any]:
         data: dict[str, Any] = {
