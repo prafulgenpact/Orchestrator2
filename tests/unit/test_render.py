@@ -332,3 +332,23 @@ def test_failed_subtasks_surface_as_heads_up() -> None:
     assert "Some parts of the task could not be completed" in out
     assert "health check failed for arxiv-papers" in out
     assert out.index("could not be completed") < out.index("Plan —")  # up front, not buried
+
+
+def test_caution_note_renders_as_heads_up() -> None:
+    # Fix 3: an ok result the judge cautioned about keeps its answer AND surfaces the caution as a
+    # heads-up under the answer — the user sees the flag but still gets the app's real work.
+    sub = _sub("t1")
+    plan = _plan((sub,))
+    res = _result(
+        "t1",
+        sub.app.app_id,
+        sub.app.app_name,
+        "ok",
+        output={"reply": "the app's real answer"},
+        note="the relevance check flagged this may not fully match the task (off-topic)",
+    )
+    synth = Synthesis(answer="the app's real answer", mode="verbatim", sources=())
+    out = render_execution(plan, PlanResult(plan.task, plan.intent, (res,)), synth)
+    assert "Heads up" in out
+    assert "may not fully match" in out
+    assert out.index("Heads up") < out.index("Plan —")  # surfaced up front

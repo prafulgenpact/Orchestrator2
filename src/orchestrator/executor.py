@@ -19,7 +19,7 @@ from typing import Any
 import httpx
 
 from orchestrator.app_caller import AppEndpoints, CallResult, call_operation
-from orchestrator.grounding import check_relevance
+from orchestrator.grounding import check_relevance, is_blank
 from orchestrator.llm.base import LLMClient, LLMError
 from orchestrator.models import Artifact, Plan, PlanResult, Subtask, SubtaskResult
 from orchestrator.registry import AppEntry, AppOperation, Registry
@@ -223,7 +223,9 @@ async def _run_app_op(
     relevant, reason = await asyncio.to_thread(
         check_relevance, llm_client, sub, result.data, model=model
     )
-    if not relevant:
+    if not relevant and is_blank(result.data):
+        # The one hard FAIL: the app returned nothing usable. An honest empty failure — there is
+        # no answer to keep, and we never fabricate one.
         return SubtaskResult(
             sub.id,
             app.id,
@@ -232,9 +234,18 @@ async def _run_app_op(
             op.name,
             None,
             source,
-            reason or "results did not match the task",
+            reason or "the app returned no content",
             result.duration_s,
         )
+    # The judge is ADVISORY, not a deleter. If it flagged a non-empty result as a possible
+    # mismatch, we KEEP the app's answer (the apps are tuned to the user — AC-4) and attach a
+    # visible caution instead of discarding it. A wrong discard is itself an inaccuracy. A clean
+    # PASS carries no note.
+    note = (
+        f"the relevance check flagged this may not fully match the task ({reason})"
+        if not relevant
+        else None
+    )
     return SubtaskResult(
         sub.id,
         app.id,
@@ -246,6 +257,7 @@ async def _run_app_op(
         None,
         result.duration_s,
         artifacts=_result_artifacts(op, sub, result.data),
+        note=note,
     )
 
 

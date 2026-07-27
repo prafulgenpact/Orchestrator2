@@ -1,1 +1,1 @@
-20260724-recover-stuck-apps.md
+20260727-judge-warns-not-discards.md

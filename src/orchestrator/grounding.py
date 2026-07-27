@@ -30,8 +30,12 @@ def load_system_prompt() -> str:
     return _PROMPT_PATH.read_text()
 
 
-def _is_blank(output: Any) -> bool:
-    """True when the app returned nothing usable — the one deterministic FAIL (no LLM needed)."""
+def is_blank(output: Any) -> bool:
+    """True when the app returned nothing usable — the one deterministic FAIL (no LLM needed).
+
+    Public so the executor can tell an EMPTY result (a real failure) apart from an off-topic
+    result that still has content (which the judge now only cautions about, never discards).
+    """
     if output is None:
         return True
     if isinstance(output, str):
@@ -65,7 +69,7 @@ def check_relevance(
 
     Deterministic gate first, then an LLM judge over the FULL output that fails open on any error.
     """
-    if _is_blank(output):
+    if is_blank(output):
         return False, "the app returned no content"
 
     message = (

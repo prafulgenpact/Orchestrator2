@@ -1,8 +1,18 @@
 # Project State — A multi agent orchestrator system calling relevant apps basis intent recognition
 
-Last updated: 2026-07-27 (recover-stuck-apps task)
+Last updated: 2026-07-27 (judge-warns-not-discards task)
 
 ## Done (most recent first)
+
+- 2026-07-27 judge-warns-not-discards (Fix 3 of the web-fallback deep-dive). The relevance judge is
+  now ADVISORY, not a deleter. Previously an LLM FAIL verdict dropped an app's output to no_match
+  (pre-Fix-2: → web; post-Fix-2: → honest failure) — but the judge is a single stochastic opinion
+  and a wrong discard is itself an inaccuracy, and the apps are tuned to the user (AC-4). Now: a
+  FAIL on NON-EMPTY output KEEPS the app's answer (status ok, output preserved) with a visible
+  caution note ("the relevance check flagged this may not fully match the task (...)"), surfaced as
+  a heads-up under the answer. Genuinely blank output stays the one hard FAIL (no_match). grounding
+  exposes `is_blank` (was `_is_blank`) so the executor tells empty apart from off-topic-with-content;
+  check_relevance's (bool, reason) contract is unchanged. make verify PASS; eval 16/16.
 
 - 2026-07-27 recover-stuck-apps (Fix 4 of the web-fallback deep-dive). A hung-but-listening app
   (the 6-day ArXiv case: process up, answering nothing, port held so a fresh start can't bind) is

@@ -12,9 +12,9 @@ from collections.abc import Callable, Sequence
 from conftest import FakeLLM
 
 from orchestrator.grounding import (
-    _is_blank,
     _render_full,
     check_relevance,
+    is_blank,
     load_system_prompt,
 )
 from orchestrator.llm.base import LLMError, LLMRequest
@@ -130,10 +130,10 @@ def test_prompt_states_pass_fail_rules() -> None:
 
 
 def test_is_blank() -> None:
-    assert _is_blank(None) and _is_blank("") and _is_blank("  ") and _is_blank([]) and _is_blank({})
-    assert not _is_blank("x")
-    assert not _is_blank([1])
-    assert not _is_blank(0)  # a scalar 0 is content, not blank
+    assert is_blank(None) and is_blank("") and is_blank("  ") and is_blank([]) and is_blank({})
+    assert not is_blank("x")
+    assert not is_blank([1])
+    assert not is_blank(0)  # a scalar 0 is content, not blank
 
 
 def test_render_full_passes_string_through_and_serializes_objects() -> None:

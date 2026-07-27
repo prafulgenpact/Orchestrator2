@@ -59,7 +59,7 @@ def _stub_call(**canned: Any) -> Callable[..., Any]:
             f"http://x{op.path}",
             canned.get("ok", True),
             canned.get("status", 200),
-            {"echo": args},
+            canned.get("data", {"echo": args}),
             canned.get("error"),
             0.01,
         )
@@ -274,16 +274,36 @@ def test_execute_success(monkeypatch: pytest.MonkeyPatch, fake_llm: MakeLLM) -> 
     assert r.source is not None
 
 
-def test_execute_irrelevant_becomes_no_match(
+def test_irrelevant_result_kept_with_caution(
     monkeypatch: pytest.MonkeyPatch, fake_llm: MakeLLM
 ) -> None:
+    # The judge is advisory: a FAIL on NON-EMPTY output keeps the app's answer (status ok) with a
+    # visible caution, instead of discarding it. A wrong discard is itself an inaccuracy.
     monkeypatch.setattr("orchestrator.executor.call_operation", _stub_call())
     client = fake_llm([_SELECT, _IRRELEVANT])  # selector, then relevance says NO
     result = _run(_plan(_sub("arxiv-papers", "ArXiv Paper Guide")), client)
     r = result.results[0]
+    assert r.status == "ok"  # kept, not discarded
+    assert r.output == {"echo": {"query": "moe"}}  # the app's real output is preserved
+    assert r.note is not None and "may not fully match" in r.note
+    assert "off-topic" in r.note  # the judge's reason is surfaced in the caution
+
+
+def test_blank_result_is_no_match(monkeypatch: pytest.MonkeyPatch, fake_llm: MakeLLM) -> None:
+    # The one hard FAIL that remains: genuinely empty output stays an honest failure, nothing kept.
+    monkeypatch.setattr("orchestrator.executor.call_operation", _stub_call(data=[]))
+    client = fake_llm([_SELECT])  # blank output fails deterministically -> no relevance LLM call
+    r = _run(_plan(_sub("arxiv-papers", "ArXiv Paper Guide")), client).results[0]
     assert r.status == "no_match"
-    assert r.output is None  # raw (irrelevant) output suppressed
-    assert "off-topic" in (r.error or "")
+    assert r.output is None
+
+
+def test_relevant_result_has_no_note(monkeypatch: pytest.MonkeyPatch, fake_llm: MakeLLM) -> None:
+    monkeypatch.setattr("orchestrator.executor.call_operation", _stub_call())
+    client = fake_llm([_SELECT, _RELEVANT])
+    r = _run(_plan(_sub("arxiv-papers", "ArXiv Paper Guide")), client).results[0]
+    assert r.status == "ok"
+    assert r.note is None  # a clean PASS carries no caution
 
 
 def _fallback_plan() -> Plan:
@@ -508,13 +528,14 @@ def test_app_error_is_not_web_rescued(monkeypatch: pytest.MonkeyPatch, fake_llm:
     assert "retry: boom" in (r.error or "")
 
 
-def test_app_no_match_is_not_web_rescued(
+def test_blank_no_match_is_not_web_rescued(
     monkeypatch: pytest.MonkeyPatch, fake_llm: MakeLLM
 ) -> None:
     _web_ok(monkeypatch)
-    monkeypatch.setattr("orchestrator.executor.call_operation", _stub_call())
-    # call ok, but the relevance guard rejects -> no_match. It stays no_match, not a web answer.
-    r = _run(_plan(_sub("arxiv-papers", "ArXiv Paper Guide")), fake_llm([_SELECT, _IRRELEVANT]))
+    # A genuinely empty result is a no_match failure — and even with the web available it stays a
+    # no_match, never a web answer (web is only the planner's no-app route).
+    monkeypatch.setattr("orchestrator.executor.call_operation", _stub_call(data=[]))
+    r = _run(_plan(_sub("arxiv-papers", "ArXiv Paper Guide")), fake_llm([_SELECT]))
     assert r.results[0].status == "no_match"
     assert r.results[0].app_name == "ArXiv Paper Guide"  # NOT the web
 
