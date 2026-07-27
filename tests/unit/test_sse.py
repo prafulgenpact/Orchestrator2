@@ -68,7 +68,7 @@ def test_sse_call_assembles_tokens_and_events() -> None:
             return httpx.Response(
                 200, json={"apps": [{"id": "github-learnings", "backend_port": 8009}]}
             )
-        if "health" in p:
+        if "health" in p or p == "/api/repos/":  # github-learnings' health route is /api/repos/
             return httpx.Response(200, json={"status": "ok"})
         if p == "/api/build/suggest":
             return httpx.Response(200, content=body, headers={"content-type": "text/event-stream"})
@@ -87,7 +87,7 @@ def test_sse_call_error_status_is_clean_failure() -> None:
             return httpx.Response(
                 200, json={"apps": [{"id": "github-learnings", "backend_port": 8009}]}
             )
-        if "health" in p:
+        if "health" in p or p == "/api/repos/":  # github-learnings' health route is /api/repos/
             return httpx.Response(200, json={"status": "ok"})
         return httpx.Response(500, text="boom")  # the streamed endpoint errors
 

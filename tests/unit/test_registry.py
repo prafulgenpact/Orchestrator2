@@ -273,6 +273,16 @@ def test_blogs_single_generate_op() -> None:
     assert generate_ops == ["generate_blog_async"], generate_ops
 
 
+def test_teach_me_health_is_real_api_route() -> None:
+    """teach-me's health must be a real JSON API route, not the SPA /models path (which returns
+    200 text/html for anything -> false-healthy). /topics is a genuine API GET."""
+    reg = load_registry()
+    tm = reg.get("teach-me")
+    assert tm is not None
+    assert tm.health == "/topics"
+    assert tm.health != "/models"
+
+
 def test_async_specs_present() -> None:
     reg = load_registry()
     for app_id, op_name in [

@@ -2282,7 +2282,7 @@
         "use Teach Me for general topics that have no dedicated specialist app"
       ],
       "port": 8008,
-      "health": "/models",
+      "health": "/topics",
       "operations": [
         {
           "name": "list_topics",

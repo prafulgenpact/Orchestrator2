@@ -1,8 +1,21 @@
 # Project State — A multi agent orchestrator system calling relevant apps basis intent recognition
 
-Last updated: 2026-07-24 (fallback-only-when-no-app task)
+Last updated: 2026-07-27 (recover-stuck-apps task)
 
 ## Done (most recent first)
+
+- 2026-07-27 recover-stuck-apps (Fix 4 of the web-fallback deep-dive). A hung-but-listening app
+  (the 6-day ArXiv case: process up, answering nothing, port held so a fresh start can't bind) is
+  now auto-recovered at run start. Three parts: (a) honest health — `is_healthy_response` requires
+  a 2xx that is NOT text/html, so teach-me's SPA page (200 HTML on any path) no longer reads as
+  healthy; teach-me health path moved /models -> /topics (real JSON route). (b) stale-process
+  reaping — `reap_stale_listeners` kills a process squatting the app's port ONLY when positively
+  identified as this app's own uvicorn (token match on uvicorn + entrypoint + port; folder/cwd is
+  not in argv, so the first attempt that matched on folder never fired — caught live, fixed to
+  match on port). (c) `ensure_started` is health-first (a live app is never duplicate-spawned),
+  then reap -> respawn -> poll when unhealthy. app_caller shares the same honest health verdict.
+  make verify PASS; eval 16/16. Reap helpers (lsof/ps/kill) are injected so logic is unit-tested
+  with no real processes. Circuit-breaker cooldown (deep-dive R5) deferred to a later task.
 
 - 2026-07-24 fallback-only-when-no-app (Fix 2 of the web-fallback deep-dive). Removed the runtime
   "safety net" in executor._run_subtask that silently answered from the web whenever a CHOSEN app

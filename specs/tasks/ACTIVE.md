@@ -1,1 +1,1 @@
-20260724-fallback-only-when-no-app.md
+20260724-recover-stuck-apps.md

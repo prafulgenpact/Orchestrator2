@@ -10,7 +10,9 @@ the only thing not exercised in tests (``_spawn_uvicorn``).
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import os
+import signal
 import subprocess
 from collections.abc import Awaitable, Callable, Iterable
 from dataclasses import dataclass, field
@@ -87,6 +89,20 @@ def _spawn_uvicorn(spec: LaunchSpec, port: int) -> bool:  # pragma: no cover - r
     return True
 
 
+def is_healthy_response(status_code: int, content_type: str) -> bool:
+    """Honest health verdict for a probe response.
+
+    A real API is alive only on a 2xx. Crucially we also reject ``text/html``: an app fronted by a
+    single-page-app catch-all (e.g. teach-me) returns ``200 text/html`` (its index.html) for ANY
+    unmatched path — so the old ``status < 500`` check called such an app "healthy" even when its
+    API layer was dead. Requiring a non-HTML 2xx makes a probe of a real JSON route the only thing
+    that counts as up. Shared with the per-call health check in app_caller so both agree.
+    """
+    if not 200 <= status_code < 300:
+        return False
+    return "text/html" not in content_type.lower()
+
+
 async def _health_ok(app: AppEntry, client: httpx.AsyncClient) -> bool:
     if app.base_url is None or app.health is None:
         return False
@@ -94,7 +110,87 @@ async def _health_ok(app: AppEntry, client: httpx.AsyncClient) -> bool:
         resp = await run_with_deadline(client.get(f"{app.base_url}{app.health}"), _HEALTH_TIMEOUT_S)
     except Exception:
         return False
-    return resp.status_code < 500
+    return is_healthy_response(resp.status_code, resp.headers.get("content-type", ""))
+
+
+def _pids_on_port(port: int) -> list[int]:  # pragma: no cover - real syscall
+    """PIDs listening on 127.0.0.1:``port`` (via ``lsof``). Empty list on any error/none found."""
+    try:
+        proc = subprocess.run(
+            ["lsof", "-nP", f"-iTCP:{port}", "-sTCP:LISTEN", "-t"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return []
+    pids: list[int] = []
+    for token in proc.stdout.split():
+        with contextlib.suppress(ValueError):
+            pids.append(int(token))
+    return pids
+
+
+def _cmdline(pid: int) -> str:  # pragma: no cover - real syscall
+    """The full command line of ``pid`` (via ``ps``); empty string on any error."""
+    try:
+        proc = subprocess.run(
+            ["ps", "-p", str(pid), "-o", "command="],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return ""
+    return proc.stdout.strip()
+
+
+def _kill(pid: int) -> None:  # pragma: no cover - real syscall
+    """Terminate ``pid`` (SIGTERM, then SIGKILL). Silent if it is already gone."""
+    for sig in (signal.SIGTERM, signal.SIGKILL):
+        try:
+            os.kill(pid, sig)
+        except (ProcessLookupError, PermissionError, OSError):
+            return
+
+
+def _is_our_app_process(cmdline: str, spec: LaunchSpec, port: int) -> bool:
+    """True only if ``cmdline`` is positively THIS app's own uvicorn process on ``port``.
+
+    The safety rule for reaping: kill a process ONLY when we can identify it as this exact app's
+    backend. ``ps`` shows the argv (not the working directory), so we match the three signals that
+    ARE in a uvicorn launch line: the ``uvicorn`` module, this app's ASGI entrypoint, and its port.
+    Matching is on whitespace-delimited TOKENS, not substrings — otherwise ``main:app`` would
+    spuriously match ``app.main:app`` (a different app). Since the candidate was already found by
+    ``lsof`` listening on this exact port, these together positively attribute it to this app.
+    Anything we cannot attribute — a non-uvicorn server, a different entrypoint, a different port —
+    is never touched.
+    """
+    tokens = cmdline.split()
+    return "uvicorn" in tokens and spec.entrypoint in tokens and str(port) in tokens
+
+
+def reap_stale_listeners(
+    port: int,
+    spec: LaunchSpec,
+    *,
+    list_pids: Callable[[int], list[int]] = _pids_on_port,
+    cmdline: Callable[[int], str] = _cmdline,
+    kill: Callable[[int], None] = _kill,
+) -> list[int]:
+    """Kill any process squatting ``port`` that is positively THIS app's own hung backend.
+
+    The 6-day-ArXiv failure mode: the app process is still listening but answers nothing, so a
+    fresh start cannot bind the port and health never recovers. Clearing the identified stale
+    process lets ``ensure_started`` relaunch cleanly. Returns the PIDs killed (empty if none
+    matched). Helpers are injected so the decision logic is unit-testable without real processes.
+    """
+    killed: list[int] = []
+    for pid in list_pids(port):
+        if _is_our_app_process(cmdline(pid), spec, port):
+            kill(pid)
+            killed.append(pid)
+    return killed
 
 
 async def ensure_started(
@@ -102,18 +198,28 @@ async def ensure_started(
     client: httpx.AsyncClient,
     *,
     spawn: Callable[[LaunchSpec, int], bool] = _spawn_uvicorn,
+    reap: Callable[[int, LaunchSpec], list[int]] = reap_stale_listeners,
     sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
     timeout_s: float = DEFAULT_START_TIMEOUT_S,
     interval_s: float = _POLL_INTERVAL_S,
 ) -> bool:
-    """Start ``app`` if we know how, and wait until it is healthy. Returns True iff healthy.
+    """Ensure ``app`` is healthy, recovering a hung instance if needed. Returns True iff healthy.
 
-    Never raises: returns False when there is no launch spec, no port, the spawn fails, or health
-    does not come up within ``timeout_s`` — the caller then errors cleanly (no hang).
+    Health-first: an app already answering is used as-is (no doomed duplicate spawn). Otherwise a
+    stale/hung process squatting the port is reaped first — the 6-day-ArXiv fix, where the old
+    process held the port so a fresh start could never bind — then the app is (re)launched and
+    health-polled. Never raises: returns False when there is no launch spec, no port, the spawn
+    fails, or health does not come up within ``timeout_s`` — the caller then errors cleanly.
     """
     spec = LAUNCH_SPECS.get(app.id)
     if spec is None or app.port is None:
         return False
+    if await _health_ok(app, client):
+        return True  # already up — never spawn a duplicate or touch the live process
+    # Unhealthy: clear a hung instance of THIS app off the port (safe: positively identified),
+    # so the fresh spawn can bind. A brief pause lets the OS release the socket before we start.
+    if reap(app.port, spec):
+        await sleep(interval_s)
     if not spawn(spec, app.port):
         return False
     for _ in range(max(1, int(timeout_s / interval_s))):

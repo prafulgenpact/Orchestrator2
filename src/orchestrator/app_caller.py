@@ -16,7 +16,7 @@ from typing import Any
 import httpx
 import websockets
 
-from orchestrator.launcher import ensure_started
+from orchestrator.launcher import ensure_started, is_healthy_response
 from orchestrator.registry import AppEntry, AppOperation
 from orchestrator.resilience import (
     CircuitBreaker,
@@ -204,7 +204,8 @@ async def _is_healthy(base_url: str, app: AppEntry, client: httpx.AsyncClient) -
         resp = await run_with_deadline(client.get(f"{base_url}{app.health}"), _HEALTH_TIMEOUT_S)
     except Exception:
         return False
-    return resp.status_code < 500
+    # Same honest verdict as the launcher: a real 2xx that is NOT the SPA HTML fallback.
+    return is_healthy_response(resp.status_code, resp.headers.get("content-type", ""))
 
 
 class AppEndpoints:
