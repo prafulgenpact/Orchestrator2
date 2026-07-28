@@ -1,1 +1,1 @@
-20260728-observability-cost-tokens.md
+20260728-observability-report-command.md
