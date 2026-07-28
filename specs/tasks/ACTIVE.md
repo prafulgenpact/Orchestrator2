@@ -1,1 +1,1 @@
-20260728-observability-runs-cli.md
+20260728-observability-quality-alerts.md
