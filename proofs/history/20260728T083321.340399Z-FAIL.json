@@ -1,8 +1,10 @@
 {
   "schema": "proof/v1",
-  "created_utc": "2026-07-07T09:50:47+00:00",
-  "result": "PASS",
-  "failed_checks": [],
+  "created_utc": "2026-07-28T08:33:16+00:00",
+  "result": "FAIL",
+  "failed_checks": [
+    "py-format"
+  ],
   "missing_required_checks": [],
   "required_checks": [
     "py-lint",
@@ -12,11 +14,11 @@
     "e2e",
     "secrets"
   ],
-  "fingerprint": "d4b58774bd740024c8c196bff8a957e1bda6120a6f04b7ad2cac38eb5d623c17",
+  "fingerprint": "e2d347f1ab766746c4ebe37d600eab0b56e0db2d7a3bf75d1d4d282e101f4da4",
   "git": {
-    "commit": "9115e56975f40ae8968ffeac12be51747aa096bd",
+    "commit": "34dfad522b4f9a71b14b1f8d274f5b01a7ac339c",
     "branch": "Orchestrator2",
-    "dirty_tracked_files": false
+    "dirty_tracked_files": true
   },
   "checks": [
     {
@@ -27,26 +29,26 @@
     },
     {
       "name": "py-format",
-      "status": "pass",
+      "status": "fail",
       "duration_s": 0,
       "evidence": "reports/py-format.log"
     },
     {
       "name": "py-types",
       "status": "pass",
-      "duration_s": 1,
+      "duration_s": 5,
       "evidence": "reports/py-types.log"
     },
     {
       "name": "py-unit",
       "status": "pass",
-      "duration_s": 5,
+      "duration_s": 8,
       "evidence": "reports/py-unit.log"
     },
     {
       "name": "e2e",
       "status": "pass",
-      "duration_s": 2,
+      "duration_s": 3,
       "evidence": "reports/e2e.log"
     },
     {
@@ -58,39 +60,39 @@
     {
       "name": "secrets-gitleaks",
       "status": "pass",
-      "duration_s": 0,
+      "duration_s": 2,
       "evidence": "reports/secrets-gitleaks.log"
     },
     {
       "name": "dep-audit",
       "status": "pass",
-      "duration_s": 30,
+      "duration_s": 31,
       "evidence": "reports/dep-audit.log"
     },
     {
       "name": "diff-cover",
       "status": "pass",
-      "duration_s": 0,
+      "duration_s": 1,
       "evidence": "reports/diff-cover.log"
     }
   ],
   "tests": {
     "unit": {
-      "tests": 158,
+      "tests": 835,
       "failures": 0,
       "errors": 0,
       "skipped": 0,
-      "time_s": 1.72
+      "time_s": 5.87
     },
     "e2e": {
       "tests": 2,
       "failures": 0,
       "errors": 0,
       "skipped": 0,
-      "time_s": 0.47
+      "time_s": 1.36
     },
     "web_e2e": null,
-    "coverage_pct": 100.0
+    "coverage_pct": 95.79
   },
   "environment": {
     "python": "Python 3.10.0",
@@ -99,5 +101,5 @@
     "pytest": "pytest 8.3.2",
     "os": "Darwin 25.5.0"
   },
-  "content_hash": "b42a61c0fb1070157494b238213eabe022abf2da92242c6b02bf094434db2016"
+  "content_hash": "bc44f8793a6cc752350db23420b78473f6ae900898b828bfefcfbc83d72597fd"
 }
