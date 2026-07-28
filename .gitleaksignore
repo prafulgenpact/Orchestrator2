@@ -1,0 +1,8 @@
+# gitleaks allowlist — reviewed like code.
+# Each line is a finding fingerprint (commit:file:rule:line) that is a deliberate, non-secret
+# test fixture, not a real credential.
+
+# A fake OpenAI/Anthropic-style key used to prove secret REDACTION in the observability tests.
+# It is a redaction fixture, never a live key; it lives in immutable history so it is allowlisted
+# by fingerprint here (the working-tree copy has since been defused).
+88ce2dcd921a1da0570558ee2aed9b154b4d9c97:tests/unit/test_observability.py:generic-api-key:299

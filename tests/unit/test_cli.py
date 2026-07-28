@@ -307,3 +307,65 @@ def test_execute_selector_error_is_honest_not_web(capsys: pytest.CaptureFixture[
     assert "could not be completed" in out
     assert "ArXiv Paper Guide" in out
     assert "Web Search" not in out  # no web substitution
+
+
+# --- `orchestrator runs` command (Step C) -----------------------------------
+
+
+def _seed_run(tmp_path: Any, monkeypatch: pytest.MonkeyPatch) -> str:
+    """Record one dry-run into tmp_path and return its run_id (no network; uses FakeLLM)."""
+    from orchestrator.observability import list_runs
+
+    monkeypatch.setenv("ORCHESTRATOR_OBS_ROOT", str(tmp_path))
+    assert main(["learn transformers"], client=FakeLLM([_valid_response()])) == 0
+    return list_runs(str(tmp_path))[0]["run_id"]
+
+
+def test_runs_list_command(
+    tmp_path: Any, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    rid = _seed_run(tmp_path, monkeypatch)
+    capsys.readouterr()  # discard the seed run's output
+    rc = main(["runs", "--root", str(tmp_path), "list"])
+    out = capsys.readouterr().out
+    assert rc == 0
+    assert "WHEN" in out
+    assert rid[:12] in out
+
+
+def test_runs_list_kpis(
+    tmp_path: Any, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    _seed_run(tmp_path, monkeypatch)
+    capsys.readouterr()
+    rc = main(["runs", "--root", str(tmp_path), "list", "--kpis"])
+    out = capsys.readouterr().out
+    assert rc == 0
+    assert "Runs" in out and "Latency" in out
+
+
+def test_runs_show_command(
+    tmp_path: Any, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    rid = _seed_run(tmp_path, monkeypatch)
+    capsys.readouterr()
+    rc = main(["runs", "--root", str(tmp_path), "show", rid])
+    out = capsys.readouterr().out
+    assert rc == 0
+    assert f"Run {rid}" in out
+    assert "Steps:" in out
+
+
+def test_runs_show_unknown_id(tmp_path: Any, capsys: pytest.CaptureFixture[str]) -> None:
+    rc = main(["runs", "--root", str(tmp_path), "show", "deadbeef"])
+    err = capsys.readouterr().err
+    assert rc == 5
+    assert "no run" in err
+
+
+def test_runs_command_offline_empty(tmp_path: Any, capsys: pytest.CaptureFixture[str]) -> None:
+    # No client, no registry, no network: an empty store lists cleanly.
+    rc = main(["runs", "--root", str(tmp_path), "list"])
+    out = capsys.readouterr().out
+    assert rc == 0
+    assert "No runs recorded yet." in out

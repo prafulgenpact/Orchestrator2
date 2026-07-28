@@ -1,8 +1,20 @@
 # Project State — A multi agent orchestrator system calling relevant apps basis intent recognition
 
-Last updated: 2026-07-28 (observability-audit-trail task)
+Last updated: 2026-07-28 (observability-runs-cli task)
 
 ## Done (most recent first)
+
+- 2026-07-28 observability-runs-cli (Observability Step C). Saved runs are now browsable without a
+  UI. observability.py gains a UI-agnostic read service — list_runs(root, limit, status) (recent
+  runs, newest first) and kpis(root) (totals, status counts, run-latency p50/p95/p99, per-app
+  usage, avg routing confidence, fallback/no-match rates; empty store → zeros) — plus text
+  renderers. The CLI gains an offline `orchestrator runs list` (with --kpis/--limit/--status/--json)
+  and `runs show <id>` (full per-step drill-down; exit 5 on unknown id), routed at the top of main
+  before any registry/client/network so it works with no LLM and never records. Also fixed test
+  hygiene: an autouse conftest fixture points ORCHESTRATOR_OBS_ROOT at a per-test tmp dir, so the
+  suite no longer litters the repo root with runs/logs/observability.db (a side effect introduced
+  when Step A wired recording into the CLI). make verify PASS; eval 16/16. The read service is the
+  stable contract the deferred Step E dashboard will bind to.
 
 - 2026-07-28 observability-audit-trail (Observability Step B, part 1). The saved audit trail is now
   defensible. (a) Tamper-evidence: logs/events.jsonl is a hash chain — each line carries seq +

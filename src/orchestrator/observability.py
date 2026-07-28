@@ -29,6 +29,7 @@ import os
 import re
 import sqlite3
 import uuid
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -435,6 +436,220 @@ def get_run(run_id: str, *, root: str | os.PathLike[str] | None = None) -> dict[
         return None
     data: dict[str, Any] = json.loads(path.read_text())
     return data
+
+
+# --- read service (UI-agnostic; the CLI now and a future dashboard both bind to this) ---
+
+_RUN_SUMMARY_COLS = (
+    "run_id",
+    "started_at",
+    "task",
+    "status",
+    "exit_code",
+    "duration_s",
+    "n_subtasks",
+    "model",
+    "mode",
+)
+
+
+def _open_db(root: str | os.PathLike[str] | None) -> sqlite3.Connection | None:
+    """Open the store read-only-ish, or None if it was never created."""
+    path = _db_path(_resolve_root(root))
+    if not path.exists():
+        return None
+    conn = sqlite3.connect(path)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+
+def list_runs(
+    root: str | os.PathLike[str] | None = None,
+    *,
+    limit: int = 20,
+    status: str | None = None,
+) -> list[dict[str, Any]]:
+    """Recent runs as summary dicts, newest first. Empty list when nothing has been saved yet."""
+    conn = _open_db(root)
+    if conn is None:
+        return []
+    try:
+        sql = f"SELECT {', '.join(_RUN_SUMMARY_COLS)} FROM runs"
+        params: list[Any] = []
+        if status:
+            sql += " WHERE status = ?"
+            params.append(status)
+        sql += " ORDER BY started_at DESC LIMIT ?"
+        params.append(limit)
+        return [dict(row) for row in conn.execute(sql, params)]
+    finally:
+        conn.close()
+
+
+def _percentile(values: list[float], q: float) -> float:
+    """Linear-interpolated q-quantile (q in [0,1]); 0.0 for an empty list."""
+    if not values:
+        return 0.0
+    ordered = sorted(values)
+    if len(ordered) == 1:
+        return round(ordered[0], 3)
+    pos = (len(ordered) - 1) * q
+    low = int(pos)
+    high = min(low + 1, len(ordered) - 1)
+    interp = ordered[low] + (ordered[high] - ordered[low]) * (pos - low)
+    return round(interp, 3)
+
+
+def _empty_kpis() -> dict[str, Any]:
+    return {
+        "total_runs": 0,
+        "success_rate": 0.0,
+        "status_counts": {},
+        "latency_s": {"p50": 0.0, "p95": 0.0, "p99": 0.0, "max": 0.0},
+        "per_app": [],
+        "avg_confidence": 0.0,
+        "fallback_rate": 0.0,
+        "no_match_rate": 0.0,
+        "runs_by_day": {},
+    }
+
+
+def _day(epoch: float) -> str:
+    """UTC date (YYYY-MM-DD) for a run's start time — the bucket key for runs-per-day."""
+    return datetime.fromtimestamp(epoch, tz=timezone.utc).strftime("%Y-%m-%d")
+
+
+def _per_app(steps: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    apps: dict[str, dict[str, Any]] = {}
+    for step in steps:
+        bucket = apps.setdefault(
+            step["app_id"],
+            {"app_id": step["app_id"], "calls": 0, "ok": 0, "error": 0, "no_match": 0, "_dur": 0.0},
+        )
+        bucket["calls"] += 1
+        bucket["_dur"] += step["duration_s"] or 0.0
+        if step["status"] in ("ok", "error", "no_match"):
+            bucket[step["status"]] += 1
+    rows = []
+    for bucket in sorted(apps.values(), key=lambda b: b["calls"], reverse=True):
+        calls = bucket["calls"]
+        rows.append(
+            {
+                "app_id": bucket["app_id"],
+                "calls": calls,
+                "ok": bucket["ok"],
+                "error": bucket["error"],
+                "no_match": bucket["no_match"],
+                "avg_duration_s": round(bucket["_dur"] / calls, 3) if calls else 0.0,
+            }
+        )
+    return rows
+
+
+def kpis(root: str | os.PathLike[str] | None = None) -> dict[str, Any]:
+    """Aggregate the whole store into headline KPIs. An empty store returns zeros, not an error.
+
+    Reads the SQLite summary tables (never scans the JSON files), so it stays fast as history grows.
+    Cost/token KPIs are added once token capture lands (a separate task)."""
+    conn = _open_db(root)
+    if conn is None:
+        return _empty_kpis()
+    try:
+        runs = [dict(row) for row in conn.execute("SELECT * FROM runs")]
+        steps = [dict(row) for row in conn.execute("SELECT * FROM steps")]
+    finally:
+        conn.close()
+    if not runs:
+        return _empty_kpis()
+
+    total = len(runs)
+    status_counts: dict[str, int] = {}
+    for run in runs:
+        status_counts[run["status"]] = status_counts.get(run["status"], 0) + 1
+    durations = [run["duration_s"] for run in runs if run["duration_s"] is not None]
+    runs_by_day: dict[str, int] = {}
+    for run in runs:
+        if run["started_at"] is not None:
+            day = _day(run["started_at"])
+            runs_by_day[day] = runs_by_day.get(day, 0) + 1
+
+    n_steps = len(steps) or 1  # guard div-by-zero; rates read 0 when there are no steps
+    confidences = [s["confidence"] for s in steps if s["confidence"] is not None]
+    return {
+        "total_runs": total,
+        "success_rate": round(status_counts.get("ok", 0) / total, 3),
+        "status_counts": status_counts,
+        "latency_s": {
+            "p50": _percentile(durations, 0.50),
+            "p95": _percentile(durations, 0.95),
+            "p99": _percentile(durations, 0.99),
+            "max": round(max(durations), 3) if durations else 0.0,
+        },
+        "per_app": _per_app(steps),
+        "avg_confidence": round(sum(confidences) / len(confidences), 3) if confidences else 0.0,
+        "fallback_rate": round(sum(1 for s in steps if s["type"] == "fallback") / n_steps, 3),
+        "no_match_rate": round(sum(1 for s in steps if s["status"] == "no_match") / n_steps, 3),
+        "runs_by_day": dict(sorted(runs_by_day.items())),
+    }
+
+
+# --- terminal rendering ------------------------------------------------------
+
+
+def _clock(epoch: float | None) -> str:
+    if epoch is None:
+        return "—"
+    return datetime.fromtimestamp(epoch, tz=timezone.utc).strftime("%Y-%m-%d %H:%M")
+
+
+def _clip(text: str, width: int) -> str:
+    return text if len(text) <= width else text[: width - 1] + "…"
+
+
+def render_runs_list(rows: list[dict[str, Any]]) -> str:
+    """A compact table of recent runs for `orchestrator runs list`."""
+    if not rows:
+        return "No runs recorded yet."
+    header = f"{'WHEN':<16}  {'RUN':<12}  {'STATUS':<8}  {'TIME':>7}  {'STEPS':>5}  TASK"
+    lines = [header, "-" * len(header)]
+    for row in rows:
+        lines.append(
+            f"{_clock(row['started_at']):<16}  "
+            f"{row['run_id'][:12]:<12}  "
+            f"{row['status']:<8}  "
+            f"{row['duration_s']:>6.1f}s  "
+            f"{row['n_subtasks']:>5}  "
+            f"{_clip(row['task'], 48)}"
+        )
+    return "\n".join(lines)
+
+
+def render_run_detail(record: dict[str, Any]) -> str:
+    """One run's full drill-down for `orchestrator runs show <id>`."""
+    lines = [
+        f"Run {record['run_id']}",
+        f"  task     : {record['task']}",
+        f"  when     : {_clock(record.get('started_at'))}   ({record['duration_s']:.1f}s)",
+        f"  status   : {record['status']}  (exit {record['exit_code']})",
+        f"  model    : {record['model']}   mode={record['mode']}",
+        f"  subtasks : {record['n_subtasks']}   counts={record['counts']}",
+        "",
+        "Steps:",
+    ]
+    for i, step in enumerate(record["steps"], start=1):
+        routing = step.get("routing") or {}
+        lines.append(
+            f"  {i}. [{step['status']}] {step['app_id']}"
+            f" — op={step['operation']}  ({step['duration_s']:.1f}s)"
+            f"  confidence={routing.get('confidence')}"
+        )
+        if routing.get("rationale"):
+            lines.append(f"       why : {_clip(routing['rationale'], 90)}")
+        if step.get("error"):
+            lines.append(f"       error: {_clip(str(step['error']), 90)}")
+        if step.get("note"):
+            lines.append(f"       note : {_clip(str(step['note']), 90)}")
+    return "\n".join(lines)
 
 
 # --- reusable entry point ----------------------------------------------------

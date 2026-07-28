@@ -7,10 +7,20 @@ that returns queued responses and records the requests it received — no networ
 from __future__ import annotations
 
 from collections.abc import Callable, Sequence
+from pathlib import Path
 
 import pytest
 
 from orchestrator.llm.base import LLMRequest
+
+
+@pytest.fixture(autouse=True)
+def _isolate_observability(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Keep run-recording out of the repo. Recording defaults to the current directory, so without
+    this every test that invokes the CLI would litter the repo root with runs/, logs/, and
+    observability.db. Point it at a per-test tmp dir; tests that assert on saved runs override
+    ORCHESTRATOR_OBS_ROOT explicitly."""
+    monkeypatch.setenv("ORCHESTRATOR_OBS_ROOT", str(tmp_path / "_obs"))
 
 
 class FakeLLM:

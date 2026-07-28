@@ -12,10 +12,12 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import json
 import os
 import sys
 import time
 from pathlib import Path
+from typing import Any
 
 import httpx
 
@@ -26,7 +28,15 @@ from orchestrator.llm import VALID_MODES, get_client
 from orchestrator.llm.base import LLMClient, LLMError
 from orchestrator.llm.foundry import resolve_model
 from orchestrator.models import Plan, PlanResult
-from orchestrator.observability import new_run_id, record_run
+from orchestrator.observability import (
+    get_run,
+    kpis,
+    list_runs,
+    new_run_id,
+    record_run,
+    render_run_detail,
+    render_runs_list,
+)
 from orchestrator.planner import PlannerError, plan_task
 from orchestrator.registry import Registry, RegistryError, load_registry
 from orchestrator.render import render_chart_paths, render_execution, render_human, render_json
@@ -76,7 +86,71 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
+def _runs_command(argv: list[str]) -> int:
+    """`orchestrator runs list|show ...` — browse saved runs from the store. Read-only: no LLM,
+    registry, or network, so it works offline and never records or invokes an app.
+
+    Exit codes: 0 success, 2 usage (argparse), 5 no such run.
+    """
+    parser = argparse.ArgumentParser(prog="orchestrator runs", description="Browse saved runs.")
+    parser.add_argument("--root", help="observability root (default: cwd / ORCHESTRATOR_OBS_ROOT)")
+    parser.add_argument("--json", action="store_true", help="emit JSON instead of a table")
+    sub = parser.add_subparsers(dest="command", required=True)
+
+    p_list = sub.add_parser("list", help="recent runs, newest first")
+    p_list.add_argument("--limit", type=int, default=20, help="max runs to show (default 20)")
+    p_list.add_argument("--status", help="only runs with this status (ok/partial/error)")
+    p_list.add_argument("--kpis", action="store_true", help="show aggregate KPIs instead of a list")
+
+    p_show = sub.add_parser("show", help="one run's full per-step detail")
+    p_show.add_argument("run_id", help="the run id (full or a unique prefix is not accepted)")
+
+    args = parser.parse_args(argv)
+    root = args.root
+
+    if args.command == "list":
+        if args.kpis:
+            data = kpis(root)
+            print(json.dumps(data, indent=2) if args.json else _render_kpis(data))
+            return 0
+        rows = list_runs(root, limit=args.limit, status=args.status)
+        print(json.dumps(rows, indent=2, default=str) if args.json else render_runs_list(rows))
+        return 0
+
+    record = get_run(args.run_id, root=root)
+    if record is None:
+        print(f"error: no run {args.run_id!r} found", file=sys.stderr)
+        return 5
+    print(json.dumps(record, indent=2, default=str) if args.json else render_run_detail(record))
+    return 0
+
+
+def _render_kpis(data: dict[str, Any]) -> str:
+    """A short human summary of the KPI dict (the --json form has the full detail)."""
+    lat = data["latency_s"]
+    lines = [
+        f"Runs        : {data['total_runs']}   success {float(data['success_rate']) * 100:.0f}%",
+        f"By status   : {data['status_counts']}",
+        f"Latency (s) : p50 {lat['p50']}  p95 {lat['p95']}  p99 {lat['p99']}  max {lat['max']}",
+        f"Confidence  : avg {data['avg_confidence']}",
+        f"Fallback    : {float(data['fallback_rate']) * 100:.0f}%   "
+        f"no-match {float(data['no_match_rate']) * 100:.0f}%",
+        "Per app     :",
+    ]
+    for app in data["per_app"]:
+        lines.append(
+            f"   {app['app_id']:<22} calls {app['calls']:>3}  "
+            f"ok {app['ok']:>3}  err {app['error']:>3}  no_match {app['no_match']:>3}  "
+            f"avg {app['avg_duration_s']}s"
+        )
+    return "\n".join(lines)
+
+
 def main(argv: list[str] | None = None, *, client: LLMClient | None = None) -> int:
+    raw = sys.argv[1:] if argv is None else argv
+    if raw and raw[0] == "runs":
+        return _runs_command(raw[1:])
+
     args = _parse_args(argv)
     started_at = time.time()
     run_id = args.run_id or new_run_id()
