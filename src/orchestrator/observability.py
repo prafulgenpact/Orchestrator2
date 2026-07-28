@@ -126,6 +126,26 @@ def _counts(steps: list[dict[str, Any]]) -> dict[str, int]:
     return counts
 
 
+def _quality(steps: list[dict[str, Any]]) -> dict[str, Any] | None:
+    """A per-run quality score derived from what executed — no LLM/executor change needed.
+
+    ``score`` = clean-ok steps / executed steps, where a *clean* ok step returned data and was NOT
+    flagged by the advisory relevance judge (it carries no caution ``note``). None for a dry run
+    (nothing executed), so planned-only runs don't drag the quality average down."""
+    executed = [s for s in steps if s["status"] != "planned"]
+    if not executed:
+        return None
+    clean_ok = sum(1 for s in executed if s["status"] == "ok" and not s.get("note"))
+    return {
+        "score": round(clean_ok / len(executed), 3),
+        "executed": len(executed),
+        "clean_ok": clean_ok,
+        "cautions": sum(1 for s in executed if s["status"] == "ok" and s.get("note")),
+        "no_match": sum(1 for s in executed if s["status"] == "no_match"),
+        "errors": sum(1 for s in executed if s["status"] == "error"),
+    }
+
+
 def build_run_record(
     plan: Plan,
     result: PlanResult | None,
@@ -165,6 +185,7 @@ def build_run_record(
         "exit_code": exit_code,
         "n_subtasks": len(steps),
         "counts": counts,
+        "quality": _quality(steps),
         "answer": answer,
         "steps": steps,
     }
@@ -292,7 +313,8 @@ CREATE TABLE IF NOT EXISTS runs (
     n_no_match INTEGER,
     n_fallback INTEGER,
     answer_mode TEXT,
-    n_sources INTEGER
+    n_sources INTEGER,
+    quality_score REAL
 );
 CREATE TABLE IF NOT EXISTS steps (
     step_id TEXT PRIMARY KEY,
@@ -316,21 +338,32 @@ def _db_path(root: Path) -> Path:
     return root / "observability.db"
 
 
+# Columns added after the initial schema shipped — applied to pre-existing local DBs on open so an
+# older observability.db is migrated forward instead of failing the insert. (table, column, type)
+_ADDED_COLUMNS = (("runs", "quality_score", "REAL"),)
+
+
 def _connect(root: Path) -> sqlite3.Connection:
-    """Open observability.db under ``root``, creating the schema on first use."""
+    """Open observability.db under ``root``, creating the schema (and migrating it) on first use."""
     root.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(_db_path(root))
     conn.executescript(_DDL)
+    for table, column, coltype in _ADDED_COLUMNS:
+        existing = {row[1] for row in conn.execute(f"PRAGMA table_info({table})")}
+        if column not in existing:
+            conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {coltype}")
+    conn.commit()
     return conn
 
 
 def _insert_rows(record: dict[str, Any], root: Path) -> None:
     counts = record["counts"]
     answer = record["answer"] or {}
+    quality = record.get("quality") or {}
     conn = _connect(root)
     try:
         conn.execute(
-            "INSERT OR REPLACE INTO runs VALUES " "(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            "INSERT OR REPLACE INTO runs VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
             (
                 record["run_id"],
                 record["session_id"],
@@ -351,6 +384,7 @@ def _insert_rows(record: dict[str, Any], root: Path) -> None:
                 counts.get("fallback", 0),
                 answer.get("mode"),
                 answer.get("n_sources"),
+                quality.get("score"),
             ),
         )
         conn.execute("DELETE FROM steps WHERE run_id = ?", (record["run_id"],))
@@ -448,6 +482,7 @@ _RUN_SUMMARY_COLS = (
     "exit_code",
     "duration_s",
     "n_subtasks",
+    "quality_score",
     "model",
     "mode",
 )
@@ -510,7 +545,24 @@ def _empty_kpis() -> dict[str, Any]:
         "avg_confidence": 0.0,
         "fallback_rate": 0.0,
         "no_match_rate": 0.0,
+        "quality": {"avg_score": None, "scored_runs": 0, "by_day": {}},
         "runs_by_day": {},
+    }
+
+
+def _quality_aggregate(runs: list[dict[str, Any]]) -> dict[str, Any]:
+    """Average quality overall and per day, over runs that executed (score is not None)."""
+    scored = [(r["started_at"], r["quality_score"]) for r in runs if r["quality_score"] is not None]
+    if not scored:
+        return {"avg_score": None, "scored_runs": 0, "by_day": {}}
+    by_day: dict[str, list[float]] = {}
+    for started_at, score in scored:
+        if started_at is not None:
+            by_day.setdefault(_day(started_at), []).append(score)
+    return {
+        "avg_score": round(sum(s for _, s in scored) / len(scored), 3),
+        "scored_runs": len(scored),
+        "by_day": {day: round(sum(v) / len(v), 3) for day, v in sorted(by_day.items())},
     }
 
 
@@ -589,8 +641,136 @@ def kpis(root: str | os.PathLike[str] | None = None) -> dict[str, Any]:
         "avg_confidence": round(sum(confidences) / len(confidences), 3) if confidences else 0.0,
         "fallback_rate": round(sum(1 for s in steps if s["type"] == "fallback") / n_steps, 3),
         "no_match_rate": round(sum(1 for s in steps if s["status"] == "no_match") / n_steps, 3),
+        "quality": _quality_aggregate(runs),
         "runs_by_day": dict(sorted(runs_by_day.items())),
     }
+
+
+# --- health alerts -----------------------------------------------------------
+
+# Fixed thresholds are intentionally conservative defaults for a local tool; pass your own to
+# alerts(). A breach is a "warning" (2x over → "critical"). quality_drop compares the recent half of
+# scored runs against the older half — a rolling-baseline regression signal, not an absolute floor.
+DEFAULT_THRESHOLDS: dict[str, float] = {
+    "error_rate": 0.2,
+    "no_match_rate": 0.2,
+    "fallback_rate": 0.5,
+    "p95_latency_s": 60.0,
+    "min_quality": 0.7,
+    "quality_drop": 0.15,
+}
+
+
+def _alert(metric: str, value: float, threshold: float, message: str) -> dict[str, Any]:
+    level = "critical" if value >= threshold * 2 else "warning"
+    return {
+        "level": level,
+        "metric": metric,
+        "value": round(value, 3),
+        "threshold": threshold,
+        "message": message,
+    }
+
+
+def _quality_drop(runs: list[dict[str, Any]]) -> float:
+    """How far the recent half of scored runs has fallen below the older half (0 if not enough data
+    or no drop). Runs must be time-ordered oldest→newest by the caller."""
+    scores = [r["quality_score"] for r in runs if r["quality_score"] is not None]
+    if len(scores) < 4:
+        return 0.0
+    mid = len(scores) // 2
+    older = sum(scores[:mid]) / mid
+    recent = sum(scores[mid:]) / (len(scores) - mid)
+    return float(max(0.0, round(older - recent, 3)))
+
+
+def alerts(
+    root: str | os.PathLike[str] | None = None,
+    *,
+    thresholds: dict[str, float] | None = None,
+) -> list[dict[str, Any]]:
+    """Health alerts for the whole store: one entry per breached threshold, empty when healthy.
+
+    Reads the same SQLite summary as kpis(), so it is cheap and offline. Signals: run error rate,
+    step no-match/fallback rates, p95 latency, an absolute quality floor, and a recent-vs-older
+    quality drop."""
+    limits = {**DEFAULT_THRESHOLDS, **(thresholds or {})}
+    k = kpis(root)
+    if k["total_runs"] == 0:
+        return []
+    conn = _open_db(root)
+    runs: list[dict[str, Any]] = []
+    if conn is not None:
+        try:
+            runs = [dict(r) for r in conn.execute("SELECT * FROM runs ORDER BY started_at")]
+        finally:
+            conn.close()
+
+    fired: list[dict[str, Any]] = []
+    error_rate = k["status_counts"].get("error", 0) / k["total_runs"]
+    if error_rate > limits["error_rate"]:
+        fired.append(
+            _alert("error_rate", error_rate, limits["error_rate"], "run error rate is high")
+        )
+    if k["no_match_rate"] > limits["no_match_rate"]:
+        fired.append(
+            _alert(
+                "no_match_rate",
+                k["no_match_rate"],
+                limits["no_match_rate"],
+                "steps often return no match",
+            )
+        )
+    if k["fallback_rate"] > limits["fallback_rate"]:
+        fired.append(
+            _alert(
+                "fallback_rate",
+                k["fallback_rate"],
+                limits["fallback_rate"],
+                "steps often fall back to web",
+            )
+        )
+    p95 = k["latency_s"]["p95"]
+    if p95 > limits["p95_latency_s"]:
+        fired.append(
+            _alert("p95_latency_s", p95, limits["p95_latency_s"], "p95 run latency is high")
+        )
+    avg_q = k["quality"]["avg_score"]
+    if avg_q is not None and avg_q < limits["min_quality"]:
+        fired.append(
+            _alert(
+                "min_quality", avg_q, limits["min_quality"], "average quality is below the floor"
+            )
+        )
+    drop = _quality_drop(runs)
+    if drop > limits["quality_drop"]:
+        fired.append(
+            _alert(
+                "quality_drop", drop, limits["quality_drop"], "quality is dropping vs the baseline"
+            )
+        )
+    return fired
+
+
+def _log_run_alerts(record: dict[str, Any]) -> None:
+    """Emit a per-run WARNING when the just-recorded run itself looks unhealthy (failed steps or low
+    quality). Best-effort and store-independent — a quick heads-up in the logs at record time."""
+    quality = record.get("quality") or {}
+    if quality.get("errors") or quality.get("no_match"):
+        _log.warning(
+            "run %s had %s failed and %s no-match step(s)",
+            record["run_id"],
+            quality.get("errors", 0),
+            quality.get("no_match", 0),
+        )
+    score = quality.get("score")
+    if score is not None and score < DEFAULT_THRESHOLDS["min_quality"]:
+        _log.warning(
+            "run %s quality score %.2f is below %.2f",
+            record["run_id"],
+            score,
+            DEFAULT_THRESHOLDS["min_quality"],
+        )
 
 
 # --- terminal rendering ------------------------------------------------------
@@ -652,6 +832,19 @@ def render_run_detail(record: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
+def render_alerts(fired: list[dict[str, Any]]) -> str:
+    """Health alerts for `orchestrator runs alerts`."""
+    if not fired:
+        return "No alerts — the store looks healthy."
+    lines = [f"{len(fired)} alert(s):"]
+    for a in fired:
+        lines.append(
+            f"  [{a['level'].upper()}] {a['metric']} = {a['value']} "
+            f"(threshold {a['threshold']}) — {a['message']}"
+        )
+    return "\n".join(lines)
+
+
 # --- reusable entry point ----------------------------------------------------
 
 
@@ -694,5 +887,9 @@ def record_run(
         _log.warning("observability could not build a run record: %s", exc)
         return None
     save_run(record, root=root)
+    try:
+        _log_run_alerts(record)
+    except Exception as exc:  # a logging helper must never break a run either
+        _log.warning("observability could not check run alerts: %s", exc)
     run_id_out: str = record["run_id"]
     return run_id_out

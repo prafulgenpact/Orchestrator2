@@ -14,6 +14,7 @@ import sqlite3
 from orchestrator.llm.base import LLMRequest
 from orchestrator.models import AppSelection, Plan, PlanResult, Subtask, SubtaskResult
 from orchestrator.observability import (
+    alerts,
     build_run_record,
     get_run,
     kpis,
@@ -437,3 +438,186 @@ def test_renderers_smoke(tmp_path) -> None:
     detail = render_run_detail(get_run("d" * 32, root=tmp_path))
     assert "Run dddddddddddd" in detail and "stanford-llm" in detail
     assert render_runs_list([]) == "No runs recorded yet."
+
+
+# --- Step D: quality + health alerts ----------------------------------------
+
+
+def _one_step_result(status: str, note: str | None = None) -> PlanResult:
+    return PlanResult(
+        task="learn transformers",
+        intent="learning plan",
+        results=(
+            SubtaskResult(
+                "t1",
+                "stanford-llm",
+                "Stanford LLM",
+                status,
+                "get_course",
+                {"text": "x"},
+                "http://app/1",
+                None,
+                1.0,
+                note=note,
+            ),
+        ),
+    )
+
+
+def _save_run(
+    tmp_path,
+    *,
+    run_id: str,
+    started_at: float,
+    status: str,
+    note: str | None = None,
+    exit_code: int = 0,
+) -> dict:
+    record = build_run_record(
+        _plan(),
+        _one_step_result(status, note),
+        _synthesis(),
+        mode="replay",
+        model="m",
+        exit_code=exit_code,
+        started_at=started_at,
+        ended_at=started_at + 1.0,
+        run_id=run_id,
+    )
+    save_run(record, root=tmp_path)
+    return record
+
+
+def test_quality_block() -> None:
+    record = build_run_record(
+        _plan(),
+        _result(),
+        _synthesis(),
+        mode="replay",
+        model="m",
+        exit_code=0,
+        started_at=1.0,
+        ended_at=2.0,
+    )
+    q = record["quality"]
+    assert q["executed"] == 2  # both subtasks ran
+    assert q["clean_ok"] == 2 and q["cautions"] == 0
+    assert q["score"] == 1.0
+
+
+def test_quality_counts_cautions_and_failures() -> None:
+    result = PlanResult(
+        task="t",
+        intent="i",
+        results=(
+            SubtaskResult("t1", "a", "A", "ok", "op", {"x": 1}, "u", None, 1.0),
+            SubtaskResult(
+                "t2", "b", "B", "ok", "op", {"x": 1}, "u", None, 1.0, note="maybe off-topic"
+            ),
+            SubtaskResult("t3", "c", "C", "no_match", "op", None, "u", "empty", 1.0),
+        ),
+    )
+    # _plan() only has t1/t2; use a plan whose subtasks match by building directly is overkill —
+    # instead score the steps via a record built from a matching plan is not needed: quality reads
+    # the step statuses, so assert through build with this result against a 3-subtask plan.
+    plan = Plan(
+        task="t",
+        intent="i",
+        model="m",
+        prompt_version="1",
+        subtasks=(
+            Subtask("t1", "T1", "d", (), _app("a", "A")),
+            Subtask("t2", "T2", "d", (), _app("b", "B")),
+            Subtask("t3", "T3", "d", (), _app("c", "C")),
+        ),
+    )
+    record = build_run_record(
+        plan,
+        result,
+        None,
+        mode="replay",
+        model="m",
+        exit_code=0,
+        started_at=1.0,
+        ended_at=2.0,
+    )
+    q = record["quality"]
+    assert q["executed"] == 3
+    assert q["clean_ok"] == 1  # only t1 is a clean ok
+    assert q["cautions"] == 1 and q["no_match"] == 1
+    assert q["score"] == round(1 / 3, 3)
+
+
+def test_dry_run_has_no_quality() -> None:
+    record = _record(dry_run=True)
+    assert record["quality"] is None
+
+
+def test_quality_score_persisted(tmp_path) -> None:
+    _save_run(tmp_path, run_id="a" * 32, started_at=1000.0, status="ok")
+    row = list_runs(tmp_path)[0]
+    assert row["quality_score"] == 1.0
+
+
+def test_missing_quality_column_is_migrated(tmp_path) -> None:
+    # Simulate a pre-Step-D DB: a runs table without the quality_score column.
+    db = tmp_path / "observability.db"
+    conn = sqlite3.connect(db)
+    conn.execute(
+        "CREATE TABLE runs (run_id TEXT PRIMARY KEY, session_id TEXT, task TEXT, intent TEXT, "
+        "model TEXT, mode TEXT, started_at REAL, ended_at REAL, duration_s REAL, status TEXT, "
+        "exit_code INTEGER, n_subtasks INTEGER, n_ok INTEGER, n_error INTEGER, n_skipped INTEGER, "
+        "n_no_match INTEGER, n_fallback INTEGER, answer_mode TEXT, n_sources INTEGER)"
+    )
+    conn.commit()
+    conn.close()
+
+    _save_run(tmp_path, run_id="b" * 32, started_at=1000.0, status="ok")  # must not crash
+    cols = {r[1] for r in sqlite3.connect(db).execute("PRAGMA table_info(runs)")}
+    assert "quality_score" in cols
+    assert list_runs(tmp_path)[0]["quality_score"] == 1.0
+
+
+def test_kpis_quality_aggregate(tmp_path) -> None:
+    _save_run(tmp_path, run_id="a" * 32, started_at=1000.0, status="ok")  # score 1.0
+    _save_run(tmp_path, run_id="b" * 32, started_at=2000.0, status="no_match")  # score 0.0
+    q = kpis(tmp_path)["quality"]
+    assert q["scored_runs"] == 2
+    assert q["avg_score"] == 0.5
+    assert len(q["by_day"]) >= 1
+
+
+def test_alerts_fire_on_breach(tmp_path) -> None:
+    # 4 clean runs then 3 failing runs: quality drops and the average falls below the floor.
+    for i in range(4):
+        _save_run(tmp_path, run_id=f"{i:032x}", started_at=1000.0 + i, status="ok")
+    for i in range(3):
+        _save_run(tmp_path, run_id=f"{i + 10:032x}", started_at=2000.0 + i, status="no_match")
+    fired = {a["metric"] for a in alerts(tmp_path)}
+    assert "min_quality" in fired
+    assert "quality_drop" in fired
+
+
+def test_alerts_empty_when_healthy(tmp_path) -> None:
+    for i in range(3):
+        _save_run(tmp_path, run_id=f"{i:032x}", started_at=1000.0 + i, status="ok")
+    assert alerts(tmp_path) == []
+    assert alerts(tmp_path / "nonexistent") == []  # empty store, no error
+
+
+def test_record_run_warns_on_bad_run(tmp_path, caplog) -> None:
+    import logging
+
+    with caplog.at_level(logging.WARNING, logger="orchestrator.observability"):
+        record_run(
+            _plan(),
+            _one_step_result("no_match"),
+            _synthesis(),
+            mode="replay",
+            model="m",
+            exit_code=0,
+            started_at=1.0,
+            ended_at=2.0,
+            root=tmp_path,
+        )
+    assert any("no-match" in m or "below" in m for m in caplog.messages)

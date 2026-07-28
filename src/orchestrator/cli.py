@@ -29,11 +29,13 @@ from orchestrator.llm.base import LLMClient, LLMError
 from orchestrator.llm.foundry import resolve_model
 from orchestrator.models import Plan, PlanResult
 from orchestrator.observability import (
+    alerts,
     get_run,
     kpis,
     list_runs,
     new_run_id,
     record_run,
+    render_alerts,
     render_run_detail,
     render_runs_list,
 )
@@ -105,6 +107,8 @@ def _runs_command(argv: list[str]) -> int:
     p_show = sub.add_parser("show", help="one run's full per-step detail")
     p_show.add_argument("run_id", help="the run id (full or a unique prefix is not accepted)")
 
+    sub.add_parser("alerts", help="health alerts (threshold breaches over the whole store)")
+
     args = parser.parse_args(argv)
     root = args.root
 
@@ -115,6 +119,11 @@ def _runs_command(argv: list[str]) -> int:
             return 0
         rows = list_runs(root, limit=args.limit, status=args.status)
         print(json.dumps(rows, indent=2, default=str) if args.json else render_runs_list(rows))
+        return 0
+
+    if args.command == "alerts":
+        fired = alerts(root)
+        print(json.dumps(fired, indent=2) if args.json else render_alerts(fired))
         return 0
 
     record = get_run(args.run_id, root=root)
@@ -128,10 +137,14 @@ def _runs_command(argv: list[str]) -> int:
 def _render_kpis(data: dict[str, Any]) -> str:
     """A short human summary of the KPI dict (the --json form has the full detail)."""
     lat = data["latency_s"]
+    quality = data["quality"]
+    avg_q = quality["avg_score"]
     lines = [
         f"Runs        : {data['total_runs']}   success {float(data['success_rate']) * 100:.0f}%",
         f"By status   : {data['status_counts']}",
         f"Latency (s) : p50 {lat['p50']}  p95 {lat['p95']}  p99 {lat['p99']}  max {lat['max']}",
+        f"Quality     : avg {avg_q if avg_q is not None else 'n/a'}"
+        f"  ({quality['scored_runs']} scored run(s))",
         f"Confidence  : avg {data['avg_confidence']}",
         f"Fallback    : {float(data['fallback_rate']) * 100:.0f}%   "
         f"no-match {float(data['no_match_rate']) * 100:.0f}%",

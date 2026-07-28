@@ -1,8 +1,23 @@
 # Project State — A multi agent orchestrator system calling relevant apps basis intent recognition
 
-Last updated: 2026-07-28 (observability-runs-cli task)
+Last updated: 2026-07-28 (observability-quality-alerts task)
 
 ## Done (most recent first)
+
+- 2026-07-28 observability-quality-alerts (Observability Step D). Runs now carry a quality score,
+  the store tracks quality over time, and threshold breaches surface as alerts. (a) Quality: each
+  executed run record gets a `quality` block (score = clean-ok steps / executed steps, where a
+  clean-ok step returned data and was NOT flagged by the advisory relevance judge; dry runs →
+  None). Persisted as `runs.quality_score` (added to the DDL; an idempotent ALTER migrates
+  pre-existing local DBs on open) and surfaced in list_runs + kpis (`quality`: avg_score, by_day,
+  scored_runs). (b) Alerts: alerts(root, thresholds) returns one entry per breached threshold —
+  error rate, no-match rate, fallback rate, p95 latency, an absolute quality floor, and a
+  recent-vs-older quality-drop — with warning/critical levels; record_run also logs a per-run
+  WARNING when a run has failed steps or low quality. (c) CLI: `orchestrator runs alerts` (+ --json)
+  and quality shown in `runs list --kpis`. All derived from data already captured — no LLM/executor
+  change — so make verify PASS and eval 16/16. DEFERRED: `promote <run_id>` into the eval dataset
+  (mutates the 16/16 release gate — its own task) and accurate cost/token capture (needs an
+  LLMClient contract change).
 
 - 2026-07-28 observability-runs-cli (Observability Step C). Saved runs are now browsable without a
   UI. observability.py gains a UI-agnostic read service — list_runs(root, limit, status) (recent

@@ -369,3 +369,50 @@ def test_runs_command_offline_empty(tmp_path: Any, capsys: pytest.CaptureFixture
     out = capsys.readouterr().out
     assert rc == 0
     assert "No runs recorded yet." in out
+
+
+def test_runs_alerts_command(tmp_path: Any, capsys: pytest.CaptureFixture[str]) -> None:
+    from orchestrator.models import AppSelection, Plan, PlanResult, Subtask, SubtaskResult
+    from orchestrator.observability import build_run_record, save_run
+
+    def _save(run_id: str, started_at: float, status: str) -> None:
+        app = AppSelection(app_id="a", app_name="A", rationale="r", confidence=0.9, fallback=False)
+        plan = Plan(
+            task="t",
+            intent="i",
+            model="m",
+            prompt_version="1",
+            subtasks=(Subtask("t1", "T", "d", (), app),),
+        )
+        result = PlanResult(
+            task="t",
+            intent="i",
+            results=(SubtaskResult("t1", "a", "A", status, "op", {"x": 1}, "u", None, 1.0),),
+        )
+        record = build_run_record(
+            plan,
+            result,
+            None,
+            mode="replay",
+            model="m",
+            exit_code=0,
+            started_at=started_at,
+            ended_at=started_at + 1.0,
+            run_id=run_id,
+        )
+        save_run(record, root=str(tmp_path))
+
+    # Empty store: no alerts.
+    assert main(["runs", "--root", str(tmp_path), "alerts"]) == 0
+    assert "No alerts" in capsys.readouterr().out
+
+    # 4 clean then 3 no-match runs -> quality alerts fire.
+    for i in range(4):
+        _save(f"{i:032x}", 1000.0 + i, "ok")
+    for i in range(3):
+        _save(f"{i + 10:032x}", 2000.0 + i, "no_match")
+    rc = main(["runs", "--root", str(tmp_path), "alerts"])
+    out = capsys.readouterr().out
+    assert rc == 0
+    assert "alert(s):" in out
+    assert "quality" in out
