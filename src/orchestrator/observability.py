@@ -146,6 +146,83 @@ def _quality(steps: list[dict[str, Any]]) -> dict[str, Any] | None:
     }
 
 
+# --- cost & token accounting -------------------------------------------------
+
+# Per-MILLION-token list-price ESTIMATES, matched by substring on the model id. Defaults for
+# visibility, not billing truth — override/extend with a JSON file at ORCHESTRATOR_PRICES, shaped
+# {"pattern": {"input":.., "output":.., "cache_read":.., "cache_write":..}} in $/MTok. A model that
+# matches no pattern keeps its exact token counts but is reported unpriced (cost is a lower bound).
+_DEFAULT_PRICES: dict[str, dict[str, float]] = {
+    "opus": {"input": 15.0, "output": 75.0, "cache_read": 1.5, "cache_write": 18.75},
+    "sonnet": {"input": 3.0, "output": 15.0, "cache_read": 0.3, "cache_write": 3.75},
+    "haiku": {"input": 0.8, "output": 4.0, "cache_read": 0.08, "cache_write": 1.0},
+}
+_PRICES_ENV = "ORCHESTRATOR_PRICES"
+_TOKEN_BUCKETS = ("input", "output", "cache_read", "cache_write")
+
+
+def _load_prices() -> dict[str, dict[str, float]]:
+    prices = {k: dict(v) for k, v in _DEFAULT_PRICES.items()}
+    path = os.environ.get(_PRICES_ENV)
+    if path:
+        try:
+            override = json.loads(Path(path).read_text())
+            for pattern, rate in override.items():
+                prices[pattern] = {**prices.get(pattern, {}), **rate}
+        except (OSError, ValueError) as exc:  # a bad price file must not break recording
+            _log.warning("could not load %s from %s: %s", _PRICES_ENV, path, exc)
+    return prices
+
+
+def _price_for(model: str, prices: dict[str, dict[str, float]]) -> dict[str, float] | None:
+    for pattern, rate in prices.items():
+        if pattern in model:
+            return rate
+    return None
+
+
+def cost_of(usage: list[dict[str, Any]]) -> dict[str, Any]:
+    """Roll a run's per-call token usage into total tokens + $ cost, broken down per model.
+
+    Tokens are exact (from the API); cost uses the configurable price table. A model with no known
+    price contributes 0 to cost and is listed in ``unpriced_models`` — so the figure is never
+    silently wrong, and its tokens still count."""
+    prices = _load_prices()
+    totals = dict.fromkeys(_TOKEN_BUCKETS, 0)
+    by_model: dict[str, dict[str, Any]] = {}
+    unpriced: set[str] = set()
+    cost_usd = 0.0
+    for event in usage:
+        model = str(event.get("model", ""))
+        rate = _price_for(model, prices)
+        bucket = by_model.setdefault(
+            model,
+            {
+                "model": model,
+                **dict.fromkeys(_TOKEN_BUCKETS, 0),
+                "cost_usd": 0.0,
+                "priced": rate is not None,
+            },
+        )
+        event_cost = 0.0
+        for key in _TOKEN_BUCKETS:
+            n = int(event.get(key, 0) or 0)
+            totals[key] += n
+            bucket[key] += n
+            if rate is not None:
+                event_cost += n / 1_000_000 * rate.get(key, 0.0)
+        if rate is None:
+            unpriced.add(model)
+        bucket["cost_usd"] = round(bucket["cost_usd"] + event_cost, 6)
+        cost_usd += event_cost
+    return {
+        "tokens": {**totals, "total": sum(totals.values())},
+        "cost_usd": round(cost_usd, 6),
+        "by_model": sorted(by_model.values(), key=lambda b: b["cost_usd"], reverse=True),
+        "unpriced_models": sorted(unpriced),
+    }
+
+
 def build_run_record(
     plan: Plan,
     result: PlanResult | None,
@@ -158,6 +235,7 @@ def build_run_record(
     ended_at: float,
     run_id: str | None = None,
     session_id: str | None = None,
+    usage: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Assemble one run record in the standard trace/step shape from what the CLI already holds."""
     rid = run_id or new_run_id()
@@ -186,6 +264,7 @@ def build_run_record(
         "n_subtasks": len(steps),
         "counts": counts,
         "quality": _quality(steps),
+        "cost": cost_of(usage or []),
         "answer": answer,
         "steps": steps,
     }
@@ -314,7 +393,11 @@ CREATE TABLE IF NOT EXISTS runs (
     n_fallback INTEGER,
     answer_mode TEXT,
     n_sources INTEGER,
-    quality_score REAL
+    quality_score REAL,
+    input_tokens INTEGER,
+    output_tokens INTEGER,
+    total_tokens INTEGER,
+    cost_usd REAL
 );
 CREATE TABLE IF NOT EXISTS steps (
     step_id TEXT PRIMARY KEY,
@@ -340,7 +423,13 @@ def _db_path(root: Path) -> Path:
 
 # Columns added after the initial schema shipped — applied to pre-existing local DBs on open so an
 # older observability.db is migrated forward instead of failing the insert. (table, column, type)
-_ADDED_COLUMNS = (("runs", "quality_score", "REAL"),)
+_ADDED_COLUMNS = (
+    ("runs", "quality_score", "REAL"),
+    ("runs", "input_tokens", "INTEGER"),
+    ("runs", "output_tokens", "INTEGER"),
+    ("runs", "total_tokens", "INTEGER"),
+    ("runs", "cost_usd", "REAL"),
+)
 
 
 def _connect(root: Path) -> sqlite3.Connection:
@@ -360,10 +449,12 @@ def _insert_rows(record: dict[str, Any], root: Path) -> None:
     counts = record["counts"]
     answer = record["answer"] or {}
     quality = record.get("quality") or {}
+    cost = record.get("cost") or {}
+    tokens = cost.get("tokens") or {}
     conn = _connect(root)
     try:
         conn.execute(
-            "INSERT OR REPLACE INTO runs VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            "INSERT OR REPLACE INTO runs VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
             (
                 record["run_id"],
                 record["session_id"],
@@ -385,6 +476,10 @@ def _insert_rows(record: dict[str, Any], root: Path) -> None:
                 answer.get("mode"),
                 answer.get("n_sources"),
                 quality.get("score"),
+                tokens.get("input", 0),
+                tokens.get("output", 0),
+                tokens.get("total", 0),
+                cost.get("cost_usd", 0.0),
             ),
         )
         conn.execute("DELETE FROM steps WHERE run_id = ?", (record["run_id"],))
@@ -483,6 +578,8 @@ _RUN_SUMMARY_COLS = (
     "duration_s",
     "n_subtasks",
     "quality_score",
+    "total_tokens",
+    "cost_usd",
     "model",
     "mode",
 )
@@ -546,7 +643,28 @@ def _empty_kpis() -> dict[str, Any]:
         "fallback_rate": 0.0,
         "no_match_rate": 0.0,
         "quality": {"avg_score": None, "scored_runs": 0, "by_day": {}},
+        "cost": {"total_usd": 0.0, "total_tokens": 0, "by_model": []},
         "runs_by_day": {},
+    }
+
+
+def _cost_aggregate(runs: list[dict[str, Any]]) -> dict[str, Any]:
+    """Total $ and tokens across the store, plus a per-model breakdown (from the runs summary)."""
+    total_usd = round(sum(r["cost_usd"] or 0.0 for r in runs), 6)
+    total_tokens = sum(r["total_tokens"] or 0 for r in runs)
+    by_model: dict[str, dict[str, Any]] = {}
+    for run in runs:
+        model = run["model"] or ""
+        bucket = by_model.setdefault(
+            model, {"model": model, "runs": 0, "tokens": 0, "cost_usd": 0.0}
+        )
+        bucket["runs"] += 1
+        bucket["tokens"] += run["total_tokens"] or 0
+        bucket["cost_usd"] = round(bucket["cost_usd"] + (run["cost_usd"] or 0.0), 6)
+    return {
+        "total_usd": total_usd,
+        "total_tokens": total_tokens,
+        "by_model": sorted(by_model.values(), key=lambda b: b["cost_usd"], reverse=True),
     }
 
 
@@ -642,6 +760,7 @@ def kpis(root: str | os.PathLike[str] | None = None) -> dict[str, Any]:
         "fallback_rate": round(sum(1 for s in steps if s["type"] == "fallback") / n_steps, 3),
         "no_match_rate": round(sum(1 for s in steps if s["status"] == "no_match") / n_steps, 3),
         "quality": _quality_aggregate(runs),
+        "cost": _cost_aggregate(runs),
         "runs_by_day": dict(sorted(runs_by_day.items())),
     }
 
@@ -813,9 +932,17 @@ def render_run_detail(record: dict[str, Any]) -> str:
         f"  status   : {record['status']}  (exit {record['exit_code']})",
         f"  model    : {record['model']}   mode={record['mode']}",
         f"  subtasks : {record['n_subtasks']}   counts={record['counts']}",
-        "",
-        "Steps:",
     ]
+    cost = record.get("cost") or {}
+    if cost:
+        tokens = cost.get("tokens", {})
+        unpriced = " (some models unpriced)" if cost.get("unpriced_models") else ""
+        lines.append(
+            f"  cost     : ${cost.get('cost_usd', 0.0):.4f}{unpriced}   "
+            f"tokens={tokens.get('total', 0)} "
+            f"(in {tokens.get('input', 0)} / out {tokens.get('output', 0)})"
+        )
+    lines += ["", "Steps:"]
     for i, step in enumerate(record["steps"], start=1):
         routing = step.get("routing") or {}
         lines.append(
@@ -862,6 +989,7 @@ def record_run(
     session_id: str | None = None,
     root: str | os.PathLike[str] | None = None,
     enabled: bool = True,
+    usage: list[dict[str, Any]] | None = None,
 ) -> str | None:
     """Build and persist one run; return its run_id (or None when recording is disabled).
 
@@ -882,6 +1010,7 @@ def record_run(
             ended_at=ended_at,
             run_id=run_id,
             session_id=session_id,
+            usage=usage,
         )
     except Exception as exc:  # recording must never break a run
         _log.warning("observability could not build a run record: %s", exc)

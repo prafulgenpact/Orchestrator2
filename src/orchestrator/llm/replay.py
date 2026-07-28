@@ -43,6 +43,10 @@ class ReplayClient:
     def __init__(self, fixture_dir: Path | None = None) -> None:
         self._dir = _fixture_dir(fixture_dir)
 
+    def drain_usage(self) -> list[dict[str, object]]:
+        """Replayed responses carry no real token counts, so a replay run reports zero usage."""
+        return []
+
     def complete(self, request: LLMRequest) -> str:
         key = request_hash(request)
         path = self._dir / f"{key}.json"
@@ -60,6 +64,14 @@ class RecordingClient:
     def __init__(self, inner: LLMClient, fixture_dir: Path | None = None) -> None:
         self._inner = inner
         self._dir = _fixture_dir(fixture_dir)
+
+    def drain_usage(self) -> list[dict[str, object]]:
+        """Delegate to the wrapped real client so recorded runs still report their token usage."""
+        drain = getattr(self._inner, "drain_usage", None)
+        if not callable(drain):
+            return []
+        events: list[dict[str, object]] = list(drain())
+        return events
 
     def complete(self, request: LLMRequest) -> str:
         response = self._inner.complete(request)

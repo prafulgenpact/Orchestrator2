@@ -1,8 +1,23 @@
 # Project State — A multi agent orchestrator system calling relevant apps basis intent recognition
 
-Last updated: 2026-07-28 (observability-quality-alerts task)
+Last updated: 2026-07-28 (observability-cost-tokens task)
 
 ## Done (most recent first)
+
+- 2026-07-28 observability-cost-tokens (Observability — cost & token accounting). Each run now
+  records the tokens it used and its dollar cost, rolled up per run and per model. Capture: a new
+  TokenUsage (llm/base.py); FoundryClient accumulates one per call in complete_stream and
+  drain_usage() returns+clears them; ReplayClient drains to [] and RecordingClient delegates. The
+  CLI drains the (single, shared) client once at record time and passes usage to record_run — usage
+  is NOT in the request hash, so replay fixtures and eval (16/16) are untouched and complete()'s
+  return type is unchanged. Cost: cost_of() sums non-overlapping token buckets × a configurable
+  per-MTok price table (_DEFAULT_PRICES, override via ORCHESTRATOR_PRICES JSON); tokens are exact,
+  and an unknown model keeps its tokens but is listed in unpriced_models rather than getting a
+  fabricated cost. Persisted as runs.input_tokens/output_tokens/total_tokens/cost_usd (column
+  migration) + a `cost` block on the record; surfaced in list_runs, kpis (`cost`: total_usd,
+  total_tokens, by_model), the KPI view, and run detail. make verify PASS; eval 16/16. This closes
+  the last deferred observability piece; only the visual dashboard (Step E) remains, pending the
+  whole-app UI design.
 
 - 2026-07-28 observability-quality-alerts (Observability Step D). Runs now carry a quality score,
   the store tracks quality over time, and threshold breaches surface as alerts. (a) Quality: each

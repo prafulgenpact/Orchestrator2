@@ -15,7 +15,7 @@ from typing import Any
 import pytest
 
 from orchestrator.llm import get_client
-from orchestrator.llm.base import LLMError, LLMRequest
+from orchestrator.llm.base import LLMError, LLMRequest, TokenUsage
 from orchestrator.llm.foundry import (
     DEFAULT_LLM_TIMEOUT_S,
     DEFAULT_MODEL,
@@ -23,6 +23,7 @@ from orchestrator.llm.foundry import (
     FoundryCredentials,
     _extract_text,
     _parse_env_file,
+    _usage_from_message,
     resolve_credentials,
     resolve_llm_timeout,
     resolve_model,
@@ -408,3 +409,44 @@ def test_complete_disables_self_retry_and_sets_timeout(monkeypatch: pytest.Monke
     assert captured["init_kwargs"]["max_retries"] == 0  # no silent self-retry compounding a stall
     assert captured["init_kwargs"]["timeout"] == 42.0
     assert "tools" not in captured["stream_kwargs"]  # omitted when the request has none
+
+
+# --- token usage accounting --------------------------------------------------
+
+
+def test_usage_from_message() -> None:
+    usage = types.SimpleNamespace(
+        input_tokens=1000,
+        output_tokens=250,
+        cache_read_input_tokens=200,
+        cache_creation_input_tokens=50,
+    )
+    message = types.SimpleNamespace(usage=usage)
+    result = _usage_from_message(message, "claude-opus-4-6")
+    assert result == TokenUsage(
+        model="claude-opus-4-6", input=1000, output=250, cache_read=200, cache_write=50
+    )
+
+
+def test_usage_from_message_tolerates_missing_fields() -> None:
+    # A message with no usage attribute, and a usage object missing the cache fields, both read 0.
+    assert _usage_from_message(types.SimpleNamespace(), "m") == TokenUsage("m", 0, 0, 0, 0)
+    partial = types.SimpleNamespace(usage=types.SimpleNamespace(input_tokens=5, output_tokens=3))
+    assert _usage_from_message(partial, "m") == TokenUsage("m", 5, 3, 0, 0)
+
+
+def test_drain_usage_accumulates_and_clears() -> None:
+    client = FoundryClient(FoundryCredentials(api_key="k", base_url="https://x"))
+    assert client.drain_usage() == []  # nothing yet
+    client._usage.append(TokenUsage("m", 10, 5))
+    client._usage.append(TokenUsage("m", 20, 8))
+    drained = client.drain_usage()
+    assert [e["input"] for e in drained] == [10, 20]
+    assert client.drain_usage() == []  # cleared after draining
+
+
+def test_replay_and_recording_drain_usage() -> None:
+    assert ReplayClient(Path("/nowhere")).drain_usage() == []
+    inner = FoundryClient(FoundryCredentials(api_key="k", base_url="https://x"))
+    inner._usage.append(TokenUsage("m", 1, 1))
+    assert RecordingClient(inner).drain_usage() == [TokenUsage("m", 1, 1).to_dict()]

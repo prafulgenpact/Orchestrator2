@@ -16,6 +16,7 @@ from orchestrator.models import AppSelection, Plan, PlanResult, Subtask, Subtask
 from orchestrator.observability import (
     alerts,
     build_run_record,
+    cost_of,
     get_run,
     kpis,
     list_runs,
@@ -621,3 +622,88 @@ def test_record_run_warns_on_bad_run(tmp_path, caplog) -> None:
             root=tmp_path,
         )
     assert any("no-match" in m or "below" in m for m in caplog.messages)
+
+
+# --- cost & token accounting ------------------------------------------------
+
+
+def test_cost_known_model() -> None:
+    usage = [
+        {"model": "claude-opus-4-6", "input": 1000, "output": 500, "cache_read": 200},
+        {"model": "claude-opus-4-6", "input": 2000, "output": 100},
+    ]
+    cost = cost_of(usage)
+    assert cost["tokens"] == {
+        "input": 3000,
+        "output": 600,
+        "cache_read": 200,
+        "cache_write": 0,
+        "total": 3800,
+    }
+    # input 3000*15 + output 600*75 + cache_read 200*1.5, all /1e6
+    assert cost["cost_usd"] == round(0.045 + 0.045 + 0.0003, 6)
+    assert cost["unpriced_models"] == []
+    assert cost["by_model"][0]["model"] == "claude-opus-4-6"
+
+
+def test_cost_unknown_model() -> None:
+    cost = cost_of([{"model": "mystery-x", "input": 1000, "output": 1000}])
+    assert cost["tokens"]["total"] == 2000  # tokens still counted
+    assert cost["cost_usd"] == 0.0  # but not fabricated
+    assert cost["unpriced_models"] == ["mystery-x"]
+    assert cost["by_model"][0]["priced"] is False
+
+
+def test_cost_price_override(tmp_path, monkeypatch) -> None:
+    prices = tmp_path / "prices.json"
+    prices.write_text('{"mystery-x": {"input": 1000.0, "output": 2000.0}}')
+    monkeypatch.setenv("ORCHESTRATOR_PRICES", str(prices))
+    cost = cost_of([{"model": "mystery-x", "input": 1_000_000, "output": 1_000_000}])
+    assert cost["cost_usd"] == 3000.0  # 1M*1000/1e6 + 1M*2000/1e6
+    assert cost["unpriced_models"] == []
+
+
+def test_cost_empty() -> None:
+    cost = cost_of([])
+    assert cost["tokens"]["total"] == 0
+    assert cost["cost_usd"] == 0.0
+
+
+def test_run_record_has_cost() -> None:
+    usage = [{"model": "claude-opus-4-6", "input": 1000, "output": 500}]
+    record = build_run_record(
+        _plan(),
+        _result(),
+        _synthesis(),
+        mode="live",
+        model="claude-opus-4-6",
+        exit_code=0,
+        started_at=1.0,
+        ended_at=2.0,
+        usage=usage,
+    )
+    assert record["cost"]["tokens"]["total"] == 1500
+    assert record["cost"]["cost_usd"] > 0
+
+
+def test_kpis_cost_aggregate(tmp_path) -> None:
+    for i, toks in enumerate([1000, 3000]):
+        record = build_run_record(
+            _plan(),
+            _result(),
+            _synthesis(),
+            mode="live",
+            model="claude-opus-4-6",
+            exit_code=0,
+            started_at=1000.0 + i,
+            ended_at=1001.0 + i,
+            run_id=f"{i:032x}",
+            usage=[{"model": "claude-opus-4-6", "input": toks, "output": 0}],
+        )
+        save_run(record, root=tmp_path)
+    cost = kpis(tmp_path)["cost"]
+    assert cost["total_tokens"] == 4000
+    assert cost["total_usd"] == round(4000 * 15 / 1_000_000, 6)
+    assert cost["by_model"][0]["model"] == "claude-opus-4-6"
+    # cost surfaces in the run summary too
+    assert list_runs(tmp_path)[0]["total_tokens"] in (1000, 3000)

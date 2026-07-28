@@ -18,6 +18,31 @@ class LLMError(RuntimeError):
 
 
 @dataclass(frozen=True)
+class TokenUsage:
+    """Tokens billed for one LLM call, in non-overlapping buckets (each token counted once).
+
+    ``cache_read`` / ``cache_write`` are the prompt-cache buckets (priced differently from fresh
+    input). A client accumulates one of these per call; observability turns them into cost. Not part
+    of any request hash, so capturing usage never affects record/replay determinism.
+    """
+
+    model: str
+    input: int
+    output: int
+    cache_read: int = 0
+    cache_write: int = 0
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "model": self.model,
+            "input": self.input,
+            "output": self.output,
+            "cache_read": self.cache_read,
+            "cache_write": self.cache_write,
+        }
+
+
+@dataclass(frozen=True)
 class LLMRequest:
     """One completion request. Message dicts carry 'role' and 'content' strings.
 

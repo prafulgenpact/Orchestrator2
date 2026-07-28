@@ -18,7 +18,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from orchestrator.llm.base import LLMError, LLMRequest
+from orchestrator.llm.base import LLMError, LLMRequest, TokenUsage
 
 DEFAULT_MODEL = "claude-opus-4-6"
 # The orchestrator's own .env at the repo root — the first file consulted after the process
@@ -149,11 +149,41 @@ def _discard_delta(_text: str) -> None:
     return None
 
 
+def _usage_from_message(message: Any, model: str) -> TokenUsage:
+    """Read an Anthropic final message's token usage into a TokenUsage (0 for any missing field).
+
+    Pure (no network), so the accumulation is unit-tested even though ``complete_stream`` — the only
+    network line — is excluded from coverage. Anthropic reports fresh input, output, and the two
+    prompt-cache buckets as separate, non-overlapping counts."""
+    usage = getattr(message, "usage", None)
+
+    def field(name: str) -> int:
+        value = getattr(usage, name, 0) if usage is not None else 0
+        return int(value or 0)
+
+    return TokenUsage(
+        model=model,
+        input=field("input_tokens"),
+        output=field("output_tokens"),
+        cache_read=field("cache_read_input_tokens"),
+        cache_write=field("cache_creation_input_tokens"),
+    )
+
+
 class FoundryClient:
     """Calls Anthropic Foundry. Construction is cheap; the SDK loads on first call."""
 
     def __init__(self, credentials: FoundryCredentials) -> None:
         self._creds = credentials
+        # Tokens billed by each call this run; drained once (by the CLI) at record time. Kept on the
+        # client because a single instance handles every call (planner/selector/judge/synthesis).
+        self._usage: list[TokenUsage] = []
+
+    def drain_usage(self) -> list[dict[str, Any]]:
+        """Return every call's token usage recorded since the last drain, then clear it."""
+        events = [u.to_dict() for u in self._usage]
+        self._usage = []
+        return events
 
     def complete(self, request: LLMRequest) -> str:
         # complete == complete_stream with the deltas thrown away: one code path, same streaming
@@ -198,4 +228,7 @@ class FoundryClient:
             for text in stream.text_stream:
                 on_delta(text)
             message = stream.get_final_message()
+        # Record tokens before extracting — a truncated tool response still cost tokens, so we count
+        # them even though _extract_text will then raise for the caller to handle.
+        self._usage.append(_usage_from_message(message, request.model))
         return _extract_text(message, expect_tool=bool(request.tools))

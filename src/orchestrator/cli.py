@@ -139,10 +139,12 @@ def _render_kpis(data: dict[str, Any]) -> str:
     lat = data["latency_s"]
     quality = data["quality"]
     avg_q = quality["avg_score"]
+    cost = data["cost"]
     lines = [
         f"Runs        : {data['total_runs']}   success {float(data['success_rate']) * 100:.0f}%",
         f"By status   : {data['status_counts']}",
         f"Latency (s) : p50 {lat['p50']}  p95 {lat['p95']}  p99 {lat['p99']}  max {lat['max']}",
+        f"Cost        : ${cost['total_usd']:.4f}   tokens {cost['total_tokens']}",
         f"Quality     : avg {avg_q if avg_q is not None else 'n/a'}"
         f"  ({quality['scored_runs']} scored run(s))",
         f"Confidence  : avg {data['avg_confidence']}",
@@ -216,12 +218,19 @@ def main(argv: list[str] | None = None, *, client: LLMClient | None = None) -> i
             print(chart_block)
         print()
         print(render_execution(plan, result, synthesis, verbose=args.verbose, include_answer=False))
-        _record(plan, result, synthesis, args, model, run_id, started_at, record_enabled)
+        _record(plan, result, synthesis, args, model, run_id, started_at, record_enabled, client)
         return 0
 
     print(render_json(plan) if args.json else render_human(plan))
-    _record(plan, None, None, args, model, run_id, started_at, record_enabled)
+    _record(plan, None, None, args, model, run_id, started_at, record_enabled, client)
     return 0
+
+
+def _drain_usage(client: LLMClient) -> list[dict[str, Any]]:
+    """Pull the tokens billed this run off the client (Foundry accumulates them; replay reports
+    none). Duck-typed so any client without the method simply yields no usage."""
+    drain = getattr(client, "drain_usage", None)
+    return list(drain()) if callable(drain) else []
 
 
 def _record(
@@ -233,6 +242,7 @@ def _record(
     run_id: str,
     started_at: float,
     enabled: bool,
+    client: LLMClient,
 ) -> None:
     """Save this run (best-effort). exit_code is 0 on both the execute and dry-run success paths;
     record_run swallows any failure so a bad disk never affects the answer already printed above."""
@@ -247,6 +257,7 @@ def _record(
         ended_at=time.time(),
         run_id=run_id,
         enabled=enabled,
+        usage=_drain_usage(client),
     )
 
 
