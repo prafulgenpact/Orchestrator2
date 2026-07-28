@@ -1,8 +1,21 @@
 # Project State — A multi agent orchestrator system calling relevant apps basis intent recognition
 
-Last updated: 2026-07-27 (determinism-and-visibility task)
+Last updated: 2026-07-28 (observability-save-runs task)
 
 ## Done (most recent first)
+
+- 2026-07-28 observability-save-runs (Observability Step A). Every run is now saved durably in the
+  standard trace/step shape (a run is one trace; each subtask a nested step — the shape Langfuse /
+  Phoenix / OpenTelemetry GenAI use), so history, audit, and a later dashboard are possible. New
+  `src/orchestrator/observability.py` exposes a reusable `record_run(...)` entry point (the CLI uses
+  it now; a future UI backend reuses it unchanged) that writes three sinks: `runs/<run_id>.json`
+  (full detail incl. per-step inputs/outputs/timing and the routing rationale+confidence — the "why
+  this app?" provenance), a `runs`+`steps` summary in `observability.db` (SQLite, for fast KPIs),
+  and an append-only `logs/events.jsonl`. Recording is best-effort: every sink is wrapped so a disk
+  failure is logged and swallowed — it never changes a run's answer or exit code — and nothing
+  touches the planner/selector/judge, so LLM request hashes and eval fixtures are unaffected. CLI
+  gains `--no-record` and `--run-id`. All new deps are stdlib (uuid/sqlite3/json/logging). make
+  verify PASS; eval 16/16. Next: Step B (cost/tokens + tamper-evident hash chain + redaction).
 
 - 2026-07-27 determinism-and-visibility (Fix 5 of the web-fallback deep-dive). Three
   determinism/visibility improvements. (a) Determinism: LLMRequest gains `temperature: float = 0.0`

@@ -19,6 +19,11 @@ reports/
 RESUME.md
 orchestrator-output/
 
+# saved run history / observability sinks (local run data, not deliverables)
+runs/
+logs/
+observability.db
+
 # secrets & local overrides
 .env
 .env.*

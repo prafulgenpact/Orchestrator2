@@ -14,6 +14,7 @@ import argparse
 import asyncio
 import os
 import sys
+import time
 from pathlib import Path
 
 import httpx
@@ -25,10 +26,11 @@ from orchestrator.llm import VALID_MODES, get_client
 from orchestrator.llm.base import LLMClient, LLMError
 from orchestrator.llm.foundry import resolve_model
 from orchestrator.models import Plan, PlanResult
+from orchestrator.observability import new_run_id, record_run
 from orchestrator.planner import PlannerError, plan_task
 from orchestrator.registry import Registry, RegistryError, load_registry
 from orchestrator.render import render_chart_paths, render_execution, render_human, render_json
-from orchestrator.synthesis import synthesize
+from orchestrator.synthesis import Synthesis, synthesize
 
 
 def _parse_args(argv: list[str] | None) -> argparse.Namespace:
@@ -65,11 +67,20 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
         default=2,
         help="max times to feed a validation error back to the model (default 2)",
     )
+    parser.add_argument(
+        "--no-record",
+        action="store_true",
+        help="do not save this run to runs/ , observability.db, or logs/ (default: save)",
+    )
+    parser.add_argument("--run-id", help="use this run id instead of a generated one")
     return parser.parse_args(argv)
 
 
 def main(argv: list[str] | None = None, *, client: LLMClient | None = None) -> int:
     args = _parse_args(argv)
+    started_at = time.time()
+    run_id = args.run_id or new_run_id()
+    record_enabled = not args.no_record
 
     try:
         registry = load_registry(Path(args.registry) if args.registry else None)
@@ -118,10 +129,38 @@ def main(argv: list[str] | None = None, *, client: LLMClient | None = None) -> i
             print(chart_block)
         print()
         print(render_execution(plan, result, synthesis, verbose=args.verbose, include_answer=False))
+        _record(plan, result, synthesis, args, model, run_id, started_at, record_enabled)
         return 0
 
     print(render_json(plan) if args.json else render_human(plan))
+    _record(plan, None, None, args, model, run_id, started_at, record_enabled)
     return 0
+
+
+def _record(
+    plan: Plan,
+    result: PlanResult | None,
+    synthesis: Synthesis | None,
+    args: argparse.Namespace,
+    model: str,
+    run_id: str,
+    started_at: float,
+    enabled: bool,
+) -> None:
+    """Save this run (best-effort). exit_code is 0 on both the execute and dry-run success paths;
+    record_run swallows any failure so a bad disk never affects the answer already printed above."""
+    record_run(
+        plan,
+        result,
+        synthesis,
+        mode=args.mode,
+        model=model,
+        exit_code=0,
+        started_at=started_at,
+        ended_at=time.time(),
+        run_id=run_id,
+        enabled=enabled,
+    )
 
 
 def _readiness_note(readiness: dict[str, bool]) -> str:
