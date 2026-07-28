@@ -1,6 +1,6 @@
 {
   "schema": "proof/v1",
-  "created_utc": "2026-07-28T11:38:28+00:00",
+  "created_utc": "2026-07-28T12:00:23+00:00",
   "result": "PASS",
   "failed_checks": [],
   "missing_required_checks": [],
@@ -12,9 +12,9 @@
     "e2e",
     "secrets"
   ],
-  "fingerprint": "b7a1da606d2a0d0525179c874bf20a29af8b5c41ac68e519da8921f1c0b0f1f4",
+  "fingerprint": "0c67954d520401be1d10182ed838faabb4f225203f088f188c43babb37b3e0f6",
   "git": {
-    "commit": "704bf3c8622aac012419566ec18b8ae5b0e549ed",
+    "commit": "fdff441f91cadc90c55c4c458d38e8d1b137d0d8",
     "branch": "Orchestrator2",
     "dirty_tracked_files": true
   },
@@ -40,7 +40,7 @@
     {
       "name": "py-unit",
       "status": "pass",
-      "duration_s": 9,
+      "duration_s": 11,
       "evidence": "reports/py-unit.log"
     },
     {
@@ -64,33 +64,33 @@
     {
       "name": "dep-audit",
       "status": "pass",
-      "duration_s": 24,
+      "duration_s": 25,
       "evidence": "reports/dep-audit.log"
     },
     {
       "name": "diff-cover",
       "status": "pass",
-      "duration_s": 0,
+      "duration_s": 1,
       "evidence": "reports/diff-cover.log"
     }
   ],
   "tests": {
     "unit": {
-      "tests": 861,
+      "tests": 871,
       "failures": 0,
       "errors": 0,
       "skipped": 0,
-      "time_s": 7.49
+      "time_s": 9.48
     },
     "e2e": {
       "tests": 2,
       "failures": 0,
       "errors": 0,
       "skipped": 0,
-      "time_s": 0.8
+      "time_s": 0.78
     },
     "web_e2e": null,
-    "coverage_pct": 95.84
+    "coverage_pct": 95.88
   },
   "environment": {
     "python": "Python 3.10.0",
@@ -99,5 +99,5 @@
     "pytest": "pytest 8.3.2",
     "os": "Darwin 25.5.0"
   },
-  "content_hash": "9c7bdb7d51674bd8cdf20b8a019473ac5d7af4ad16a155719b3007c8e3eb8d24"
+  "content_hash": "48af4db3ad0b9496d9abefa474bcf694cacf9713936cdc98d6104286ddc8525a"
 }
