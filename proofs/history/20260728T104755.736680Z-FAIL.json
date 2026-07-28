@@ -1,8 +1,10 @@
 {
   "schema": "proof/v1",
-  "created_utc": "2026-07-07T13:59:45+00:00",
-  "result": "PASS",
-  "failed_checks": [],
+  "created_utc": "2026-07-28T09:42:10+00:00",
+  "result": "FAIL",
+  "failed_checks": [
+    "secrets"
+  ],
   "missing_required_checks": [],
   "required_checks": [
     "py-lint",
@@ -12,11 +14,11 @@
     "e2e",
     "secrets"
   ],
-  "fingerprint": "36f3b1b8f51bd7b93e86fb90d888a4a72049bf8bb6f0da21ce48d8c969725917",
+  "fingerprint": "191f3af54322af26ebfc5da2658abb092291d20316ff3f08ef3ecd3226ae8630",
   "git": {
-    "commit": "6323afbb1a162f8c5144f6033146dd66eedf073d",
+    "commit": "203be8cbc4b6c8b315be2b2513f0f6e9b20e364c",
     "branch": "Orchestrator2",
-    "dirty_tracked_files": false
+    "dirty_tracked_files": true
   },
   "checks": [
     {
@@ -40,7 +42,7 @@
     {
       "name": "py-unit",
       "status": "pass",
-      "duration_s": 3,
+      "duration_s": 5,
       "evidence": "reports/py-unit.log"
     },
     {
@@ -51,20 +53,20 @@
     },
     {
       "name": "secrets",
-      "status": "pass",
-      "duration_s": 0,
+      "status": "fail",
+      "duration_s": 1,
       "evidence": "reports/secrets.log"
     },
     {
       "name": "secrets-gitleaks",
       "status": "pass",
-      "duration_s": 1,
+      "duration_s": 2,
       "evidence": "reports/secrets-gitleaks.log"
     },
     {
       "name": "dep-audit",
       "status": "pass",
-      "duration_s": 25,
+      "duration_s": 24,
       "evidence": "reports/dep-audit.log"
     },
     {
@@ -76,21 +78,21 @@
   ],
   "tests": {
     "unit": {
-      "tests": 198,
+      "tests": 842,
       "failures": 0,
       "errors": 0,
       "skipped": 0,
-      "time_s": 1.39
+      "time_s": 3.44
     },
     "e2e": {
       "tests": 2,
       "failures": 0,
       "errors": 0,
       "skipped": 0,
-      "time_s": 0.62
+      "time_s": 0.99
     },
     "web_e2e": null,
-    "coverage_pct": 100.0
+    "coverage_pct": 95.82
   },
   "environment": {
     "python": "Python 3.10.0",
@@ -99,5 +101,5 @@
     "pytest": "pytest 8.3.2",
     "os": "Darwin 25.5.0"
   },
-  "content_hash": "4c4cef3e6f365b2506143226a9a655255eeb7d9225a8ba066a6d8bd12ed7a7b1"
+  "content_hash": "153147e93e132896d7d9fddcbf4d7ea71c040cd47f13b0edf08030d79d688985"
 }

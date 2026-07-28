@@ -1,6 +1,6 @@
 {
   "schema": "proof/v1",
-  "created_utc": "2026-07-28T08:34:28+00:00",
+  "created_utc": "2026-07-28T10:50:42+00:00",
   "result": "PASS",
   "failed_checks": [],
   "missing_required_checks": [],
@@ -12,9 +12,9 @@
     "e2e",
     "secrets"
   ],
-  "fingerprint": "7af58d17ca4a326b3aec081d8e29753b9c1c98166b9e593906137dbd6d96f309",
+  "fingerprint": "e77a2376bd5fcc1f570d4b882f423f4bac3e4f5382fa9ba2ee36803b01d2d297",
   "git": {
-    "commit": "34dfad522b4f9a71b14b1f8d274f5b01a7ac339c",
+    "commit": "203be8cbc4b6c8b315be2b2513f0f6e9b20e364c",
     "branch": "Orchestrator2",
     "dirty_tracked_files": true
   },
@@ -34,13 +34,13 @@
     {
       "name": "py-types",
       "status": "pass",
-      "duration_s": 3,
+      "duration_s": 1,
       "evidence": "reports/py-types.log"
     },
     {
       "name": "py-unit",
       "status": "pass",
-      "duration_s": 8,
+      "duration_s": 7,
       "evidence": "reports/py-unit.log"
     },
     {
@@ -64,33 +64,33 @@
     {
       "name": "dep-audit",
       "status": "pass",
-      "duration_s": 29,
+      "duration_s": 23,
       "evidence": "reports/dep-audit.log"
     },
     {
       "name": "diff-cover",
       "status": "pass",
-      "duration_s": 0,
+      "duration_s": 1,
       "evidence": "reports/diff-cover.log"
     }
   ],
   "tests": {
     "unit": {
-      "tests": 835,
+      "tests": 842,
       "failures": 0,
       "errors": 0,
       "skipped": 0,
-      "time_s": 6.11
+      "time_s": 5.2
     },
     "e2e": {
       "tests": 2,
       "failures": 0,
       "errors": 0,
       "skipped": 0,
-      "time_s": 1.21
+      "time_s": 1.74
     },
     "web_e2e": null,
-    "coverage_pct": 95.79
+    "coverage_pct": 95.82
   },
   "environment": {
     "python": "Python 3.10.0",
@@ -99,5 +99,5 @@
     "pytest": "pytest 8.3.2",
     "os": "Darwin 25.5.0"
   },
-  "content_hash": "79c00c98300b809f76e52934c0dd9fbc75052d2b685732c8221576072a87fc32"
+  "content_hash": "709bd12933911892ba605599a86b162b914061e8fc8ed3099aa0702ee0db4a5c"
 }
