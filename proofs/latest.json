@@ -1,6 +1,6 @@
 {
   "schema": "proof/v1",
-  "created_utc": "2026-07-28T10:50:42+00:00",
+  "created_utc": "2026-07-28T11:19:57+00:00",
   "result": "PASS",
   "failed_checks": [],
   "missing_required_checks": [],
@@ -12,9 +12,9 @@
     "e2e",
     "secrets"
   ],
-  "fingerprint": "e77a2376bd5fcc1f570d4b882f423f4bac3e4f5382fa9ba2ee36803b01d2d297",
+  "fingerprint": "edd57f20a4a841297b9a6703cd328ab321a88ade077ac8fd231673bd30f5d528",
   "git": {
-    "commit": "203be8cbc4b6c8b315be2b2513f0f6e9b20e364c",
+    "commit": "f4c8d9b35ff3d419d8f5fbbc7caaffc636e96f76",
     "branch": "Orchestrator2",
     "dirty_tracked_files": true
   },
@@ -28,7 +28,7 @@
     {
       "name": "py-format",
       "status": "pass",
-      "duration_s": 1,
+      "duration_s": 0,
       "evidence": "reports/py-format.log"
     },
     {
@@ -40,19 +40,19 @@
     {
       "name": "py-unit",
       "status": "pass",
-      "duration_s": 7,
+      "duration_s": 8,
       "evidence": "reports/py-unit.log"
     },
     {
       "name": "e2e",
       "status": "pass",
-      "duration_s": 3,
+      "duration_s": 2,
       "evidence": "reports/e2e.log"
     },
     {
       "name": "secrets",
       "status": "pass",
-      "duration_s": 1,
+      "duration_s": 0,
       "evidence": "reports/secrets.log"
     },
     {
@@ -76,21 +76,21 @@
   ],
   "tests": {
     "unit": {
-      "tests": 842,
+      "tests": 851,
       "failures": 0,
       "errors": 0,
       "skipped": 0,
-      "time_s": 5.2
+      "time_s": 6.52
     },
     "e2e": {
       "tests": 2,
       "failures": 0,
       "errors": 0,
       "skipped": 0,
-      "time_s": 1.74
+      "time_s": 0.69
     },
     "web_e2e": null,
-    "coverage_pct": 95.82
+    "coverage_pct": 95.9
   },
   "environment": {
     "python": "Python 3.10.0",
@@ -99,5 +99,5 @@
     "pytest": "pytest 8.3.2",
     "os": "Darwin 25.5.0"
   },
-  "content_hash": "709bd12933911892ba605599a86b162b914061e8fc8ed3099aa0702ee0db4a5c"
+  "content_hash": "ef49e58a610a2b7abfbfda0f3f6fa9570dfff1375b1e3250efa1ebb3acf81139"
 }
