@@ -1,8 +1,9 @@
-"""Unit tests for observability — building, saving, and reloading a run record.
+"""Unit tests for observability — building, saving, reloading, and auditing a run record.
 
-All offline (tmp_path, no network). These prove Step A of the observability plan: every run is
-saved in the standard trace/step shape, to all three sinks, best-effort (a failing sink never
-raises), and without touching any LLM request hash.
+All offline (tmp_path, no network). Step A: every run is saved in the standard trace/step shape,
+to all three sinks, best-effort (a failing sink never raises), without touching any LLM request
+hash. Step B: the event log is a tamper-evident hash chain (verify_chain), and secrets are masked
+before anything is written to disk.
 """
 
 from __future__ import annotations
@@ -16,7 +17,9 @@ from orchestrator.observability import (
     build_run_record,
     get_run,
     record_run,
+    redact,
     save_run,
+    verify_chain,
 )
 from orchestrator.synthesis import Synthesis
 
@@ -235,3 +238,135 @@ def test_recording_does_not_touch_request_hash(tmp_path) -> None:
     )
     after = json.dumps(request.to_dict(), sort_keys=True)
     assert before == after
+
+
+# --- Step B: tamper-evidence (hash-chained event log) -----------------------
+
+
+def _events(tmp_path) -> list[dict]:
+    lines = (tmp_path / "logs" / "events.jsonl").read_text().strip().splitlines()
+    return [json.loads(line) for line in lines]
+
+
+def _rewrite_events(tmp_path, rows: list[dict]) -> None:
+    path = tmp_path / "logs" / "events.jsonl"
+    path.write_text("".join(json.dumps(r) + "\n" for r in rows))
+
+
+def test_event_chain_links(tmp_path) -> None:
+    save_run(_record(), root=tmp_path)
+    save_run(_record(), root=tmp_path)
+    rows = _events(tmp_path)
+    assert [r["seq"] for r in rows] == [1, 2]
+    assert rows[0]["prev_hash"] == "0" * 64  # genesis
+    assert rows[1]["prev_hash"] == rows[0]["hash"]  # each links to the previous
+    ok, broken = verify_chain(root=tmp_path)
+    assert ok and broken is None
+
+
+def test_verify_chain_detects_tamper(tmp_path) -> None:
+    save_run(_record(), root=tmp_path)
+    save_run(_record(), root=tmp_path)
+    rows = _events(tmp_path)
+    rows[0]["status"] = "error"  # edit a past record's payload, leave its hash untouched
+    _rewrite_events(tmp_path, rows)
+    ok, broken = verify_chain(root=tmp_path)
+    assert not ok
+    assert broken == 1
+
+
+def test_verify_chain_detects_deletion(tmp_path) -> None:
+    for _ in range(3):
+        save_run(_record(), root=tmp_path)
+    rows = _events(tmp_path)
+    _rewrite_events(tmp_path, [rows[0], rows[2]])  # drop the middle line
+    ok, broken = verify_chain(root=tmp_path)
+    assert not ok
+    assert broken == 3  # seq jumps 1 -> 3, so the surviving line 3 is where expectations break
+
+
+def test_verify_chain_missing_log_is_intact(tmp_path) -> None:
+    assert verify_chain(root=tmp_path) == (True, None)
+
+
+# --- Step B: redaction ------------------------------------------------------
+
+
+def test_redact_masks_secrets() -> None:
+    payload = {
+        "note": "reach me at alice@example.com",
+        "auth": "Bearer abc.def.ghi123",
+        "key": "sk-ABCDEFGHIJKLMNOP1234",
+        "aws": "AKIAIOSFODNN7EXAMPLE",  # secret-ok: public AWS example key, a test fixture
+        "nested": ["plain text", {"token": "sk-ZZZZZZZZZZZZZZZZ9999"}],
+        "kept": "transformers attention",
+        "number": 42,
+    }
+    out = redact(payload)
+    assert "[REDACTED]" in out["note"] and "example.com" not in out["note"]
+    assert out["auth"] == "[REDACTED]"
+    assert out["key"] == "[REDACTED]"
+    assert out["aws"] == "[REDACTED]"
+    assert out["nested"][1]["token"] == "[REDACTED]"
+    assert out["nested"][0] == "plain text"
+    assert out["kept"] == "transformers attention"  # ordinary content is untouched
+    assert out["number"] == 42
+
+
+def _record_with_secret():
+    result = PlanResult(
+        task="learn transformers",
+        intent="learning plan",
+        results=(
+            SubtaskResult(
+                "t1",
+                "stanford-llm",
+                "Stanford LLM",
+                "ok",
+                "get_course",
+                {"text": "your key is sk-SECRETSECRET1234567 keep it safe"},
+                "http://app/1",
+                None,
+                1.0,
+                args={"email": "user@example.com"},
+            ),
+            SubtaskResult(
+                "t2",
+                "web-search",
+                "Web Search",
+                "ok",
+                "web_search",
+                {"text": "web"},
+                "http://web/2",
+                None,
+                0.5,
+            ),
+        ),
+    )
+    return build_run_record(
+        _plan(),
+        result,
+        _synthesis(),
+        mode="replay",
+        model="m",
+        exit_code=0,
+        started_at=1.0,
+        ended_at=2.0,
+    )
+
+
+def test_saved_run_is_redacted(tmp_path) -> None:
+    record = _record_with_secret()
+    save_run(record, root=tmp_path)
+    saved = json.dumps(get_run(record["run_id"], root=tmp_path))
+    assert "sk-SECRETSECRET1234567" not in saved
+    assert "user@example.com" not in saved
+    assert "[REDACTED]" in saved
+
+
+def test_redaction_can_be_disabled(tmp_path, monkeypatch) -> None:
+    monkeypatch.setenv("ORCHESTRATOR_OBS_REDACT", "0")
+    record = _record_with_secret()
+    save_run(record, root=tmp_path)
+    saved = json.dumps(get_run(record["run_id"], root=tmp_path))
+    assert "sk-SECRETSECRET1234567" in saved  # stored raw when redaction is off

@@ -1,8 +1,21 @@
 # Project State — A multi agent orchestrator system calling relevant apps basis intent recognition
 
-Last updated: 2026-07-28 (observability-save-runs task)
+Last updated: 2026-07-28 (observability-audit-trail task)
 
 ## Done (most recent first)
+
+- 2026-07-28 observability-audit-trail (Observability Step B, part 1). The saved audit trail is now
+  defensible. (a) Tamper-evidence: logs/events.jsonl is a hash chain — each line carries seq +
+  prev_hash + hash = sha256(prev_hash + seq + canonical(payload)), chained from a fixed genesis;
+  verify_chain(root) recomputes the chain and returns (False, seq) at the first edited or deleted
+  past record (tail truncation is the one undetectable case, documented). (b) Redaction: redact()
+  recursively masks emails, sk-/AKIA keys, and bearer tokens in nested dicts/lists/strings before
+  anything is written, so a credential embedded in an app's output/args is never persisted;
+  disable with ORCHESTRATOR_OBS_REDACT=0. Both live entirely in observability.py — no LLM-path
+  change — so make verify PASS and eval 16/16. FOLLOW-UP: accurate cost/token capture is deferred
+  to its own task because it needs an LLMClient contract change (complete() returns only str today;
+  message.usage is available in foundry.complete_stream but discarded) and must not disturb replay
+  fixtures.
 
 - 2026-07-28 observability-save-runs (Observability Step A). Every run is now saved durably in the
   standard trace/step shape (a run is one trace; each subtask a nested step — the shape Langfuse /

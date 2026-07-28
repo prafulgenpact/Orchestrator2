@@ -6,7 +6,11 @@ Arize Phoenix, and the OpenTelemetry GenAI conventions use), and writes it to th
 
 * ``runs/<run_id>.json`` — the full-detail record (drill-down + audit source);
 * ``observability.db`` — a SQLite summary row per run and per step (fast KPI queries);
-* ``logs/events.jsonl`` — an append-only event line per run (the running audit trail).
+* ``logs/events.jsonl`` — an append-only, hash-chained event line per run (a tamper-evident
+  audit trail; ``verify_chain`` detects any edit or deletion of a past record).
+
+Secrets (API keys, bearer tokens, emails) are masked by ``redact`` before anything is written, so
+run data can be kept without storing credentials (disable with ``ORCHESTRATOR_OBS_REDACT=0``).
 
 Every write is BEST-EFFORT: recording must never change a run's answer or exit code, so a disk
 or database failure is logged and swallowed, never raised. Nothing here touches the planner /
@@ -18,9 +22,11 @@ can call the same function unchanged.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 import os
+import re
 import sqlite3
 import uuid
 from pathlib import Path
@@ -163,6 +169,106 @@ def build_run_record(
     }
 
 
+# --- redaction ---------------------------------------------------------------
+
+_REDACT_ENV = "ORCHESTRATOR_OBS_REDACT"
+_REDACTED = "[REDACTED]"
+# A conservative pack — high-precision secret shapes only, so ordinary run content is left intact.
+_SECRET_PATTERNS = (
+    re.compile(r"[\w.+-]+@[\w-]+\.[\w.-]+"),  # email address
+    re.compile(r"sk-[A-Za-z0-9_-]{16,}"),  # OpenAI / Anthropic-style API key
+    re.compile(r"AKIA[0-9A-Z]{16}"),  # AWS access key id
+    re.compile(r"(?i)bearer\s+[A-Za-z0-9._~+/=-]+"),  # bearer token
+)
+
+
+def _redaction_enabled() -> bool:
+    """Redaction is on unless ORCHESTRATOR_OBS_REDACT is set to a falsey value."""
+    return (os.environ.get(_REDACT_ENV) or "1").lower() not in ("0", "false", "no")
+
+
+def _redact_str(text: str) -> str:
+    for pattern in _SECRET_PATTERNS:
+        text = pattern.sub(_REDACTED, text)
+    return text
+
+
+def redact(value: Any) -> Any:
+    """Recursively mask secrets (emails, API keys, bearer tokens) in a JSON-like value.
+
+    Only string leaves are scanned; numbers, bools, and None pass through. Applied before a run is
+    written to disk so a credential embedded in an app's output or args is never persisted."""
+    if isinstance(value, str):
+        return _redact_str(value)
+    if isinstance(value, dict):
+        return {key: redact(item) for key, item in value.items()}
+    if isinstance(value, list | tuple):
+        return [redact(item) for item in value]
+    return value
+
+
+# --- tamper-evidence (hash-chained event log) --------------------------------
+
+_GENESIS_HASH = "0" * 64
+_CHAIN_FIELDS = ("seq", "prev_hash", "hash")
+
+
+def _canonical(payload: dict[str, Any]) -> str:
+    return json.dumps(payload, sort_keys=True, separators=(",", ":"), default=str)
+
+
+def _chain_hash(prev_hash: str, seq: int, payload: dict[str, Any]) -> str:
+    """This link's hash = sha256(prev_hash + seq + canonical(payload)). Editing any past payload
+    (or its seq/order) changes every downstream hash, so tampering is detectable."""
+    material = f"{prev_hash}{seq}{_canonical(payload)}".encode()
+    return hashlib.sha256(material).hexdigest()
+
+
+def _last_chain_link(path: Path) -> tuple[int, str]:
+    """(seq, hash) of the last event line, or (0, genesis) when the log is empty or missing."""
+    if not path.exists():
+        return 0, _GENESIS_HASH
+    last: str | None = None
+    with path.open() as fh:
+        for raw in fh:
+            stripped = raw.strip()
+            if stripped:
+                last = stripped
+    if last is None:
+        return 0, _GENESIS_HASH
+    row = json.loads(last)
+    return int(row["seq"]), str(row["hash"])
+
+
+def verify_chain(root: str | os.PathLike[str] | None = None) -> tuple[bool, int | None]:
+    """Check the event log's hash chain.
+
+    Returns ``(True, None)`` when the whole log verifies, else ``(False, seq)`` at the first line
+    whose sequence, prev-link, or recomputed hash does not match — i.e. an edited or deleted past
+    record. (Truncating the newest lines off the tail is not detectable without a separate anchor.)
+    """
+    path = _resolve_root(root) / "logs" / "events.jsonl"
+    if not path.exists():
+        return True, None
+    prev_hash = _GENESIS_HASH
+    expected_seq = 1
+    with path.open() as fh:
+        for raw in fh:
+            stripped = raw.strip()
+            if not stripped:
+                continue
+            row = json.loads(stripped)
+            payload = {k: v for k, v in row.items() if k not in _CHAIN_FIELDS}
+            seq = int(row.get("seq", -1))
+            if seq != expected_seq or row.get("prev_hash") != prev_hash:
+                return False, seq
+            if row.get("hash") != _chain_hash(prev_hash, seq, payload):
+                return False, seq
+            prev_hash = str(row["hash"])
+            expected_seq += 1
+    return True, None
+
+
 # --- persistence (best-effort) -----------------------------------------------
 
 _DDL = """
@@ -280,9 +386,14 @@ def _write_json(record: dict[str, Any], root: Path) -> None:
 
 
 def _append_event(record: dict[str, Any], root: Path) -> None:
+    """Append one hash-chained event line, linked to the previous line (genesis if the log is new).
+
+    A single line, so the whole run isn't duplicated here — the full record lives in runs/<id>.json;
+    this log is the tamper-evident index of what ran and when."""
     logs_dir = root / "logs"
     logs_dir.mkdir(parents=True, exist_ok=True)
-    event = {
+    path = logs_dir / "events.jsonl"
+    payload = {
         "run_id": record["run_id"],
         "task": record["task"],
         "status": record["status"],
@@ -291,20 +402,29 @@ def _append_event(record: dict[str, Any], root: Path) -> None:
         "n_subtasks": record["n_subtasks"],
         "ended_at": record["ended_at"],
     }
-    with (logs_dir / "events.jsonl").open("a") as fh:
-        fh.write(json.dumps(event, default=str) + "\n")
+    prev_seq, prev_hash = _last_chain_link(path)
+    seq = prev_seq + 1
+    line = {
+        "seq": seq,
+        "prev_hash": prev_hash,
+        "hash": _chain_hash(prev_hash, seq, payload),
+        **payload,
+    }
+    with path.open("a") as fh:
+        fh.write(json.dumps(line, default=str) + "\n")
 
 
 def save_run(record: dict[str, Any], *, root: str | os.PathLike[str] | None = None) -> None:
     """Write the record to all three sinks. Each is independent and best-effort: one failing sink
     is logged and skipped so the others still persist, and no failure ever reaches the caller."""
     base = _resolve_root(root)
+    payload = redact(record) if _redaction_enabled() else record
     for name, sink in (("json", _write_json), ("sqlite", _insert_rows), ("events", _append_event)):
         try:
-            sink(record, base)
+            sink(payload, base)
         except Exception as exc:  # recording must never break a run
             _log.warning(
-                "observability %s sink failed for run %s: %s", name, record.get("run_id"), exc
+                "observability %s sink failed for run %s: %s", name, payload.get("run_id"), exc
             )
 
 
