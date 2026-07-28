@@ -972,6 +972,62 @@ def render_alerts(fired: list[dict[str, Any]]) -> str:
     return "\n".join(lines)
 
 
+def render_kpis(data: dict[str, Any]) -> str:
+    """Aggregate KPIs as a human summary — shared by `runs list --kpis` and the full report."""
+    lat = data["latency_s"]
+    cost = data["cost"]
+    quality = data["quality"]
+    avg_q = quality["avg_score"]
+    lines = [
+        f"Runs        : {data['total_runs']}   success {data['success_rate'] * 100:.0f}%",
+        f"By status   : {data['status_counts']}",
+        f"Latency (s) : p50 {lat['p50']}  p95 {lat['p95']}  p99 {lat['p99']}  max {lat['max']}",
+        f"Cost        : ${cost['total_usd']:.4f}   tokens {cost['total_tokens']}",
+        f"Quality     : avg {avg_q if avg_q is not None else 'n/a'}"
+        f"  ({quality['scored_runs']} scored run(s))",
+        f"Confidence  : avg {data['avg_confidence']}",
+        f"Fallback    : {data['fallback_rate'] * 100:.0f}%   "
+        f"no-match {data['no_match_rate'] * 100:.0f}%",
+    ]
+    if cost["by_model"]:
+        lines.append("Cost/model  :")
+        for m in cost["by_model"]:
+            lines.append(f"   {m['model']:<22} ${m['cost_usd']:.4f}  ({m['tokens']} tokens)")
+    lines.append("Per app     :")
+    for app in data["per_app"]:
+        lines.append(
+            f"   {app['app_id']:<22} calls {app['calls']:>3}  "
+            f"ok {app['ok']:>3}  err {app['error']:>3}  no_match {app['no_match']:>3}  "
+            f"avg {app['avg_duration_s']}s"
+        )
+    return "\n".join(lines)
+
+
+def _rule(title: str) -> str:
+    return f"\n{'═' * 70}\n {title}\n{'═' * 70}"
+
+
+def render_report(
+    kpis_data: dict[str, Any],
+    fired: list[dict[str, Any]],
+    recent: list[dict[str, Any]],
+    run_detail: dict[str, Any] | None = None,
+) -> str:
+    """One combined observability report: summary KPIs, alerts, recent runs, and — when a run is
+    given — that run's per-step drill-down. The single view behind `runs report` and `--report`."""
+    sections = [
+        _rule("OBSERVABILITY REPORT"),
+        render_kpis(kpis_data),
+        _rule("HEALTH ALERTS"),
+        render_alerts(fired),
+        _rule(f"RECENT RUNS (latest {len(recent)})"),
+        render_runs_list(recent),
+    ]
+    if run_detail is not None:
+        sections += [_rule("THIS RUN"), render_run_detail(run_detail)]
+    return "\n".join(sections)
+
+
 # --- reusable entry point ----------------------------------------------------
 
 

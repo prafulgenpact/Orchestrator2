@@ -1,8 +1,20 @@
 # Project State — A multi agent orchestrator system calling relevant apps basis intent recognition
 
-Last updated: 2026-07-28 (observability-cost-tokens task)
+Last updated: 2026-07-28 (observability-report-command task)
 
 ## Done (most recent first)
+
+- 2026-07-28 observability-report-command (Observability — one-command live report). One command
+  now runs a real task and prints the whole observability picture with real numbers:
+  `PYTHONPATH=src python3 -m orchestrator --execute --report "<task>"`. New `render_report(...)`
+  composes a single terminal report — summary KPIs (success rate, latency p50/p95/p99), cost +
+  tokens per model, quality, health alerts, per-app table, recent runs, and this run's per-step
+  drill-down — from the read service built earlier. `render_kpis` was hoisted into observability so
+  the `--kpis` view and the report share one renderer. CLI: a `--report` flag on the run (best-
+  effort; a report failure never changes the exit code or hides the answer) and a standalone
+  `orchestrator runs report [--run-id X] [--json]`. RUNBOOK documents the one-command flow. No
+  LLM/executor change; make verify PASS; eval 16/16. Observability plan complete through the
+  backend + CLI; only the visual dashboard (Step E) remains, pending the whole-app UI.
 
 - 2026-07-28 observability-cost-tokens (Observability — cost & token accounting). Each run now
   records the tokens it used and its dollar cost, rolled up per run and per model. Capture: a new

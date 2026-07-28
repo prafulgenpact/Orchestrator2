@@ -416,3 +416,43 @@ def test_runs_alerts_command(tmp_path: Any, capsys: pytest.CaptureFixture[str]) 
     assert rc == 0
     assert "alert(s):" in out
     assert "quality" in out
+
+
+def test_runs_report_command(
+    tmp_path: Any, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    rid = _seed_run(tmp_path, monkeypatch)
+    capsys.readouterr()
+    rc = main(["runs", "--root", str(tmp_path), "report", "--run-id", rid])
+    out = capsys.readouterr().out
+    assert rc == 0
+    assert "OBSERVABILITY REPORT" in out
+    assert "RECENT RUNS" in out
+    assert "THIS RUN" in out
+
+
+def test_run_with_report_flag(
+    tmp_path: Any, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setenv("ORCHESTRATOR_OBS_ROOT", str(tmp_path))
+    rc = main(["learn transformers", "--report"], client=FakeLLM([_valid_response()]))
+    out = capsys.readouterr().out
+    assert rc == 0
+    assert "Intent: build a learning plan" in out  # the normal run output
+    assert "OBSERVABILITY REPORT" in out  # followed by the report
+    assert "THIS RUN" in out
+
+
+def test_report_flag_survives_unreadable_store(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # Force the report to blow up; the run must still succeed and print its answer.
+    def _boom(_run_id: str, _root: Any = None) -> str:
+        raise RuntimeError("store unreadable")
+
+    monkeypatch.setattr("orchestrator.cli._full_report", _boom)
+    rc = main(["learn transformers", "--report"], client=FakeLLM([_valid_response()]))
+    captured = capsys.readouterr()
+    assert rc == 0
+    assert "Intent: build a learning plan" in captured.out
+    assert "report unavailable" in captured.err

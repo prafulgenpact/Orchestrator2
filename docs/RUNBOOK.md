@@ -17,8 +17,38 @@ PYTHONPATH=src AGENT_LLM_MODE=replay python3 -m orchestrator "plan my week of le
 ```
 
 Flags: `--json`, `--model`, `--registry PATH`, `--mode {live,record,replay}`,
-`--max-retries N`. Exit codes: 0 ok, 2 usage, 3 config/registry/credential error,
-4 planning failure.
+`--max-retries N`, `--no-record`, `--run-id ID`, `--report`. Exit codes: 0 ok, 2 usage,
+3 config/registry/credential error, 4 planning failure.
+
+## Observability (runs, KPIs, cost, quality, alerts)
+
+Every run is saved automatically (JSON per run + a SQLite summary + a hash-chained event log)
+under the current dir, or `ORCHESTRATOR_OBS_ROOT`. Secrets are masked before writing;
+`--no-record` skips saving.
+
+One command — run a real task and see everything, with real numbers:
+
+```
+PYTHONPATH=src python3 -m orchestrator --execute --report "plan my week of learning transformers"
+```
+
+`--report` prints, after the answer: aggregate KPIs (success rate, latency p50/p95/p99),
+cost + tokens per model, quality, health alerts, a per-app table, recent runs, and this run's
+per-step drill-down (which app, why, timing, cost). Live cost/tokens are real; replay shows $0.
+
+Browse the store any time (read-only, offline):
+
+```
+PYTHONPATH=src python3 -m orchestrator runs report            # full report over the store
+PYTHONPATH=src python3 -m orchestrator runs list              # recent runs
+PYTHONPATH=src python3 -m orchestrator runs list --kpis       # aggregate KPIs
+PYTHONPATH=src python3 -m orchestrator runs show <run-id>     # one run's drill-down
+PYTHONPATH=src python3 -m orchestrator runs alerts            # health-threshold breaches
+```
+
+Add `--json` to any `runs` command for machine output. Set contract token prices with
+`ORCHESTRATOR_PRICES=/path/to/prices.json` (`{"pattern": {"input":.., "output":..}}` in $/MTok);
+unknown models are reported with tokens but marked unpriced.
 
 ## Record / re-record e2e fixtures
 

@@ -22,6 +22,7 @@ from orchestrator.observability import (
     list_runs,
     record_run,
     redact,
+    render_report,
     render_run_detail,
     render_runs_list,
     save_run,
@@ -707,3 +708,21 @@ def test_kpis_cost_aggregate(tmp_path) -> None:
     assert cost["by_model"][0]["model"] == "claude-opus-4-6"
     # cost surfaces in the run summary too
     assert list_runs(tmp_path)[0]["total_tokens"] in (1000, 3000)
+
+
+# --- combined report --------------------------------------------------------
+
+
+def test_render_report(tmp_path) -> None:
+    _save_run(tmp_path, run_id="a" * 32, started_at=1000.0, status="ok")
+    data, fired, recent = kpis(tmp_path), alerts(tmp_path), list_runs(tmp_path)
+
+    without = render_report(data, fired, recent, None)
+    assert "OBSERVABILITY REPORT" in without
+    assert "HEALTH ALERTS" in without
+    assert "RECENT RUNS" in without
+    assert "THIS RUN" not in without  # drill-down omitted when no run given
+
+    with_run = render_report(data, fired, recent, get_run("a" * 32, root=tmp_path))
+    assert "THIS RUN" in with_run
+    assert "Run aaaaaaaaaaaa" in with_run
