@@ -244,6 +244,7 @@ body.conv-off .conv-mini{ display:flex; flex-direction:column; align-items:cente
 .md hr{ border:0; height:1px; background:var(--line); margin:14px 0 }
 .md code,.md-code code{ font-family:var(--mono); font-size:.86em }
 .md :not(pre) > code{ background:var(--bg-2); border:1px solid var(--line); border-radius:5px; padding:1px 5px; color:var(--ink); }
+.report{ font-family:var(--mono); font-size:11.5px; line-height:1.55; color:var(--ink-2); background:var(--bg-2); border:1px solid var(--line); border-radius:8px; padding:10px 12px; margin:0; white-space:pre-wrap; overflow-wrap:anywhere; }
 .md-code{ background:var(--bg-2); border:1px solid var(--line); border-radius:8px; padding:10px 12px; margin:0 0 10px; overflow-x:auto; }
 .md-code code{ display:block; white-space:pre; color:var(--ink); line-height:1.5; font-size:12px; }
 .paper{ padding:2px 0 }
@@ -634,8 +635,11 @@ function renderFeed(){
     const row = document.createElement('div');
     row.className = 'frow ' + (st==='error' ? 'done' : st);
     const icon = (st==='done'||st==='error') ? CHECK_SVG : st==='running' ? SPIN_SVG : '';
+    // The feed is the conversational view: show the fuller plain-English description of the step
+    // (the technical short title lives in the Agent Trace instead).
+    const say = s.description || s.title;
     row.innerHTML = `<span class="fi">${icon}</span>
-      <div class="ft"><div class="fmsg">${esc(s.title)}${st==='running'?'…':''}</div>
+      <div class="ft"><div class="fmsg">${esc(say)}${st==='running'?'…':''}</div>
       <div class="fmeta">${s.appName?'<span class="fapp">'+esc(s.appName)+'</span>':''}${s.t?'<time>'+s.t+'</time>':''}</div></div>`;
     feed.appendChild(row);
   });
@@ -780,6 +784,19 @@ function mdToHtml(src){
   return out.join('\n');
 }
 function md(src){ return '<div class="md">'+mdToHtml(src)+'</div>'; }
+// True markdown prose (blog, summaries) → rich render. Plain/console reports (e.g. a p-value
+// demo with ==== boxes) → keep the app's own layout faithfully in a monospace block.
+function looksLikeMarkdown(s){
+  return /^\s{0,3}#{1,6}\s+\S/m.test(s)          // ATX heading
+      || /\*\*[^*\n]+\*\*/.test(s)               // **bold**
+      || /^\s*```/m.test(s)                      // fenced code
+      || /^\s*>\s+\S/m.test(s)                   // blockquote
+      || /(^|\n)\s*[-*]\s+\S[\s\S]*\n\s*[-*]\s+\S/.test(s)  // 2+ bullet items
+      || /\[[^\]]+\]\(https?:\/\//.test(s);       // [text](url)
+}
+function renderText(s){
+  return looksLikeMarkdown(s) ? md(s) : '<pre class="report">'+esc(s)+'</pre>';
+}
 
 /* ---- shape-aware value rendering: pick the right view for each app's output ---- */
 const TEXT_FIELDS = ['content','text','answer','body','markdown','md','summary','draft','blog','post','explanation','lesson','message'];
@@ -814,7 +831,7 @@ function renderKV(o){
 }
 function renderValue(v){
   if(v == null || v === '') return '';
-  if(typeof v === 'string') return md(v);
+  if(typeof v === 'string') return renderText(v);
   if(Array.isArray(v)){
     if(!v.length) return '';
     if(v.every(isPaper)) return v.map(renderPaper).join('<div class="md-sep"></div>');
@@ -824,9 +841,9 @@ function renderValue(v){
   if(Array.isArray(v.messages)){
     const asst = v.messages.filter(m => m && m.role === 'assistant');
     const last = asst.length ? asst[asst.length-1] : v.messages[v.messages.length-1];
-    if(last && typeof last.content === 'string') return md(last.content);
+    if(last && typeof last.content === 'string') return renderText(last.content);
   }
-  for(const k of TEXT_FIELDS){ if(typeof v[k] === 'string' && v[k].trim()) return md(v[k]); }
+  for(const k of TEXT_FIELDS){ if(typeof v[k] === 'string' && v[k].trim()) return renderText(v[k]); }
   if(Array.isArray(v.images) && v.images.length){
     return v.images.filter(b => typeof b === 'string' && b).map(b => `<img class="out-img" src="data:image/png;base64,${esc(b)}" alt="output image">`).join('');
   }
@@ -884,8 +901,8 @@ function answerCopyText(){
 
 /* ---- SSE event handlers ---- */
 function buildSteps(plan){
-  steps = (plan.subtasks||[]).map(s => ({ id:s.id, title:s.title, appName:(s.app&&s.app.app_name)||'', status:'queued' }));
-  steps.push({ id:'__synth__', title:'Compose final answer', appName:'Orchestrator', status:'queued' });
+  steps = (plan.subtasks||[]).map(s => ({ id:s.id, title:s.title, description:s.description||'', appName:(s.app&&s.app.app_name)||'', status:'queued' }));
+  steps.push({ id:'__synth__', title:'Compose final answer', description:'Bringing every app’s results together into one grounded answer.', appName:'Orchestrator', status:'queued' });
   stepById = {}; steps.forEach(s => stepById[s.id] = s);
   setSummary('running', steps.length+' steps'); renderTrace(); renderFeed();
 }

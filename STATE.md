@@ -1,8 +1,21 @@
 # Project State — A multi agent orchestrator system calling relevant apps basis intent recognition
 
-Last updated: 2026-07-31 (output-format-and-trace-detail task)
+Last updated: 2026-07-31 (faithful-output-and-feed-descriptions task)
 
 ## In progress
+
+- 2026-07-31 faithful-output-and-feed-descriptions (Whole-app UI — polish). `web/
+  atelier-workspace.html` only, no backend change. (1) String outputs now route through
+  `looksLikeMarkdown`/`renderText`: true markdown (blog, summaries, lessons) renders rich; plain
+  or console-style reports (e.g. Simulated Learning's `====`-boxed p-value demo, which the earlier
+  markdown pass mangled into stray rules) render faithfully in a monospace `.report` block that
+  preserves the app's own layout. (2) The left Progress feed is now conversational — it shows each
+  step's plain-English description — while the Agent Trace keeps the short technical title + app +
+  method, so the two views no longer duplicate each other. Live-verified in headless Chrome:
+  box-report → `<pre class="report">` with no stray `<hr>`; blog → markdown; feed shows
+  descriptions and trace shows titles (feed ≠ trace); 0 JS errors. `make verify` PASS.
+  NEXT (separate backend task, plan-first): user chose to split code apps into write→execute as
+  two real trace steps — a planner/executor change that affects the decomposition eval.
 
 - 2026-07-31 output-format-and-trace-detail (Whole-app UI — polish). `web/atelier-workspace.html`
   only, no backend change. (1) `mdToHtml` now joins wrapped lines within a paragraph with `<br>`

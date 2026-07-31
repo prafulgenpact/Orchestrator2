@@ -1,1 +1,1 @@
-20260731-output-format-and-trace-detail.md
+20260731-faithful-output-and-feed-descriptions.md

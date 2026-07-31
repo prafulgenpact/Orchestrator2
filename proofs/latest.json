@@ -1,6 +1,6 @@
 {
   "schema": "proof/v1",
-  "created_utc": "2026-07-31T13:40:32+00:00",
+  "created_utc": "2026-07-31T14:05:47+00:00",
   "result": "PASS",
   "failed_checks": [],
   "missing_required_checks": [],
@@ -12,11 +12,11 @@
     "e2e",
     "secrets"
   ],
-  "fingerprint": "703855d07096f46a88b780d550f58c9a3f791f6936f9504ef0c1b767704fa826",
+  "fingerprint": "47729fcb4bb42cd8fe1268664a5288deaf85638aa2441c78f9638d0764bbecb6",
   "git": {
-    "commit": "25a8bc92b5962dd4f74825c71437d549d1b00d35",
+    "commit": "f2da3874409be6c8cf88e58f8a1b76ed981c6fd6",
     "branch": "Orchestrator2",
-    "dirty_tracked_files": false
+    "dirty_tracked_files": true
   },
   "checks": [
     {
@@ -40,7 +40,7 @@
     {
       "name": "py-unit",
       "status": "pass",
-      "duration_s": 8,
+      "duration_s": 10,
       "evidence": "reports/py-unit.log"
     },
     {
@@ -52,7 +52,7 @@
     {
       "name": "secrets",
       "status": "pass",
-      "duration_s": 0,
+      "duration_s": 1,
       "evidence": "reports/secrets.log"
     },
     {
@@ -64,7 +64,7 @@
     {
       "name": "dep-audit",
       "status": "pass",
-      "duration_s": 14,
+      "duration_s": 27,
       "evidence": "reports/dep-audit.log"
     },
     {
@@ -80,14 +80,14 @@
       "failures": 0,
       "errors": 0,
       "skipped": 0,
-      "time_s": 7.2
+      "time_s": 8.25
     },
     "e2e": {
       "tests": 2,
       "failures": 0,
       "errors": 0,
       "skipped": 0,
-      "time_s": 0.67
+      "time_s": 0.69
     },
     "web_e2e": null,
     "coverage_pct": 95.99
@@ -99,5 +99,5 @@
     "pytest": "pytest 8.3.2",
     "os": "Darwin 25.5.0"
   },
-  "content_hash": "3a74f04ce8276f5ce673ba0c41fe87ace356cabe4affd9a7c1f15b727ebead41"
+  "content_hash": "b075f386bed4331bfa527d922f338f94e7ca3fd9dfd9207b6279ebdc5c8a1a42"
 }
