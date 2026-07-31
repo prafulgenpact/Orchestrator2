@@ -1,8 +1,19 @@
 # Project State — A multi agent orchestrator system calling relevant apps basis intent recognition
 
-Last updated: 2026-07-31 (faithful-output-and-feed-descriptions task)
+Last updated: 2026-07-31 (trace-code-authoring-substep task)
 
 ## In progress
+
+- 2026-07-31 trace-code-authoring-substep (Whole-app UI — polish). `web/atelier-workspace.html`
+  only, no backend change. When a step's input carries model-authored code (`args.code`), the
+  Agent Trace now renders TWO honest nodes: a "Wrote the code" node attributed to the Orchestrator's
+  model (Output = the code) followed by the app-execution node (method + output). Extracted a
+  `traceNode(opts)` builder to render each collapsible node. This resolves the "one method shown"
+  complaint truthfully: Simulated Learning exposes no write API (only `execute_code`/`ask_question`),
+  so the code authoring is attributed to the orchestrator, not faked as an app call. User explicitly
+  chose this over a backend write→execute split (which isn't possible without a write endpoint).
+  Live-verified in headless Chrome: code step → 2 nodes, non-code step → 1 node, 0 JS errors.
+  `make verify` PASS.
 
 - 2026-07-31 faithful-output-and-feed-descriptions (Whole-app UI — polish). `web/
   atelier-workspace.html` only, no backend change. (1) String outputs now route through

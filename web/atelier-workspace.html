@@ -651,26 +651,47 @@ function renderFeed(){
 }
 
 /* ---- trace (technical) ---- */
+const CARET_SVG = '<svg class="caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg>';
+function traceNode(o){                                       // one collapsible trace node
+  const st = o.status==='error' ? 'done' : o.status;
+  const node = document.createElement('div'); node.className = 'step ' + st;
+  const kv = (b, v, mono) => v == null ? '' : `<div class="kv"><b>${esc(b)}</b><span class="val${mono?' mono':''}">${esc(v)}</span></div>`;
+  node.innerHTML = `<span class="node"></span>
+    <div class="top">
+      <div class="lbl"><span class="tag">${esc(o.tag)}</span><span class="name">${esc(o.name)}</span></div>
+      <span class="sbadge ${st}">${esc(o.status)}</span>
+      ${CARET_SVG}
+    </div>
+    <div class="detail">
+      ${kv('App', o.app)}
+      ${kv('Method', o.method)}
+      ${o.input!=null ? kv('Input', o.input, true) : ''}
+      ${kv('Output', o.output, true)}
+      ${o.statusLine ? kv('Status', o.statusLine) : ''}
+    </div>`;
+  node.querySelector('.top').addEventListener('click', () => node.classList.toggle('open'));
+  return node;
+}
 function renderTrace(){
   tl.innerHTML = '';
   steps.forEach(s => {
-    const st = s.status==='error' ? 'done' : s.status;
-    const step = document.createElement('div'); step.className = 'step ' + st;
-    step.innerHTML = `<span class="node"></span>
-      <div class="top">
-        <div class="lbl"><span class="tag">${esc(s.appName||'Step')}</span><span class="name">${esc(s.title)}</span></div>
-        <span class="sbadge ${st}">${esc(s.status)}</span>
-        <svg class="caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg>
-      </div>
-      <div class="detail">
-        <div class="kv"><b>App</b><span class="val">${esc(s.appName||'—')}</span></div>
-        <div class="kv"><b>Method</b><span class="val">${esc(s.operation||'—')}</span></div>
-        <div class="kv"><b>Input</b><span class="val mono">${esc(argsText(s.args))}</span></div>
-        <div class="kv"><b>Output</b><span class="val mono">${esc(trunc(valueToText(s.output), 400))}</span></div>
-        <div class="kv"><b>Status</b><span class="val">${esc(s.status)}${s.dur?' · '+s.dur+'s':''}${s.t?' · '+s.t:''}</span></div>
-      </div>`;
-    step.querySelector('.top').addEventListener('click', () => step.classList.toggle('open'));
-    tl.appendChild(step);
+    // If the orchestrator's model authored code for this step, surface that as its own honest
+    // node (attributed to the Orchestrator, not the app) BEFORE the app-execution node.
+    const code = s.args && typeof s.args.code === 'string' ? s.args.code.trim() : '';
+    if(code){
+      tl.appendChild(traceNode({
+        status: 'done', tag: 'Orchestrator', name: 'Wrote the code',
+        app: 'Orchestrator (model)', method: 'authored code',
+        output: trunc(code, 600),
+      }));
+    }
+    tl.appendChild(traceNode({
+      status: s.status, tag: s.appName || 'Step', name: s.title,
+      app: s.appName || '—', method: s.operation || '—',
+      input: argsText(s.args),
+      output: trunc(valueToText(s.output), 400),
+      statusLine: `${s.status}${s.dur?' · '+s.dur+'s':''}${s.t?' · '+s.t:''}`,
+    }));
   });
 }
 
