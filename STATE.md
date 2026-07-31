@@ -1,8 +1,30 @@
 # Project State — A multi agent orchestrator system calling relevant apps basis intent recognition
 
-Last updated: 2026-07-28 (observability-report-command task)
+Last updated: 2026-07-31 (ui-blank-start-clean-copy task)
+
+## In progress
+
+- 2026-07-31 ui-blank-start-clean-copy (Whole-app UI — polish). Three UI fixes to
+  `web/atelier-workspace.html`, no backend change so routing is untouched: (1) a fresh load is now
+  a clean slate — the 5 sample result cards were removed from the canvas, the user message + the
+  "Progress" header stay hidden until a real run, and the trace summary starts empty (all of it
+  fills live from the run's own events); (2) the "System Telemetry" block under the Agent Trace
+  (active-apps / tokens / latency chart) was removed entirely, HTML + its dead CSS; (3) every
+  result card and the final answer card now carry a structured `data-copy` plain-text payload
+  (label -> output/JSON -> note -> sources; the streaming answer keeps it in sync), so the Copy
+  button yields clean, paste-ready text instead of scraped screen text. `make verify` PASS.
 
 ## Done (most recent first)
+
+- 2026-07-30 web-connector-live-run (Whole-app UI — Phase 1; commit ecdde05). A live web connector
+  joins the Atelier UI to the running orchestrator. New `src/orchestrator/web.py`: a pure
+  `run_events` generator relays the existing `plan -> execute(progress) -> synthesize(on_delta)`
+  pipeline to the browser as an ordered Server-Sent-Events stream (status/plan/progress/result/
+  answer/final/error/done), behind a thin `ThreadingHTTPServer` (`python -m orchestrator.web`,
+  `$ATELIER_PORT`, `$ATELIER_UI`). `web/atelier-workspace.html` drives the feed, trace, and result
+  cards from an `EventSource`. `execute_plan` gained an optional `on_result` callback fired the
+  moment each subtask finishes, so intermediate app outputs appear as each app completes rather than
+  after the whole run. No planner/synthesis change; decomposition eval unchanged; make verify PASS.
 
 - 2026-07-28 observability-report-command (Observability — one-command live report). One command
   now runs a real task and prints the whole observability picture with real numbers:

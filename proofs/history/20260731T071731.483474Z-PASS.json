@@ -1,10 +1,8 @@
 {
   "schema": "proof/v1",
-  "created_utc": "2026-07-09T06:29:31+00:00",
-  "result": "FAIL",
-  "failed_checks": [
-    "py-format"
-  ],
+  "created_utc": "2026-07-31T07:17:29+00:00",
+  "result": "PASS",
+  "failed_checks": [],
   "missing_required_checks": [],
   "required_checks": [
     "py-lint",
@@ -14,9 +12,9 @@
     "e2e",
     "secrets"
   ],
-  "fingerprint": "61b7e852ddb4ff5fa4fffc8253c26b7fe37d11e89bd8e46cf8abd975986ff9f7",
+  "fingerprint": "240b759502779c46baa1ef0f32eba600acb42654f316aa97cc4a59909de6c401",
   "git": {
-    "commit": "c13dd58395641638e1c5a985fabb66dadad8b6b2",
+    "commit": "ecdde057998e24162716128d0570548222cd9958",
     "branch": "Orchestrator2",
     "dirty_tracked_files": true
   },
@@ -29,26 +27,26 @@
     },
     {
       "name": "py-format",
-      "status": "fail",
+      "status": "pass",
       "duration_s": 0,
       "evidence": "reports/py-format.log"
     },
     {
       "name": "py-types",
       "status": "pass",
-      "duration_s": 3,
+      "duration_s": 2,
       "evidence": "reports/py-types.log"
     },
     {
       "name": "py-unit",
       "status": "pass",
-      "duration_s": 2,
+      "duration_s": 12,
       "evidence": "reports/py-unit.log"
     },
     {
       "name": "e2e",
       "status": "pass",
-      "duration_s": 2,
+      "duration_s": 3,
       "evidence": "reports/e2e.log"
     },
     {
@@ -60,7 +58,7 @@
     {
       "name": "secrets-gitleaks",
       "status": "pass",
-      "duration_s": 1,
+      "duration_s": 2,
       "evidence": "reports/secrets-gitleaks.log"
     },
     {
@@ -78,21 +76,21 @@
   ],
   "tests": {
     "unit": {
-      "tests": 228,
+      "tests": 881,
       "failures": 0,
       "errors": 0,
       "skipped": 0,
-      "time_s": 1.1
+      "time_s": 10.36
     },
     "e2e": {
       "tests": 2,
       "failures": 0,
       "errors": 0,
       "skipped": 0,
-      "time_s": 0.66
+      "time_s": 0.74
     },
     "web_e2e": null,
-    "coverage_pct": 100.0
+    "coverage_pct": 95.99
   },
   "environment": {
     "python": "Python 3.10.0",
@@ -101,5 +99,5 @@
     "pytest": "pytest 8.3.2",
     "os": "Darwin 25.5.0"
   },
-  "content_hash": "66f1ad2e7399b8b1553f6fd6ee8b1716ee510286802514d5536812d0761c8f6b"
+  "content_hash": "c8660b878f1c62dfc44f840233074ff71714c62e35e0dc38b3b9768fb4d916bf"
 }

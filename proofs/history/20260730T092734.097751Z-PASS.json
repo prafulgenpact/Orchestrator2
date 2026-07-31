@@ -1,6 +1,6 @@
 {
   "schema": "proof/v1",
-  "created_utc": "2026-07-09T06:32:34+00:00",
+  "created_utc": "2026-07-30T09:27:32+00:00",
   "result": "PASS",
   "failed_checks": [],
   "missing_required_checks": [],
@@ -12,9 +12,9 @@
     "e2e",
     "secrets"
   ],
-  "fingerprint": "ca11d571d4718ed0df1342cf0a6da7ee8d63efae2034af1a77bd7f9e1934827a",
+  "fingerprint": "33b23219015e0601a89942b8965921071724ead6133ee716e927875fa20f27ef",
   "git": {
-    "commit": "364fc8e9b6b9282c7f18c40ab9aec44032c4d476",
+    "commit": "a23d6dc1f0ebbdd12a4978e9297e3a1383709294",
     "branch": "Orchestrator2",
     "dirty_tracked_files": true
   },
@@ -22,7 +22,7 @@
     {
       "name": "py-lint",
       "status": "pass",
-      "duration_s": 0,
+      "duration_s": 1,
       "evidence": "reports/py-lint.log"
     },
     {
@@ -34,13 +34,13 @@
     {
       "name": "py-types",
       "status": "pass",
-      "duration_s": 2,
+      "duration_s": 3,
       "evidence": "reports/py-types.log"
     },
     {
       "name": "py-unit",
       "status": "pass",
-      "duration_s": 4,
+      "duration_s": 10,
       "evidence": "reports/py-unit.log"
     },
     {
@@ -58,7 +58,7 @@
     {
       "name": "secrets-gitleaks",
       "status": "pass",
-      "duration_s": 1,
+      "duration_s": 2,
       "evidence": "reports/secrets-gitleaks.log"
     },
     {
@@ -70,27 +70,27 @@
     {
       "name": "diff-cover",
       "status": "pass",
-      "duration_s": 0,
+      "duration_s": 2,
       "evidence": "reports/diff-cover.log"
     }
   ],
   "tests": {
     "unit": {
-      "tests": 228,
+      "tests": 880,
       "failures": 0,
       "errors": 0,
       "skipped": 0,
-      "time_s": 1.88
+      "time_s": 7.71
     },
     "e2e": {
       "tests": 2,
       "failures": 0,
       "errors": 0,
       "skipped": 0,
-      "time_s": 0.94
+      "time_s": 0.82
     },
     "web_e2e": null,
-    "coverage_pct": 100.0
+    "coverage_pct": 95.98
   },
   "environment": {
     "python": "Python 3.10.0",
@@ -99,5 +99,5 @@
     "pytest": "pytest 8.3.2",
     "os": "Darwin 25.5.0"
   },
-  "content_hash": "21d0113b8cacd91381c24144ef8baed0ca296f759a04163c6917ebca89d7fef5"
+  "content_hash": "b5ff4cd72a284146ea30d3ed8a2b329c633d4db061f18c2e2de568f45d1c42d7"
 }

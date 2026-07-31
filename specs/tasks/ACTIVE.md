@@ -1,1 +1,1 @@
-20260728-observability-report-command.md
+20260731-ui-blank-start-clean-copy.md
