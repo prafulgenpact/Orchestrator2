@@ -228,6 +228,40 @@ body.conv-off .conv-mini{ display:flex; flex-direction:column; align-items:cente
 .paper-card .body{ background:linear-gradient(180deg, var(--paper-2) 0%, var(--paper) 100%), var(--grain); background-blend-mode: multiply; padding:0; }
 .paper-card .padded{ padding:16px 18px 14px; }
 .sc-label{ font-family:var(--mono); font-size:9.5px; letter-spacing:.16em; color:var(--ink-3); text-transform:uppercase; font-weight:600; margin-bottom:6px; }
+
+/* ---- rendered output: markdown prose, paper items, key/value, code ---- */
+.md{ font-family:var(--serif); font-size:13.5px; line-height:1.62; color:var(--ink-2); word-wrap:break-word; overflow-wrap:anywhere; }
+.md > :first-child{ margin-top:0 }
+.md > :last-child{ margin-bottom:0 }
+.md h1,.md h2,.md h3,.md h4,.md h5,.md h6{ font-family:var(--serif); color:var(--ink); font-weight:650; line-height:1.25; letter-spacing:-.01em; margin:16px 0 7px; }
+.md h1{ font-size:20px } .md h2{ font-size:17px } .md h3{ font-size:15px } .md h4,.md h5,.md h6{ font-size:13.5px }
+.md p{ margin:0 0 10px }
+.md strong{ font-weight:700; color:var(--ink) }
+.md em{ font-style:italic }
+.md a{ color:var(--accent); text-decoration:none } .md a:hover{ text-decoration:underline }
+.md ul,.md ol{ margin:0 0 10px; padding-left:20px } .md li{ margin:3px 0 }
+.md blockquote{ margin:0 0 10px; padding:2px 0 2px 12px; border-left:3px solid var(--accent-ring); color:var(--ink-2); font-style:italic }
+.md hr{ border:0; height:1px; background:var(--line); margin:14px 0 }
+.md code,.md-code code{ font-family:var(--mono); font-size:.86em }
+.md :not(pre) > code{ background:var(--bg-2); border:1px solid var(--line); border-radius:5px; padding:1px 5px; color:var(--ink); }
+.md-code{ background:var(--bg-2); border:1px solid var(--line); border-radius:8px; padding:10px 12px; margin:0 0 10px; overflow-x:auto; }
+.md-code code{ display:block; white-space:pre; color:var(--ink); line-height:1.5; font-size:12px; }
+.paper{ padding:2px 0 }
+.paper + .md-sep{ height:1px; background:var(--line); margin:12px 0; opacity:.7 }
+.p-title{ font-family:var(--serif); font-size:15px; line-height:1.3; font-weight:650; color:var(--ink); margin-bottom:4px }
+.p-auth{ font-size:12px; color:var(--ink-2); line-height:1.45; margin-bottom:2px }
+.p-meta{ font-family:var(--mono); font-size:10px; color:var(--ink-3); letter-spacing:.04em; margin-bottom:7px }
+.p-abs{ font-family:var(--serif); font-size:13px; line-height:1.55; color:var(--ink-2); margin:0 0 7px }
+.p-link a{ font-size:11.5px; color:var(--accent); text-decoration:none; word-break:break-all } .p-link a:hover{ text-decoration:underline }
+.kvrow{ display:flex; gap:10px; padding:3px 0; font-size:12.5px; line-height:1.5; border-bottom:1px solid var(--line) }
+.kvrow:last-child{ border-bottom:0 }
+.kvrow .k{ font-family:var(--mono); font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:var(--ink-3); min-width:84px; flex:none; padding-top:2px }
+.kvrow .v{ color:var(--ink-2); flex:1; word-break:break-word }
+.out-img{ max-width:100%; border-radius:8px; border:1px solid var(--line); margin:0 0 10px; display:block }
+.out-err{ color:var(--run); font-size:13px; line-height:1.55; white-space:pre-wrap }
+.out-note{ font-size:11.5px; color:var(--ink-3); font-style:italic; margin-top:10px; padding-top:8px; border-top:1px dashed var(--line) }
+.out-src{ margin-top:8px; font-size:11.5px } .out-src a{ color:var(--accent); text-decoration:none; word-break:break-all }
+.out-empty{ color:var(--ink-3); font-size:13px }
 .paper-card .title{ font-family:var(--serif); font-size:16.5px; line-height:1.28; font-weight:600; color:var(--ink); letter-spacing:-.005em; margin:0 0 10px; }
 .paper-card .authors{ font-size:12px; color:var(--ink-2); line-height:1.5; margin-bottom:3px }
 .paper-card .aff{ font-size:11.5px; color:var(--ink-3); font-style:italic; margin-bottom:10px }
@@ -580,7 +614,7 @@ const CHECK_ICON = CHECK_SVG;
 
 /* ---- run state ---- */
 let steps = [], stepById = {}, running = false, noteText = '';
-let answerCard = null, answerBody = null, answerTextEl = null;
+let answerCard = null, answerBody = null, answerTextEl = null, answerRaw = '';
 let zTop = 20, colY = [24,24,24];
 const COL_W = 372, COL_X0 = 24;
 
@@ -702,32 +736,133 @@ function placeCard(block){                                 // simple masonry int
   makeCardInteractive(block);
   colY[col] += block.offsetHeight + 18;
 }
+/* ---- tiny markdown renderer (escape FIRST, then format — CSP-safe, no libs) ---- */
+function mdInline(escaped){
+  return escaped
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/(^|[^*])\*([^*\n]+)\*/g, '$1<em>$2</em>')
+    .replace(/\b(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener">$1</a>')
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+}
+function mdToHtml(src){
+  const lines = String(src==null?'':src).replace(/\r\n?/g,'\n').split('\n');
+  const out = []; let i = 0, para = [];
+  const flush = () => { if(para.length){ out.push('<p>'+mdInline(esc(para.join(' ')))+'</p>'); para = []; } };
+  while(i < lines.length){
+    const line = lines[i];
+    let m = line.match(/^```(\w*)\s*$/);
+    if(m){ flush(); i++; const buf = []; while(i<lines.length && !/^```\s*$/.test(lines[i])){ buf.push(lines[i]); i++; } i++;
+      out.push('<pre class="md-code"><code>'+esc(buf.join('\n'))+'</code></pre>'); continue; }
+    if(/^\s*$/.test(line)){ flush(); i++; continue; }
+    if(m = line.match(/^\s*(#{1,6})\s+(.*)$/)){ flush(); const l = m[1].length; out.push('<h'+l+'>'+mdInline(esc(m[2].replace(/\s*#+\s*$/,'')))+'</h'+l+'>'); i++; continue; }
+    if(/^\s*(---+|\*\*\*+|___+)\s*$/.test(line)){ flush(); out.push('<hr>'); i++; continue; }
+    if(/^\s*[-*+]\s+/.test(line)){ flush(); const it = []; while(i<lines.length && /^\s*[-*+]\s+/.test(lines[i])){ it.push('<li>'+mdInline(esc(lines[i].replace(/^\s*[-*+]\s+/,'')))+'</li>'); i++; } out.push('<ul>'+it.join('')+'</ul>'); continue; }
+    if(/^\s*\d+\.\s+/.test(line)){ flush(); const it = []; while(i<lines.length && /^\s*\d+\.\s+/.test(lines[i])){ it.push('<li>'+mdInline(esc(lines[i].replace(/^\s*\d+\.\s+/,'')))+'</li>'); i++; } out.push('<ol>'+it.join('')+'</ol>'); continue; }
+    if(/^\s*>\s?/.test(line)){ flush(); const buf = []; while(i<lines.length && /^\s*>\s?/.test(lines[i])){ buf.push(lines[i].replace(/^\s*>\s?/,'')); i++; } out.push('<blockquote>'+mdInline(esc(buf.join(' ')))+'</blockquote>'); continue; }
+    para.push(line.trim()); i++;
+  }
+  flush();
+  return out.join('\n');
+}
+function md(src){ return '<div class="md">'+mdToHtml(src)+'</div>'; }
+
+/* ---- shape-aware value rendering: pick the right view for each app's output ---- */
+const TEXT_FIELDS = ['content','text','answer','body','markdown','md','summary','draft','blog','post','explanation','lesson','message'];
+const LIST_FIELDS = ['papers','results','items','entries','data','messages'];
+function isPaper(o){ return o && typeof o==='object' && !Array.isArray(o) && ('title' in o) && ('abstract' in o || 'authors' in o || 'arxiv_id' in o || 'pdf_url' in o); }
+function authorsText(a){
+  if(!a) return '';
+  if(Array.isArray(a)) return a.map(x => typeof x==='string' ? x : (x && (x.name || x.full_name || x.author || ''))).filter(Boolean).join(', ');
+  return typeof a==='string' ? a : '';
+}
+function renderPaper(o){
+  const link = o.pdf_url || o.url || (o.arxiv_id ? 'https://arxiv.org/abs/'+o.arxiv_id : '');
+  const meta = [o.arxiv_id ? 'arXiv:'+o.arxiv_id : '', (o.published||'').slice(0,10), o.primary_category || o.categories || ''].filter(Boolean).join('  ·  ');
+  const auth = authorsText(o.authors);
+  return `<div class="paper">
+    <div class="p-title">${esc(o.title||'Untitled')}</div>
+    ${auth ? `<div class="p-auth">${esc(auth)}</div>` : ''}
+    ${meta ? `<div class="p-meta">${esc(meta)}</div>` : ''}
+    ${o.abstract ? `<p class="p-abs">${esc(o.abstract)}</p>` : ''}
+    ${typeof o.content==='string' && o.content.trim() ? md(o.content) : ''}
+    ${link ? `<div class="p-link"><a href="${esc(link)}" target="_blank" rel="noopener">${esc(link)}</a></div>` : ''}
+  </div>`;
+}
+function renderKV(o){
+  const rows = [];
+  for(const [k, v] of Object.entries(o)){
+    if(v == null || v === '' || (Array.isArray(v) && !v.length)) continue;
+    if(typeof v === 'object'){ rows.push(`<div class="kvrow"><span class="k">${esc(k)}</span><span class="v">${renderValue(v)}</span></div>`); }
+    else { rows.push(`<div class="kvrow"><span class="k">${esc(k)}</span><span class="v">${mdInline(esc(String(v)))}</span></div>`); }
+  }
+  return rows.join('') || `<pre class="md-code"><code>${esc(JSON.stringify(o, null, 2))}</code></pre>`;
+}
+function renderValue(v){
+  if(v == null || v === '') return '';
+  if(typeof v === 'string') return md(v);
+  if(Array.isArray(v)){
+    if(!v.length) return '';
+    if(v.every(isPaper)) return v.map(renderPaper).join('<div class="md-sep"></div>');
+    return v.map(renderValue).filter(Boolean).join('<div class="md-sep"></div>');
+  }
+  if(isPaper(v)) return renderPaper(v);
+  if(Array.isArray(v.messages)){
+    const asst = v.messages.filter(m => m && m.role === 'assistant');
+    const last = asst.length ? asst[asst.length-1] : v.messages[v.messages.length-1];
+    if(last && typeof last.content === 'string') return md(last.content);
+  }
+  for(const k of TEXT_FIELDS){ if(typeof v[k] === 'string' && v[k].trim()) return md(v[k]); }
+  if(Array.isArray(v.images) && v.images.length){
+    return v.images.filter(b => typeof b === 'string' && b).map(b => `<img class="out-img" src="data:image/png;base64,${esc(b)}" alt="output image">`).join('');
+  }
+  for(const k of LIST_FIELDS){ if(Array.isArray(v[k]) && v[k].length) return renderValue(v[k]); }
+  return renderKV(v);
+}
 function renderOutput(r){
   let html = '';
-  if(r.status!=='ok' && r.error){ html += `<div style="color:var(--run); font-size:13px; white-space:pre-wrap">${esc(r.error)}</div>`; }
-  const out = r.output;
-  if(out!=null && out!==''){
-    if(typeof out==='string'){ html += `<div style="white-space:pre-wrap; font-size:13px; line-height:1.55; color:var(--ink-2)">${esc(out)}</div>`; }
-    else { html += `<pre style="white-space:pre-wrap; max-height:280px; overflow:auto; margin:0; font-family:var(--mono); font-size:11.5px; color:var(--ink-2); background:var(--bg-2); padding:8px 10px; border-radius:8px">${esc(JSON.stringify(out,null,2))}</pre>`; }
-  }
-  if(r.note){ html += `<div class="cite" style="margin-top:10px">${esc(r.note)}</div>`; }
-  if(r.source){ html += `<div style="margin-top:8px; font-size:11.5px"><a href="${esc(r.source)}" target="_blank" rel="noopener" style="color:var(--accent)">${esc(r.source)}</a></div>`; }
-  return html || '<div style="color:var(--ink-3); font-size:13px">No output.</div>';
+  if(r.status!=='ok' && r.error){ html += `<div class="out-err">${mdInline(esc(r.error))}</div>`; }
+  html += renderValue(r.output);
+  if(r.note){ html += `<div class="out-note">${esc(r.note)}</div>`; }
+  if(r.source){ html += `<div class="out-src"><a href="${esc(r.source)}" target="_blank" rel="noopener">${esc(r.source)}</a></div>`; }
+  return html || '<div class="out-empty">No output.</div>';
 }
 
 /* ---- clean, copy-paste-ready plain text for each card (drives the Copy button) ---- */
+function authorsForCopy(o){ const a = authorsText(o.authors); return a; }
+function paperToText(o){
+  const link = o.pdf_url || o.url || (o.arxiv_id ? 'https://arxiv.org/abs/'+o.arxiv_id : '');
+  const meta = [o.arxiv_id ? 'arXiv:'+o.arxiv_id : '', (o.published||'').slice(0,10)].filter(Boolean).join(' · ');
+  return [o.title, authorsForCopy(o), meta, o.abstract || (typeof o.content==='string'?o.content:''), link].filter(Boolean).join('\n');
+}
+function valueToText(v){
+  if(v == null || v === '') return '';
+  if(typeof v === 'string') return v;               // markdown source pastes cleanly into editors
+  if(Array.isArray(v)){
+    if(v.every(isPaper)) return v.map(paperToText).join('\n\n');
+    return v.map(valueToText).filter(Boolean).join('\n\n');
+  }
+  if(isPaper(v)) return paperToText(v);
+  if(Array.isArray(v.messages)){
+    const asst = v.messages.filter(m => m && m.role === 'assistant');
+    const last = asst.length ? asst[asst.length-1] : v.messages[v.messages.length-1];
+    if(last && typeof last.content === 'string') return last.content;
+  }
+  for(const k of TEXT_FIELDS){ if(typeof v[k] === 'string' && v[k].trim()) return v[k]; }
+  for(const k of LIST_FIELDS){ if(Array.isArray(v[k]) && v[k].length) return valueToText(v[k]); }
+  return JSON.stringify(v, null, 2);
+}
 function resultCopyText(label, r){
   const parts = [];
   if(label) parts.push(label);
   if(r.status!=='ok' && r.error) parts.push(String(r.error));
-  const out = r.output;
-  if(out!=null && out!==''){ parts.push(typeof out==='string' ? out : JSON.stringify(out, null, 2)); }
+  const t = valueToText(r.output); if(t) parts.push(t);
   if(r.note) parts.push(String(r.note));
   if(r.source) parts.push('Source: ' + r.source);
   return parts.join('\n\n').trim();
 }
 function answerCopyText(){
-  let t = 'Answer\n\n' + (answerTextEl ? answerTextEl.textContent : '').trim();
+  let t = (answerRaw || '').trim();
   const srcs = answerBody ? Array.from(answerBody.querySelectorAll('.answer-src a')).map(a => a.textContent) : [];
   if(srcs.length){ t += '\n\nSources:\n' + srcs.map(s => '- ' + s).join('\n'); }
   return t.trim();
@@ -765,14 +900,14 @@ function ensureAnswerCard(){
   const synth = stepById['__synth__']; if(synth && synth.status==='queued'){ synth.status='running'; synth.t=now(); }
   const card = cardShell('Final answer', 'final output', 'fin'); card.classList.add('final'); card.style.width='440px';
   answerBody = card.querySelector('.padded');
-  answerBody.innerHTML = `<div class="kicker" style="font-family:var(--mono); font-size:10px; letter-spacing:.16em; color:var(--accent); text-transform:uppercase; font-weight:600; margin-bottom:8px">Answer</div><div class="answer-text" style="white-space:pre-wrap; font-family:var(--serif); font-size:14px; line-height:1.62; color:var(--ink)"></div><div class="answer-src"></div>`;
+  answerBody.innerHTML = `<div class="kicker" style="font-family:var(--mono); font-size:10px; letter-spacing:.16em; color:var(--accent); text-transform:uppercase; font-weight:600; margin-bottom:8px">Answer</div><div class="answer-text md"></div><div class="answer-src"></div>`;
   answerTextEl = answerBody.querySelector('.answer-text');
   placeCard(card); answerCard = card; renderFeed(); renderTrace();
 }
-function appendAnswer(delta){ ensureAnswerCard(); answerTextEl.textContent += delta; answerCard.dataset.copy = answerCopyText(); }
+function appendAnswer(delta){ ensureAnswerCard(); answerRaw += delta; answerTextEl.innerHTML = mdToHtml(answerRaw); answerCard.dataset.copy = answerCopyText(); }
 function finalizeAnswer(data){
   ensureAnswerCard();
-  if(data.answer && !answerTextEl.textContent.trim()){ answerTextEl.textContent = data.answer; }
+  if(data.answer && !answerRaw.trim()){ answerRaw = data.answer; answerTextEl.innerHTML = mdToHtml(answerRaw); }
   const synth = stepById['__synth__']; if(synth){ synth.status='done'; synth.t=now(); }
   if(data.sources && data.sources.length){
     answerBody.querySelector('.answer-src').innerHTML = '<div class="rule" style="height:1px; background:var(--rule); margin:12px 0 8px; opacity:.6"></div><div class="sc-label">Sources</div>'
@@ -806,7 +941,7 @@ function runTask(task){
   if(feedHead) feedHead.style.display = '';
   canvas.querySelectorAll('.block').forEach(b => b.remove());   // clear the previous run
   steps = []; stepById = {}; running = true; noteText = 'Planning your task…';
-  answerCard = null; answerBody = null; answerTextEl = null; colY = [24,24,24];
+  answerCard = null; answerBody = null; answerTextEl = null; answerRaw = ''; colY = [24,24,24];
   setSummary('running', 'starting…'); renderFeed(); renderTrace();
   let es;
   try { es = new EventSource('/run?task=' + encodeURIComponent(task)); }

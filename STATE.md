@@ -1,10 +1,23 @@
 # Project State — A multi agent orchestrator system calling relevant apps basis intent recognition
 
-Last updated: 2026-07-31 (ui-blank-start-clean-copy task)
+Last updated: 2026-07-31 (rich-output-rendering task)
 
 ## In progress
 
-- 2026-07-31 ui-blank-start-clean-copy (Whole-app UI — polish). Three UI fixes to
+- 2026-07-31 rich-output-rendering (Whole-app UI — polish). Result cards + the final answer now
+  render app outputs as readable, well-formatted content instead of raw JSON / raw markdown source,
+  and copy as clean plain text. `web/atelier-workspace.html` only, no backend change. Added a small
+  self-contained markdown renderer (`mdToHtml`/`mdInline`: headings, bold/italic, inline + fenced
+  code, ul/ol, blockquote, hr, links, paragraphs — escape-first, CSP-safe) and a shape-aware value
+  dispatcher (`renderValue` → `renderPaper`/`renderKV`): strings and text-bearing dicts (content /
+  chat `messages`) render as markdown; ArXiv paper lists render as title/authors/meta/abstract/link
+  items; base64 images as <img>; unknown shapes as a clean key/value view. The streamed answer
+  accumulates raw and re-renders markdown per delta. Copy payloads (`valueToText`/`paperToText`)
+  give markdown source for prose and a readable list for papers. Live-verified in a headless
+  browser: answer renders <h1>/<h2>/<strong>/<ul> with zero stray `#`; ArXiv shows readable paper
+  titles/links with no JSON noise; paper Copy yields title/authors/abstract/link. `make verify` PASS.
+
+  Earlier this session — ui-blank-start-clean-copy (Whole-app UI — polish, commit 798915d). Three UI fixes to
   `web/atelier-workspace.html`, no backend change so routing is untouched: (1) a fresh load is now
   a clean slate — the 5 sample result cards were removed from the canvas, the user message + the
   "Progress" header stay hidden until a real run, and the trace summary starts empty (all of it

@@ -1,6 +1,6 @@
 {
   "schema": "proof/v1",
-  "created_utc": "2026-07-09T06:41:47+00:00",
+  "created_utc": "2026-07-31T10:08:14+00:00",
   "result": "PASS",
   "failed_checks": [],
   "missing_required_checks": [],
@@ -12,9 +12,9 @@
     "e2e",
     "secrets"
   ],
-  "fingerprint": "473d59d6b4441785e29a10b4d0306a67b2518eec74a622836a9b6e023351fa90",
+  "fingerprint": "de51e2ff032c6c30e3ab5e0578479c3b33593707f30b9c2054d133b6a8140816",
   "git": {
-    "commit": "cd8849156987c52483cea5645b5a42c4ae5ac445",
+    "commit": "670eefd3db2ff3a741aa0801a8e20c7d8d61179c",
     "branch": "Orchestrator2",
     "dirty_tracked_files": true
   },
@@ -22,7 +22,7 @@
     {
       "name": "py-lint",
       "status": "pass",
-      "duration_s": 0,
+      "duration_s": 3,
       "evidence": "reports/py-lint.log"
     },
     {
@@ -40,13 +40,13 @@
     {
       "name": "py-unit",
       "status": "pass",
-      "duration_s": 4,
+      "duration_s": 10,
       "evidence": "reports/py-unit.log"
     },
     {
       "name": "e2e",
       "status": "pass",
-      "duration_s": 2,
+      "duration_s": 3,
       "evidence": "reports/e2e.log"
     },
     {
@@ -64,7 +64,7 @@
     {
       "name": "dep-audit",
       "status": "pass",
-      "duration_s": 20,
+      "duration_s": 27,
       "evidence": "reports/dep-audit.log"
     },
     {
@@ -76,21 +76,21 @@
   ],
   "tests": {
     "unit": {
-      "tests": 239,
+      "tests": 881,
       "failures": 0,
       "errors": 0,
       "skipped": 0,
-      "time_s": 1.82
+      "time_s": 7.71
     },
     "e2e": {
       "tests": 2,
       "failures": 0,
       "errors": 0,
       "skipped": 0,
-      "time_s": 0.82
+      "time_s": 0.89
     },
     "web_e2e": null,
-    "coverage_pct": 100.0
+    "coverage_pct": 95.99
   },
   "environment": {
     "python": "Python 3.10.0",
@@ -99,5 +99,5 @@
     "pytest": "pytest 8.3.2",
     "os": "Darwin 25.5.0"
   },
-  "content_hash": "3585aa56fc79fe1813c9fd0556062bee58468da00085233560c0d550aa8eec16"
+  "content_hash": "711118a55b8f61a8983d85886da7e4da3b3d1929b852aba19b416f66fdb7df45"
 }
