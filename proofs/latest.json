@@ -1,6 +1,6 @@
 {
   "schema": "proof/v1",
-  "created_utc": "2026-07-31T10:09:18+00:00",
+  "created_utc": "2026-07-31T13:39:41+00:00",
   "result": "PASS",
   "failed_checks": [],
   "missing_required_checks": [],
@@ -12,17 +12,17 @@
     "e2e",
     "secrets"
   ],
-  "fingerprint": "de51e2ff032c6c30e3ab5e0578479c3b33593707f30b9c2054d133b6a8140816",
+  "fingerprint": "703855d07096f46a88b780d550f58c9a3f791f6936f9504ef0c1b767704fa826",
   "git": {
-    "commit": "edd14c9d32a6c95e5b837341a25b87bb9b6ce573",
+    "commit": "e014754fe6b36860f673082f96d4b098afd0fba4",
     "branch": "Orchestrator2",
-    "dirty_tracked_files": false
+    "dirty_tracked_files": true
   },
   "checks": [
     {
       "name": "py-lint",
       "status": "pass",
-      "duration_s": 0,
+      "duration_s": 1,
       "evidence": "reports/py-lint.log"
     },
     {
@@ -34,19 +34,19 @@
     {
       "name": "py-types",
       "status": "pass",
-      "duration_s": 1,
+      "duration_s": 2,
       "evidence": "reports/py-types.log"
     },
     {
       "name": "py-unit",
       "status": "pass",
-      "duration_s": 7,
+      "duration_s": 9,
       "evidence": "reports/py-unit.log"
     },
     {
       "name": "e2e",
       "status": "pass",
-      "duration_s": 3,
+      "duration_s": 2,
       "evidence": "reports/e2e.log"
     },
     {
@@ -58,19 +58,19 @@
     {
       "name": "secrets-gitleaks",
       "status": "pass",
-      "duration_s": 1,
+      "duration_s": 2,
       "evidence": "reports/secrets-gitleaks.log"
     },
     {
       "name": "dep-audit",
       "status": "pass",
-      "duration_s": 14,
+      "duration_s": 23,
       "evidence": "reports/dep-audit.log"
     },
     {
       "name": "diff-cover",
       "status": "pass",
-      "duration_s": 0,
+      "duration_s": 1,
       "evidence": "reports/diff-cover.log"
     }
   ],
@@ -80,14 +80,14 @@
       "failures": 0,
       "errors": 0,
       "skipped": 0,
-      "time_s": 6.51
+      "time_s": 6.89
     },
     "e2e": {
       "tests": 2,
       "failures": 0,
       "errors": 0,
       "skipped": 0,
-      "time_s": 0.72
+      "time_s": 0.64
     },
     "web_e2e": null,
     "coverage_pct": 95.99
@@ -99,5 +99,5 @@
     "pytest": "pytest 8.3.2",
     "os": "Darwin 25.5.0"
   },
-  "content_hash": "13811c101b838ecd0cced745c9a0d670f6f552347c185619e8ca55cfb6bccf8a"
+  "content_hash": "4ac8aa9559e12de276bf4bdaf16476627d4f4b81f025e890664e54361e426cf8"
 }

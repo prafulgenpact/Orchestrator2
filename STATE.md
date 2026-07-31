@@ -1,8 +1,19 @@
 # Project State — A multi agent orchestrator system calling relevant apps basis intent recognition
 
-Last updated: 2026-07-31 (rich-output-rendering task)
+Last updated: 2026-07-31 (output-format-and-trace-detail task)
 
 ## In progress
+
+- 2026-07-31 output-format-and-trace-detail (Whole-app UI — polish). `web/atelier-workspace.html`
+  only, no backend change. (1) `mdToHtml` now joins wrapped lines within a paragraph with `<br>`
+  (not a space), so plain multi-line tool reports (e.g. Simulated Learning's p-value demo) keep
+  their structure instead of collapsing into one cluttered blob; report-style `=== Title ===` /
+  `--- Title ---` lines render as `<h3>` sections and bare rules as `<hr>`. (2) The agent trace
+  detail now shows App / Method / Input / Output / Status per step — `addResultCard` stores each
+  result's operation, args, and output on the step; `renderTrace` renders them (Output truncated
+  via `trunc`, args compacted via `argsText`). Live-verified in headless Chrome: p-value report →
+  `<h3>` sections + `<br>` lines; trace keys = App/Method/Input/Output/Status populated; 0 JS
+  errors. `make verify` PASS.
 
 - 2026-07-31 rich-output-rendering (Whole-app UI — polish). Result cards + the final answer now
   render app outputs as readable, well-formatted content instead of raw JSON / raw markdown source,

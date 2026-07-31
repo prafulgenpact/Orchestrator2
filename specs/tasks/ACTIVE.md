@@ -1,1 +1,1 @@
-20260731-rich-output-rendering.md
+20260731-output-format-and-trace-detail.md

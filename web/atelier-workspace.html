@@ -358,6 +358,7 @@ body.trace-off .trace-mini{ display:flex; flex-direction:column; align-items:cen
 .step .detail .kv{ font-family:var(--mono); font-size:10.5px; color:var(--ink-3); display:flex; gap:8px; padding:3px 0; align-items:baseline }
 .step .detail .kv b{ color:var(--ink-2); font-weight:600; min-width:56px; flex:none; text-transform:uppercase; letter-spacing:.04em; font-size:9.5px }
 .step .detail .val{ color:var(--ink); word-break:break-word; flex:1 }
+.step .detail .val.mono{ font-family:var(--mono); font-size:9.5px; line-height:1.5; color:var(--ink-2); white-space:pre-wrap; word-break:break-word; max-height:120px; overflow:auto; }
 
 /* settings drawer */
 .scrim{ position:fixed; inset:0; background:rgba(15,15,22,.35); opacity:0; pointer-events:none; transition:opacity 220ms ease; z-index:80; backdrop-filter:blur(2px); }
@@ -606,6 +607,13 @@ const taskEcho  = document.getElementById('taskEcho');
 const summaryEl = document.querySelector('.trace-head .summary');
 const now = () => new Date().toLocaleTimeString('en-GB');
 const esc = s => String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const trunc = (s, n) => { s = String(s==null?'':s); return s.length > n ? s.slice(0, n).trimEnd() + '…' : s; };
+function argsText(a){                                       // compact one-line view of an app's input args
+  if(a == null) return '—';
+  if(typeof a === 'string') return a || '—';
+  try { const j = JSON.stringify(a); return (j === '{}' || j === 'null') ? '—' : trunc(j, 400); }
+  catch(e){ return '—'; }
+}
 
 const CHECK_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7"/></svg>';
 const SPIN_SVG  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M12 3a9 9 0 1 0 9 9"/></svg>';
@@ -652,7 +660,9 @@ function renderTrace(){
       </div>
       <div class="detail">
         <div class="kv"><b>App</b><span class="val">${esc(s.appName||'—')}</span></div>
-        <div class="kv"><b>Id</b><span class="val">${esc(s.id)}</span></div>
+        <div class="kv"><b>Method</b><span class="val">${esc(s.operation||'—')}</span></div>
+        <div class="kv"><b>Input</b><span class="val mono">${esc(argsText(s.args))}</span></div>
+        <div class="kv"><b>Output</b><span class="val mono">${esc(trunc(valueToText(s.output), 400))}</span></div>
         <div class="kv"><b>Status</b><span class="val">${esc(s.status)}${s.dur?' · '+s.dur+'s':''}${s.t?' · '+s.t:''}</span></div>
       </div>`;
     step.querySelector('.top').addEventListener('click', () => step.classList.toggle('open'));
@@ -748,7 +758,9 @@ function mdInline(escaped){
 function mdToHtml(src){
   const lines = String(src==null?'':src).replace(/\r\n?/g,'\n').split('\n');
   const out = []; let i = 0, para = [];
-  const flush = () => { if(para.length){ out.push('<p>'+mdInline(esc(para.join(' ')))+'</p>'); para = []; } };
+  // Join wrapped lines within a paragraph with <br> (NOT a space) so plain multi-line reports
+  // from apps keep their structure instead of collapsing into one blob.
+  const flush = () => { if(para.length){ out.push('<p>'+para.map(l => mdInline(esc(l))).join('<br>')+'</p>'); para = []; } };
   while(i < lines.length){
     const line = lines[i];
     let m = line.match(/^```(\w*)\s*$/);
@@ -756,7 +768,9 @@ function mdToHtml(src){
       out.push('<pre class="md-code"><code>'+esc(buf.join('\n'))+'</code></pre>'); continue; }
     if(/^\s*$/.test(line)){ flush(); i++; continue; }
     if(m = line.match(/^\s*(#{1,6})\s+(.*)$/)){ flush(); const l = m[1].length; out.push('<h'+l+'>'+mdInline(esc(m[2].replace(/\s*#+\s*$/,'')))+'</h'+l+'>'); i++; continue; }
-    if(/^\s*(---+|\*\*\*+|___+)\s*$/.test(line)){ flush(); out.push('<hr>'); i++; continue; }
+    if(/^\s*(---+|\*\*\*+|___+|===+)\s*$/.test(line)){ flush(); out.push('<hr>'); i++; continue; }
+    // report-style section header: "=== Title ===" or "--- Title ---" (common in tool output)
+    if(m = line.match(/^\s*(?:={2,}|-{3,})\s+(.+?)\s+(?:={2,}|-{3,})\s*$/)){ flush(); out.push('<h3>'+mdInline(esc(m[1]))+'</h3>'); i++; continue; }
     if(/^\s*[-*+]\s+/.test(line)){ flush(); const it = []; while(i<lines.length && /^\s*[-*+]\s+/.test(lines[i])){ it.push('<li>'+mdInline(esc(lines[i].replace(/^\s*[-*+]\s+/,'')))+'</li>'); i++; } out.push('<ul>'+it.join('')+'</ul>'); continue; }
     if(/^\s*\d+\.\s+/.test(line)){ flush(); const it = []; while(i<lines.length && /^\s*\d+\.\s+/.test(lines[i])){ it.push('<li>'+mdInline(esc(lines[i].replace(/^\s*\d+\.\s+/,'')))+'</li>'); i++; } out.push('<ol>'+it.join('')+'</ol>'); continue; }
     if(/^\s*>\s?/.test(line)){ flush(); const buf = []; while(i<lines.length && /^\s*>\s?/.test(lines[i])){ buf.push(lines[i].replace(/^\s*>\s?/,'')); i++; } out.push('<blockquote>'+mdInline(esc(buf.join(' ')))+'</blockquote>'); continue; }
@@ -887,7 +901,13 @@ function applyProgress(msg){
 }
 function addResultCard(r){
   const step = stepById[r.subtask_id];
-  if(step && step.status!=='done' && step.status!=='error'){ step.status = (r.status==='ok'?'done':'error'); step.t=now(); }
+  if(step){                                                 // enrich the trace: method, input, output
+    if(step.status!=='done' && step.status!=='error'){ step.status = (r.status==='ok'?'done':'error'); step.t=now(); }
+    step.operation = r.operation || step.operation;
+    step.args = r.args;
+    step.output = (r.status!=='ok' && r.error) ? r.error : r.output;
+    if(r.app_name) step.appName = r.app_name;
+  }
   const isErr = r.status!=='ok';
   const card = cardShell(r.app_name||'App', isErr?'error':'result', 'int');
   const label = step ? step.title : (r.operation || 'Output');
