@@ -1,6 +1,6 @@
 {
   "schema": "proof/v1",
-  "created_utc": "2026-07-31T13:39:41+00:00",
+  "created_utc": "2026-07-31T13:40:32+00:00",
   "result": "PASS",
   "failed_checks": [],
   "missing_required_checks": [],
@@ -14,15 +14,15 @@
   ],
   "fingerprint": "703855d07096f46a88b780d550f58c9a3f791f6936f9504ef0c1b767704fa826",
   "git": {
-    "commit": "e014754fe6b36860f673082f96d4b098afd0fba4",
+    "commit": "25a8bc92b5962dd4f74825c71437d549d1b00d35",
     "branch": "Orchestrator2",
-    "dirty_tracked_files": true
+    "dirty_tracked_files": false
   },
   "checks": [
     {
       "name": "py-lint",
       "status": "pass",
-      "duration_s": 1,
+      "duration_s": 0,
       "evidence": "reports/py-lint.log"
     },
     {
@@ -40,7 +40,7 @@
     {
       "name": "py-unit",
       "status": "pass",
-      "duration_s": 9,
+      "duration_s": 8,
       "evidence": "reports/py-unit.log"
     },
     {
@@ -64,7 +64,7 @@
     {
       "name": "dep-audit",
       "status": "pass",
-      "duration_s": 23,
+      "duration_s": 14,
       "evidence": "reports/dep-audit.log"
     },
     {
@@ -80,14 +80,14 @@
       "failures": 0,
       "errors": 0,
       "skipped": 0,
-      "time_s": 6.89
+      "time_s": 7.2
     },
     "e2e": {
       "tests": 2,
       "failures": 0,
       "errors": 0,
       "skipped": 0,
-      "time_s": 0.64
+      "time_s": 0.67
     },
     "web_e2e": null,
     "coverage_pct": 95.99
@@ -99,5 +99,5 @@
     "pytest": "pytest 8.3.2",
     "os": "Darwin 25.5.0"
   },
-  "content_hash": "4ac8aa9559e12de276bf4bdaf16476627d4f4b81f025e890664e54361e426cf8"
+  "content_hash": "3a74f04ce8276f5ce673ba0c41fe87ace356cabe4affd9a7c1f15b727ebead41"
 }
