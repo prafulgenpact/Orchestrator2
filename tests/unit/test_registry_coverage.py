@@ -54,3 +54,24 @@ def test_all_non_streaming_endpoints_wired() -> None:
                     continue
                 unwired.append(f"{app.id}: {method} {endpoint_path}")
     assert not unwired, "unwired non-streaming endpoints:\n" + "\n".join(sorted(unwired))
+
+
+def _op(app_id: str, op_name: str):
+    app = _REGISTRY.get(app_id)
+    assert app is not None, f"missing app {app_id}"
+    return next(o for o in app.operations if o.name == op_name)
+
+
+def test_blog_import_publishes_fast_without_inline_critique() -> None:
+    """Regression: Blogs Playground must PUBLISH, not error at the deadline.
+
+    /api/blog/import runs an inline StyleCritic+Verifier (~30-60s+, two LLM calls) when
+    ``run_critique`` is true (the app defaults it True), which blew the op's hard 60s deadline. The
+    contract now (1) defaults ``run_critique=false`` so import takes the instant path and is sent
+    in the POST body, (2) drops ``run_critique`` from the model-filled ``request_fields`` so it
+    can't be turned back on, and (3) keeps a generous anti-hang backstop deadline.
+    """
+    op = _op("blogs-playground", "post_blog_import")
+    assert op.defaults.get("run_critique") is False, "import must default to the fast publish path"
+    assert "run_critique" not in op.request_fields, "run_critique must not be model-selectable"
+    assert op.timeout_s >= 120, "keep a generous anti-hang backstop for a slow save"

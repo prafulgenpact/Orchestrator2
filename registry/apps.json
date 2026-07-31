@@ -3286,7 +3286,7 @@
           "description": "Api Import Blog",
           "method": "POST",
           "path": "/api/blog/import",
-          "timeout_s": 60,
+          "timeout_s": 120,
           "destructive": false,
           "idempotency": "none",
           "retry": {
@@ -3295,12 +3295,14 @@
           },
           "request_fields": [
             "content",
-            "title",
-            "run_critique"
+            "title"
           ],
           "required_fields": [
             "content"
-          ]
+          ],
+          "defaults": {
+            "run_critique": false
+          }
         },
         {
           "name": "delete_blog",

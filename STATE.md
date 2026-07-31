@@ -1,8 +1,20 @@
 # Project State — A multi agent orchestrator system calling relevant apps basis intent recognition
 
-Last updated: 2026-07-31 (trace-code-authoring-substep task)
+Last updated: 2026-07-31 (blog-import-reliable-publish task)
 
 ## In progress
+
+- 2026-07-31 blog-import-reliable-publish (Phase 2 — app contracts). Blogs Playground now PUBLISHES
+  reliably instead of erroring at the deadline. Root cause: `POST /api/blog/import` runs an inline
+  StyleCritic+Verifier (~30–60s+, two Opus calls) when `run_critique=true`, which the app model
+  defaults True; the orchestrator never set it, so every import took the slow path and blew the hard
+  60s deadline (recorded `retry: operation exceeded 60.0s deadline`, transient class but
+  transient_max=0 so no retry). Fix in `registry/apps.json` (op `post_blog_import`): default
+  `run_critique=false` (selector setdefault → sent in the POST body → instant publish path), remove
+  `run_critique` from model-filled `request_fields` so it can't be turned back on, and raise
+  `timeout_s` 60→120 as an anti-hang backstop. The blog text was always model-authored (the
+  `content` arg); only the publish failed — now it succeeds and the app holds the blog. New
+  regression test `test_blog_import_publishes_fast_without_inline_critique`. `make verify` PASS.
 
 - 2026-07-31 trace-code-authoring-substep (Whole-app UI — polish). `web/atelier-workspace.html`
   only, no backend change. When a step's input carries model-authored code (`args.code`), the
