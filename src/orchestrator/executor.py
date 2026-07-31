@@ -45,8 +45,16 @@ _ASYNC_HEARTBEAT_EVERY = (
 # activity while the executor stays free of any print/stderr coupling and tests stay deterministic.
 ProgressFn = Callable[[str], None]
 
+# Each subtask's result is also pushed to an injectable sink the moment that subtask finishes, so a
+# UI can show an app's output live instead of waiting for the whole run. Default: no-op.
+ResultFn = Callable[["SubtaskResult"], None]
+
 
 def _null_progress(_message: str) -> None:
+    return None
+
+
+def _null_result(_result: SubtaskResult) -> None:
     return None
 
 
@@ -76,6 +84,7 @@ async def execute_plan(
     model: str,
     breaker: CircuitBreaker | None = None,
     progress: ProgressFn = _null_progress,
+    on_result: ResultFn = _null_result,
 ) -> PlanResult:
     """Run every subtask in dependency order and collect a PlanResult.
 
@@ -101,6 +110,7 @@ async def execute_plan(
                 sub, registry, llm_client, http_client, model, cb, upstream, endpoints, progress
             )
             progress(f"[{result.status}] {sub.title} ({result.duration_s:.1f}s)")
+            on_result(result)  # stream this result now, the moment its app finished
             return result
 
     # Waves stay sequential (they encode dependencies), but the independent subtasks WITHIN a wave

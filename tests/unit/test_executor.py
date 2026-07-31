@@ -15,7 +15,7 @@ from conftest import FakeLLM
 from orchestrator.app_caller import AppEndpoints, CallResult
 from orchestrator.executor import _ASYNC_MAX_SILENT_POLLS, _dig, _run_async, execute_plan
 from orchestrator.llm.base import LLMError
-from orchestrator.models import AppSelection, Plan, PlanResult, Subtask
+from orchestrator.models import AppSelection, Plan, PlanResult, Subtask, SubtaskResult
 from orchestrator.registry import AppEntry, AppOperation, AsyncSpec, load_registry
 from orchestrator.resilience import CircuitBreaker
 from orchestrator.web_search import WebResult, WebSearchError
@@ -230,6 +230,29 @@ def test_execute_emits_progress(monkeypatch: pytest.MonkeyPatch, fake_llm: MakeL
     asyncio.run(go())
     assert any(e.startswith("-> Find papers") for e in events)  # start line
     assert any(e.startswith("[ok] Find papers") for e in events)  # finish line, ok status
+
+
+def test_execute_streams_each_result(monkeypatch: pytest.MonkeyPatch, fake_llm: MakeLLM) -> None:
+    # on_result fires once per subtask, the moment it finishes — so a UI can show each app's output
+    # live instead of waiting for the whole run to end.
+    monkeypatch.setattr("orchestrator.executor.call_operation", _stub_call())
+    streamed: list[SubtaskResult] = []
+    client = fake_llm([_SELECT, _RELEVANT])
+
+    async def go() -> PlanResult:
+        async with _dummy_client() as http:
+            return await execute_plan(
+                _plan(_sub("arxiv-papers", "ArXiv Paper Guide")),
+                REG,
+                llm_client=client,
+                http_client=http,
+                model="m",
+                on_result=streamed.append,
+            )
+
+    result = asyncio.run(go())
+    assert [r.subtask_id for r in streamed] == [r.subtask_id for r in result.results]
+    assert len(streamed) == 1 and streamed[0].status == "ok"
 
 
 def test_async_poll_emits_heartbeat(monkeypatch: pytest.MonkeyPatch) -> None:
