@@ -1,6 +1,6 @@
 {
   "schema": "proof/v1",
-  "created_utc": "2026-07-31T14:11:37+00:00",
+  "created_utc": "2026-07-31T14:12:31+00:00",
   "result": "PASS",
   "failed_checks": [],
   "missing_required_checks": [],
@@ -14,9 +14,9 @@
   ],
   "fingerprint": "7670350142da5510c02fdb8ad5544af78494925ec8f6c08ddbe2662972d0013e",
   "git": {
-    "commit": "90fa176b9f2cba2fd4402c80399bf35ce7d05888",
+    "commit": "132367f88de9577a26bd8a454952188792ae7d1c",
     "branch": "Orchestrator2",
-    "dirty_tracked_files": true
+    "dirty_tracked_files": false
   },
   "checks": [
     {
@@ -40,7 +40,7 @@
     {
       "name": "py-unit",
       "status": "pass",
-      "duration_s": 13,
+      "duration_s": 11,
       "evidence": "reports/py-unit.log"
     },
     {
@@ -80,14 +80,14 @@
       "failures": 0,
       "errors": 0,
       "skipped": 0,
-      "time_s": 11.91
+      "time_s": 10.02
     },
     "e2e": {
       "tests": 2,
       "failures": 0,
       "errors": 0,
       "skipped": 0,
-      "time_s": 1.26
+      "time_s": 1.06
     },
     "web_e2e": null,
     "coverage_pct": 95.99
@@ -99,5 +99,5 @@
     "pytest": "pytest 8.3.2",
     "os": "Darwin 25.5.0"
   },
-  "content_hash": "f2fb66e5f7e8494f3d95c09a87e2bbe64e416e1d2dccf26da50805b09ebda89d"
+  "content_hash": "6095feb2d00340e65746c059887d1e8d8b6d92e1e4eb8e198ef96c3960fef995"
 }
