@@ -1,6 +1,6 @@
 {
   "schema": "proof/v1",
-  "created_utc": "2026-07-10T11:10:54+00:00",
+  "created_utc": "2026-07-31T14:06:49+00:00",
   "result": "PASS",
   "failed_checks": [],
   "missing_required_checks": [],
@@ -12,11 +12,11 @@
     "e2e",
     "secrets"
   ],
-  "fingerprint": "6d2873fc7ec89a45dd08ba67a41172295c6ef34842c7dfb747bcdea240988c95",
+  "fingerprint": "47729fcb4bb42cd8fe1268664a5288deaf85638aa2441c78f9638d0764bbecb6",
   "git": {
-    "commit": "580fe297c0e19deb1190297053a276b408350aa5",
+    "commit": "3eb5bc9969212ae95a462fd4f416c97cf264961b",
     "branch": "Orchestrator2",
-    "dirty_tracked_files": true
+    "dirty_tracked_files": false
   },
   "checks": [
     {
@@ -34,13 +34,13 @@
     {
       "name": "py-types",
       "status": "pass",
-      "duration_s": 3,
+      "duration_s": 2,
       "evidence": "reports/py-types.log"
     },
     {
       "name": "py-unit",
       "status": "pass",
-      "duration_s": 4,
+      "duration_s": 11,
       "evidence": "reports/py-unit.log"
     },
     {
@@ -52,7 +52,7 @@
     {
       "name": "secrets",
       "status": "pass",
-      "duration_s": 0,
+      "duration_s": 1,
       "evidence": "reports/secrets.log"
     },
     {
@@ -64,7 +64,7 @@
     {
       "name": "dep-audit",
       "status": "pass",
-      "duration_s": 19,
+      "duration_s": 18,
       "evidence": "reports/dep-audit.log"
     },
     {
@@ -76,21 +76,21 @@
   ],
   "tests": {
     "unit": {
-      "tests": 245,
+      "tests": 881,
       "failures": 0,
       "errors": 0,
       "skipped": 0,
-      "time_s": 1.96
+      "time_s": 9.66
     },
     "e2e": {
       "tests": 2,
       "failures": 0,
       "errors": 0,
       "skipped": 0,
-      "time_s": 0.92
+      "time_s": 0.96
     },
     "web_e2e": null,
-    "coverage_pct": 100.0
+    "coverage_pct": 95.99
   },
   "environment": {
     "python": "Python 3.10.0",
@@ -99,5 +99,5 @@
     "pytest": "pytest 8.3.2",
     "os": "Darwin 25.5.0"
   },
-  "content_hash": "aa8981eb2907db067b6cab87888083b5b226b9da01c09a049062b9a913e61921"
+  "content_hash": "5f19b9f8d1f9668ce1fdb84eba7c49f02bf056ad30c74881a00a92ea7dbe4150"
 }
