@@ -15,6 +15,24 @@ runs the orchestration/SSE, and it cold-starts the sibling apps (ports 8001–80
 script loads `.env`, frees the port of any stale server (so you always run current code), waits
 until it answers, and opens the page; Ctrl-C stops it.
 
+Check which apps are ready (and why any are down):
+
+```
+./run.sh --check          # or: PYTHONPATH=src python3 -m orchestrator.doctor
+```
+
+Datastores: one app needs a database — ArXiv Paper Guide requires PostgreSQL on :5432 with a DB
+named `arxiv_explorer`. Bring it up (idempotent; installs/starts Homebrew `postgresql@16`, creates
+the DB, self-heals a stale `postmaster.pid`):
+
+```
+./datastores.sh           # then ./run.sh --check should show ArXiv Paper Guide UP
+```
+
+Coding/Blogs Playground run without their MySQL/Redis (optional). App startup crashes are captured
+to `logs/apps/<id>.log` and surfaced in the trace + `--check`, so a down dependency says exactly
+what's wrong.
+
 ## Run locally (CLI / plan-only)
 
 ```

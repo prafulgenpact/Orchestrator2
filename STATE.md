@@ -1,8 +1,20 @@
 # Project State — A multi agent orchestrator system calling relevant apps basis intent recognition
 
-Last updated: 2026-07-31 (app-startup-diagnostics task)
+Last updated: 2026-07-31 (datastore-bring-up task)
 
 ## In progress
+
+- 2026-07-31 datastore-bring-up (tooling/DX). Added `./datastores.sh` — one idempotent command
+  brings up the only datastore an app hard-requires today: PostgreSQL on :5432 with the
+  `arxiv_explorer` DB, which ArXiv Paper Guide needs (it auto-creates its own tables on boot via
+  `Base.metadata.create_all`). The script installs/starts Homebrew `postgresql@16`, waits for
+  `pg_isready`, creates the DB if missing, and self-heals a stale `postmaster.pid` (only when the
+  recorded PID is not a live postgres — the exact failure hit here: the OS had recycled the PID).
+  Docker is installed but its daemon was off, so native Homebrew Postgres is the path; script notes
+  the Docker alternative and that Coding/Blogs' MySQL/Redis are optional. Live-verified: ran the
+  script → Postgres up + DB present → ArXiv `ensure_started` True → `orchestrator.doctor` shows
+  `ArXiv Paper Guide UP :8002`. RUNBOOK documents `./datastores.sh` + `./run.sh --check`.
+  `make verify` PASS.
 
 - 2026-07-31 app-startup-diagnostics (Phase 2 — resilience/diagnosability). App-startup failures
   are now diagnosable across ALL apps, not just ArXiv. Root of the pain: the launcher spawned apps

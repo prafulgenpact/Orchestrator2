@@ -1,6 +1,6 @@
 {
   "schema": "proof/v1",
-  "created_utc": "2026-08-03T12:57:12+00:00",
+  "created_utc": "2026-08-03T13:03:12+00:00",
   "result": "PASS",
   "failed_checks": [],
   "missing_required_checks": [],
@@ -12,11 +12,11 @@
     "e2e",
     "secrets"
   ],
-  "fingerprint": "9939d340c689c7d095860a59852affb1c02fbc6401009602d3613a5d0e7dcf1c",
+  "fingerprint": "780a00edff2545ebc9af9e6b6300f86bdbcc9cf135eb6303877d15a33dd5e52c",
   "git": {
-    "commit": "09cb694bfb1de9fa62abe49ad292878999e59b3b",
+    "commit": "fcfce70fb720e31b5cff3eb294a341e7d50caba3",
     "branch": "Orchestrator2",
-    "dirty_tracked_files": false
+    "dirty_tracked_files": true
   },
   "checks": [
     {
@@ -40,13 +40,13 @@
     {
       "name": "py-unit",
       "status": "pass",
-      "duration_s": 10,
+      "duration_s": 8,
       "evidence": "reports/py-unit.log"
     },
     {
       "name": "e2e",
       "status": "pass",
-      "duration_s": 3,
+      "duration_s": 2,
       "evidence": "reports/e2e.log"
     },
     {
@@ -58,7 +58,7 @@
     {
       "name": "secrets-gitleaks",
       "status": "pass",
-      "duration_s": 0,
+      "duration_s": 1,
       "evidence": "reports/secrets-gitleaks.log"
     },
     {
@@ -70,7 +70,7 @@
     {
       "name": "diff-cover",
       "status": "pass",
-      "duration_s": 2,
+      "duration_s": 0,
       "evidence": "reports/diff-cover.log"
     }
   ],
@@ -80,14 +80,14 @@
       "failures": 0,
       "errors": 0,
       "skipped": 0,
-      "time_s": 8.81
+      "time_s": 6.82
     },
     "e2e": {
       "tests": 2,
       "failures": 0,
       "errors": 0,
       "skipped": 0,
-      "time_s": 0.9
+      "time_s": 0.51
     },
     "web_e2e": null,
     "coverage_pct": 95.93
@@ -99,5 +99,5 @@
     "pytest": "pytest 8.3.2",
     "os": "Darwin 25.5.0"
   },
-  "content_hash": "dd234ab3b1df2b394a5ac6c0f93ada5264521c37fc3c17dac911c79afe252a83"
+  "content_hash": "9a071d0fd8f27dd39556381d49f9f2466492db7e0dce5c88645e81a553953c1e"
 }
