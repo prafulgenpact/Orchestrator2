@@ -1,6 +1,6 @@
 {
   "schema": "proof/v1",
-  "created_utc": "2026-07-13T06:18:14+00:00",
+  "created_utc": "2026-08-03T14:12:21+00:00",
   "result": "PASS",
   "failed_checks": [],
   "missing_required_checks": [],
@@ -12,11 +12,11 @@
     "e2e",
     "secrets"
   ],
-  "fingerprint": "33035bc32cdcb321c077ed6c2987930c2bd4c6d29d4256ceb6d94f1264be9b2e",
+  "fingerprint": "287602906c05d4d03aebe7048c6f06e455d88e86961e50011c580be474a85bb3",
   "git": {
-    "commit": "9ff127406ee8d4b28c0f2bb4cd3f4285db393aa5",
+    "commit": "b4b663a9d35558ef783f269d9b5fbf9fcaeb0f1b",
     "branch": "Orchestrator2",
-    "dirty_tracked_files": true
+    "dirty_tracked_files": false
   },
   "checks": [
     {
@@ -40,31 +40,31 @@
     {
       "name": "py-unit",
       "status": "pass",
-      "duration_s": 3,
+      "duration_s": 10,
       "evidence": "reports/py-unit.log"
     },
     {
       "name": "e2e",
       "status": "pass",
-      "duration_s": 1,
+      "duration_s": 3,
       "evidence": "reports/e2e.log"
     },
     {
       "name": "secrets",
       "status": "pass",
-      "duration_s": 1,
+      "duration_s": 0,
       "evidence": "reports/secrets.log"
     },
     {
       "name": "secrets-gitleaks",
       "status": "pass",
-      "duration_s": 0,
+      "duration_s": 2,
       "evidence": "reports/secrets-gitleaks.log"
     },
     {
       "name": "dep-audit",
       "status": "pass",
-      "duration_s": 33,
+      "duration_s": 14,
       "evidence": "reports/dep-audit.log"
     },
     {
@@ -76,21 +76,21 @@
   ],
   "tests": {
     "unit": {
-      "tests": 285,
+      "tests": 893,
       "failures": 0,
       "errors": 0,
       "skipped": 0,
-      "time_s": 1.8
+      "time_s": 9.12
     },
     "e2e": {
       "tests": 2,
       "failures": 0,
       "errors": 0,
       "skipped": 0,
-      "time_s": 0.62
+      "time_s": 1.24
     },
     "web_e2e": null,
-    "coverage_pct": 100.0
+    "coverage_pct": 95.93
   },
   "environment": {
     "python": "Python 3.10.0",
@@ -99,5 +99,5 @@
     "pytest": "pytest 8.3.2",
     "os": "Darwin 25.5.0"
   },
-  "content_hash": "e8ad640bba62287fa17b19edd48c839091bd0e120b233c48d344107a1ecc7c26"
+  "content_hash": "9ed21845f1bc5b2cbbee45470ea4397a6d0aafe56a5e5d2fffef955dadda00e4"
 }
