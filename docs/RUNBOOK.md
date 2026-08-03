@@ -3,7 +3,19 @@
 <!-- Operational knowledge: how to run, debug, and recover the system.
      If you had to figure something out the hard way, it goes here. -->
 
-## Run locally
+## Run the whole app (web UI)
+
+```
+./run.sh            # start the Orchestrator + open http://127.0.0.1:8080 in your browser
+./run.sh 8090       # ...on a different port     (NO_OPEN=1 ./run.sh to skip opening a browser)
+```
+
+One server does it all: the connector (`python -m orchestrator.web`) serves the Atelier UI AND
+runs the orchestration/SSE, and it cold-starts the sibling apps (ports 8001–8011) on demand. The
+script loads `.env`, frees the port of any stale server (so you always run current code), waits
+until it answers, and opens the page; Ctrl-C stops it.
+
+## Run locally (CLI / plan-only)
 
 ```
 make bootstrap                 # install pinned toolchain + anthropic, install hooks

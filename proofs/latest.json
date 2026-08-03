@@ -1,6 +1,6 @@
 {
   "schema": "proof/v1",
-  "created_utc": "2026-07-31T15:36:50+00:00",
+  "created_utc": "2026-08-03T05:22:33+00:00",
   "result": "PASS",
   "failed_checks": [],
   "missing_required_checks": [],
@@ -12,11 +12,11 @@
     "e2e",
     "secrets"
   ],
-  "fingerprint": "17ca65a9fafb1aff678986d832aeeacfc37343caad630094ea41e714106ccc10",
+  "fingerprint": "d5dcfb95407ab8e4e8cd0b8d7c78b4e53e67e195a057c62c5cb97ca224ddb9a7",
   "git": {
-    "commit": "6c110f14eba0984ef9d5ccb99fc9dd33b4ef1794",
+    "commit": "12ace24bb30600bfe271df12bf8ec75557856537",
     "branch": "Orchestrator2",
-    "dirty_tracked_files": false
+    "dirty_tracked_files": true
   },
   "checks": [
     {
@@ -40,13 +40,13 @@
     {
       "name": "py-unit",
       "status": "pass",
-      "duration_s": 12,
+      "duration_s": 9,
       "evidence": "reports/py-unit.log"
     },
     {
       "name": "e2e",
       "status": "pass",
-      "duration_s": 4,
+      "duration_s": 2,
       "evidence": "reports/e2e.log"
     },
     {
@@ -58,19 +58,19 @@
     {
       "name": "secrets-gitleaks",
       "status": "pass",
-      "duration_s": 2,
+      "duration_s": 3,
       "evidence": "reports/secrets-gitleaks.log"
     },
     {
       "name": "dep-audit",
       "status": "pass",
-      "duration_s": 18,
+      "duration_s": 27,
       "evidence": "reports/dep-audit.log"
     },
     {
       "name": "diff-cover",
       "status": "pass",
-      "duration_s": 1,
+      "duration_s": 0,
       "evidence": "reports/diff-cover.log"
     }
   ],
@@ -80,14 +80,14 @@
       "failures": 0,
       "errors": 0,
       "skipped": 0,
-      "time_s": 9.59
+      "time_s": 6.4
     },
     "e2e": {
       "tests": 2,
       "failures": 0,
       "errors": 0,
       "skipped": 0,
-      "time_s": 1.44
+      "time_s": 1.07
     },
     "web_e2e": null,
     "coverage_pct": 95.99
@@ -99,5 +99,5 @@
     "pytest": "pytest 8.3.2",
     "os": "Darwin 25.5.0"
   },
-  "content_hash": "6e11a8c680fd5ff0691be8dee8cc27f4dc27575f611b69ba85d8ac5fe2e52903"
+  "content_hash": "d13dffb3393e406f186c45f6f9e2ab0f366500ac6d8ce71304973d17cd2cb66c"
 }

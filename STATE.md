@@ -1,8 +1,17 @@
 # Project State — A multi agent orchestrator system calling relevant apps basis intent recognition
 
-Last updated: 2026-07-31 (blog-import-reliable-publish task)
+Last updated: 2026-07-31 (run-script task)
 
 ## In progress
+
+- 2026-07-31 run-script (tooling/DX). Added `./run.sh` — one command starts the whole app and opens
+  it. In this architecture the connector (`python -m orchestrator.web`) is both backend
+  (orchestration + SSE) and frontend (serves the Atelier UI) and cold-starts the sibling apps on
+  demand, so there's one server, not two. The script loads `.env`, frees the port of any stale
+  connector (guarantees current code — kills the stale-process class of bug), starts the connector,
+  waits until it answers, opens `http://127.0.0.1:$PORT/`, and stops cleanly on Ctrl-C. Port via arg
+  or `ATELIER_PORT`; `NO_OPEN=1` skips the browser. RUNBOOK documents it. Verified by running it
+  (port 8099): loaded .env, served the Atelier UI HTML, freed the port on stop. `make verify` PASS.
 
 - 2026-07-31 blog-import-reliable-publish (Phase 2 — app contracts). Blogs Playground now PUBLISHES
   reliably instead of erroring at the deadline. Root cause: `POST /api/blog/import` runs an inline
