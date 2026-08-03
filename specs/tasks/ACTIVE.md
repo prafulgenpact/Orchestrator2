@@ -1,1 +1,1 @@
-20260731-run-script.md
+20260731-app-startup-diagnostics.md

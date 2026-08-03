@@ -20,6 +20,12 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$ROOT"
 
+# --check: run the preflight doctor (which apps are ready, and why the down ones are down) and exit.
+if [ "${1:-}" = "--check" ]; then
+  if [ -f .env ]; then set -a; . ./.env; set +a; fi
+  exec env PYTHONPATH=src python3 -m orchestrator.doctor
+fi
+
 PORT="${1:-${ATELIER_PORT:-8080}}"
 URL="http://127.0.0.1:${PORT}/"
 

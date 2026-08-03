@@ -7,12 +7,15 @@ from collections.abc import Awaitable, Callable
 
 import httpx
 
+from orchestrator import launcher
 from orchestrator.launcher import (
     LAUNCH_SPECS,
     LaunchSpec,
+    _extract_startup_error,
     _health_ok,
     ensure_started,
     is_healthy_response,
+    read_startup_error,
     reap_stale_listeners,
     start_all,
 )
@@ -262,3 +265,45 @@ def test_start_all_maps_exceptions_to_false() -> None:
     result = _run_start_all(ensure)
     assert result["teach-me"] is False  # never raises — a failed start is just False
     assert result["arxiv-papers"] is True
+
+
+_PG_CRASH_LOG = """\
+INFO:     Started server process [90427]
+INFO:     Waiting for application startup.
+Traceback (most recent call last):
+  File ".../asyncpg/connect_utils.py", line 802, in _create_ssl_connection
+    tr, pr = await loop.create_connection(
+OSError: Multiple exceptions: [Errno 61] Connect call failed ('127.0.0.1', 5432)
+
+ERROR:    Application startup failed. Exiting.
+"""
+
+
+def test_extract_startup_error_picks_the_exception_line() -> None:
+    assert _extract_startup_error(_PG_CRASH_LOG) == (
+        "OSError: Multiple exceptions: [Errno 61] Connect call failed ('127.0.0.1', 5432)"
+    )
+
+
+def test_extract_startup_error_empty_log_is_none() -> None:
+    assert _extract_startup_error("") is None
+    assert _extract_startup_error("   \n\n  ") is None
+
+
+def test_extract_startup_error_falls_back_to_failure_line() -> None:
+    # No exception line, but a clear failure message -> return that.
+    assert _extract_startup_error("booting\nERROR: Application startup failed. Exiting.") == (
+        "ERROR: Application startup failed. Exiting."
+    )
+
+
+def test_read_startup_error_reads_the_app_log(tmp_path, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    monkeypatch.setattr(launcher, "_APP_LOG_DIR", tmp_path)
+    (tmp_path / "arxiv-papers.log").write_text(_PG_CRASH_LOG)
+    reason = read_startup_error("arxiv-papers")
+    assert reason is not None and "5432" in reason
+
+
+def test_read_startup_error_missing_log_is_none(tmp_path, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    monkeypatch.setattr(launcher, "_APP_LOG_DIR", tmp_path)
+    assert read_startup_error("nope") is None

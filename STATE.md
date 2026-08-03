@@ -1,8 +1,22 @@
 # Project State — A multi agent orchestrator system calling relevant apps basis intent recognition
 
-Last updated: 2026-07-31 (run-script task)
+Last updated: 2026-07-31 (app-startup-diagnostics task)
 
 ## In progress
+
+- 2026-07-31 app-startup-diagnostics (Phase 2 — resilience/diagnosability). App-startup failures
+  are now diagnosable across ALL apps, not just ArXiv. Root of the pain: the launcher spawned apps
+  with stdout/stderr → /dev/null, so a boot crash (a down DB, a missing key, an import error)
+  collapsed into an opaque "health check failed". Now: `_spawn_uvicorn` captures each app's startup
+  output to `logs/apps/<id>.log` (gitignored); `read_startup_error`/`_extract_startup_error` pull
+  the salient crash line; `call_operation` appends that reason to the health-fail error so the
+  trace shows the real cause. New `orchestrator/doctor.py` — `python -m orchestrator.doctor` (and
+  `./run.sh --check`) prints per-app readiness and the reason for each down app. Live-verified: the
+  doctor reports 10/11 up with `ArXiv Paper Guide DOWN — OSError: Connect call failed (:5432)`
+  (Postgres). Also learned Coding/Blogs boot fine despite MySQL/Redis refs (optional/lazy); only
+  ArXiv hard-requires its DB. No planner/routing change; eval unchanged. `make verify` PASS.
+  NEXT (approved, separate task): provide a datastore bring-up so ArXiv's Postgres (and any needed
+  MySQL/Redis) can be started locally.
 
 - 2026-07-31 run-script (tooling/DX). Added `./run.sh` — one command starts the whole app and opens
   it. In this architecture the connector (`python -m orchestrator.web`) is both backend

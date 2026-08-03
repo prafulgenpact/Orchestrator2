@@ -160,6 +160,30 @@ def test_health_failure_is_reported() -> None:
     assert "health check failed" in (res.error or "")
 
 
+def test_health_failure_surfaces_the_startup_reason(monkeypatch: pytest.MonkeyPatch) -> None:
+    # When we captured why the app failed to boot, that real reason is appended to the error, so
+    # the trace shows "Postgres refused" instead of a bare "health check failed".
+    app, op = _arxiv()
+    monkeypatch.setattr(
+        "orchestrator.app_caller.read_startup_error",
+        lambda _app_id: "OSError: Connect call failed ('127.0.0.1', 5432)",
+    )
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        if req.url.path == "/api/apps":
+            return _apps_ok()
+        return httpx.Response(500)
+
+    async def go() -> CallResult:
+        async with _client(handler) as c:
+            return await call_operation(app, op, {"query": "x"}, client=c)
+
+    res = asyncio.run(go())
+    assert res.ok is False
+    assert "failed to start" in (res.error or "")
+    assert "5432" in (res.error or "")
+
+
 class _HangTransport(httpx.AsyncBaseTransport):
     """Serves launcher/health quickly but hangs on the operation call."""
 

@@ -12,6 +12,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import os
+import re
 import signal
 import subprocess
 from collections.abc import Awaitable, Callable, Iterable
@@ -61,10 +62,68 @@ LAUNCH_SPECS: dict[str, LaunchSpec] = {
 }
 
 
+# Each app's startup output is captured here (not /dev/null) so a boot crash — a down database, a
+# missing key, an import error — is recoverable after the fact instead of invisible. Override the
+# dir with ORCHESTRATOR_APP_LOG_DIR; it lives under gitignored logs/ by default.
+_APP_LOG_DIR = Path(os.environ.get("ORCHESTRATOR_APP_LOG_DIR", "logs/apps"))
+
+
+def app_log_path(app_id: str) -> Path:
+    """Path to the captured startup log for ``app_id``."""
+    return _APP_LOG_DIR / f"{app_id}.log"
+
+
+def _app_id_for_spec(spec: LaunchSpec) -> str:
+    """The registry app id whose launch spec this is (specs live in LAUNCH_SPECS keyed by id)."""
+    for app_id, candidate in LAUNCH_SPECS.items():
+        if candidate is spec:
+            return app_id
+    return spec.folder.lower().replace(" ", "-")  # defensive: a spec built outside LAUNCH_SPECS
+
+
+def _extract_startup_error(text: str) -> str | None:
+    """Pull the one salient line explaining why an app failed to boot, from its captured log.
+
+    Prefers an explicit exception line (``OSError: ...``, an ``[Errno N]`` / "Connect call failed"),
+    else the last line that mentions a failure, else the last non-empty line. None for an empty log.
+    """
+    lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
+    if not lines:
+        return None
+    exc = [
+        ln
+        for ln in lines
+        if re.match(r"^[A-Za-z_][\w.]*(Error|Exception|Timeout)\b.*:", ln)
+        or "Errno" in ln
+        or "Connect call failed" in ln
+    ]
+    if exc:
+        return exc[-1]
+    fail = [ln for ln in lines if re.search(r"startup failed|refused|failed|error", ln, re.I)]
+    return fail[-1] if fail else lines[-1]
+
+
+def read_startup_error(app_id: str) -> str | None:
+    """The salient startup-crash line from ``app_id``'s captured log, or None if unavailable."""
+    try:
+        return _extract_startup_error(app_log_path(app_id).read_text(errors="replace"))
+    except OSError:
+        return None
+
+
 def _spawn_uvicorn(spec: LaunchSpec, port: int) -> bool:  # pragma: no cover - real process spawn
-    """Start the backend detached on 127.0.0.1:port. Returns False if it cannot be launched."""
+    """Start the backend detached on 127.0.0.1:port. Returns False if it cannot be launched.
+
+    Startup output is captured to ``logs/apps/<id>.log`` (truncated each attempt) so a boot failure
+    surfaces its real cause instead of vanishing into /dev/null.
+    """
     python = spec.venv_python()
     if not python.exists():
+        return False
+    try:
+        _APP_LOG_DIR.mkdir(parents=True, exist_ok=True)
+        log = open(app_log_path(_app_id_for_spec(spec)), "w")  # noqa: SIM115 - child keeps its fd
+    except OSError:
         return False
     try:
         subprocess.Popen(
@@ -80,12 +139,15 @@ def _spawn_uvicorn(spec: LaunchSpec, port: int) -> bool:  # pragma: no cover - r
             ],
             cwd=str(spec.backend_dir()),
             env={**os.environ, **spec.env},
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
+            stdout=log,
+            stderr=subprocess.STDOUT,
             start_new_session=True,  # detach: survives the CLI, reused by later runs
         )
     except OSError:
+        log.close()
         return False
+    finally:
+        log.close()  # the child keeps its own dup'd fd; we don't need ours
     return True
 
 

@@ -16,7 +16,7 @@ from typing import Any
 import httpx
 import websockets
 
-from orchestrator.launcher import ensure_started, is_healthy_response
+from orchestrator.launcher import ensure_started, is_healthy_response, read_startup_error
 from orchestrator.registry import AppEntry, AppOperation
 from orchestrator.resilience import (
     CircuitBreaker,
@@ -296,7 +296,11 @@ async def call_operation(
         # Resolve + health-confirm once per app per run (auto-starting a down app on first miss);
         # a shared ``endpoints`` means repeated calls (esp. the poll loop) skip the duplicate pings.
         if not await eps.ensure_healthy(base_url, app, client):
-            raise ConnectionError(f"health check failed for {app.id} at {base_url}{app.health}")
+            detail = f"health check failed for {app.id} at {base_url}{app.health}"
+            reason = read_startup_error(app.id)  # the app's own boot crash, if we captured one
+            if reason:
+                detail += f" — the app failed to start: {reason}"
+            raise ConnectionError(detail)
         if op.stream == "ws":
             # Live-kernel WebSocket op: no HTTP request is built; run code + assemble the stream.
             ws_data = await _consume_ws(base_url, op, args)
