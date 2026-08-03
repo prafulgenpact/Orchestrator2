@@ -1,8 +1,18 @@
 # Project State — A multi agent orchestrator system calling relevant apps basis intent recognition
 
-Last updated: 2026-07-31 (datastore-bring-up task)
+Last updated: 2026-07-31 (connector-quiet-disconnects task)
 
 ## In progress
+
+- 2026-07-31 connector-quiet-disconnects (Whole-app UI — connector). The connector no longer dumps
+  a traceback when a browser closes a socket early (preconnect / refresh / navigating away
+  mid-SSE). Those `ConnectionResetError`/`BrokenPipeError` raise in the base handler's request-line
+  read — before our handler — so `_serve_run`'s try/except never saw them and the default
+  `handle_error` printed a full traceback (harmless but alarming). Fix in `web.py`: pure
+  `_is_benign_disconnect(exc)` + a `ThreadingHTTPServer` subclass whose `handle_error` swallows
+  those and defers to the base for real errors; `serve()` uses it. Live-verified: 3 forced RST
+  disconnects → clean log, no traceback. Unit tests for the predicate. `make verify` PASS.
+  (Restart the connector — re-run `./run.sh` — to pick up the fix.)
 
 - 2026-07-31 datastore-bring-up (tooling/DX). Added `./datastores.sh` — one idempotent command
   brings up the only datastore an app hard-requires today: PostgreSQL on :5432 with the

@@ -24,6 +24,7 @@ from __future__ import annotations
 import json
 import os
 import queue
+import sys
 import threading
 from collections.abc import Callable, Iterator
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -213,9 +214,28 @@ class _Handler(BaseHTTPRequestHandler):  # pragma: no cover - socket I/O, run ma
         self.wfile.flush()
 
 
+def _is_benign_disconnect(exc: BaseException | None) -> bool:
+    """True for the everyday 'the client closed the socket' errors — a browser preconnecting,
+    refreshing, or navigating away mid-stream. These are not server faults and must not log a
+    traceback (they raise in the base handler's request read, before our handler runs)."""
+    return isinstance(exc, ConnectionResetError | BrokenPipeError | ConnectionAbortedError)
+
+
+class _ConnectorHTTPServer(ThreadingHTTPServer):  # pragma: no cover - socket shell, run manually
+    """ThreadingHTTPServer that stays quiet when a browser hangs up early, but still reports real
+    errors."""
+
+    daemon_threads = True
+
+    def handle_error(self, request: Any, client_address: Any) -> None:
+        if _is_benign_disconnect(sys.exc_info()[1]):
+            return  # expected client disconnect — ignore instead of dumping a traceback
+        super().handle_error(request, client_address)
+
+
 def serve(host: str = "127.0.0.1", port: int = 8080) -> None:  # pragma: no cover - process entry
     """Run the connector until interrupted."""
-    httpd = ThreadingHTTPServer((host, port), _Handler)
+    httpd = _ConnectorHTTPServer((host, port), _Handler)
     print(f"Atelier connector → http://{host}:{port}  (serving {ui_path()})")
     try:
         httpd.serve_forever()

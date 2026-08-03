@@ -142,3 +142,15 @@ def test_ui_path_env_override(monkeypatch: pytest.MonkeyPatch, tmp_path: Any) ->
 
     monkeypatch.delenv("ATELIER_UI", raising=False)
     assert web.ui_path() == web.DEFAULT_UI
+
+
+def test_is_benign_disconnect_true_for_client_hangups() -> None:
+    assert web._is_benign_disconnect(ConnectionResetError()) is True
+    assert web._is_benign_disconnect(BrokenPipeError()) is True
+    assert web._is_benign_disconnect(ConnectionAbortedError()) is True
+
+
+def test_is_benign_disconnect_false_for_real_errors() -> None:
+    assert web._is_benign_disconnect(ValueError("boom")) is False
+    assert web._is_benign_disconnect(RuntimeError()) is False
+    assert web._is_benign_disconnect(None) is False
