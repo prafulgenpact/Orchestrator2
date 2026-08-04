@@ -13,6 +13,8 @@ message so the planner can ask the model to correct itself.
 from __future__ import annotations
 
 import json
+import re
+from dataclasses import replace
 from typing import Any
 
 from orchestrator.models import AppSelection, Plan, Subtask
@@ -113,6 +115,43 @@ def _check_acyclic(subtasks: tuple[Subtask, ...]) -> None:
         raise PlanValidationError(f"subtask dependencies form a cycle among: {cyclic}")
 
 
+def _norm_title(title: str) -> str:
+    """Normalize a subtask title for duplicate detection: lowercase, collapse whitespace, drop
+    trailing sentence punctuation. So 'Find papers on X.' and 'find  papers on x' match."""
+    return re.sub(r"\s+", " ", title.strip().lower()).rstrip(".!?…").strip()
+
+
+def _dedupe_subtasks(subtasks: tuple[Subtask, ...]) -> tuple[Subtask, ...]:
+    """Collapse subtasks that are exact duplicates — same app AND normalized title — into one.
+
+    The planner occasionally emits two steps that do the same thing (e.g. two "find papers on X"
+    routed to the same app), which then run redundantly and show as duplicate cards. Keep the first,
+    drop later twins, and rewire any dependency on a dropped twin to the kept one. Deterministic and
+    conservative (title-exact only); a no-op when there are no duplicates.
+    """
+    kept: list[Subtask] = []
+    canonical: dict[tuple[str, str], str] = {}  # (app_id, norm title) -> the kept subtask id
+    remap: dict[str, str] = {}  # dropped twin id -> kept id
+    for s in subtasks:
+        key = (s.app.app_id, _norm_title(s.title))
+        if key in canonical:
+            remap[s.id] = canonical[key]
+        else:
+            canonical[key] = s.id
+            kept.append(s)
+    if not remap:
+        return subtasks
+    rewired: list[Subtask] = []
+    for s in kept:
+        deps: list[str] = []
+        for d in s.depends_on:
+            target = remap.get(d, d)
+            if target != s.id and target not in deps:
+                deps.append(target)
+        rewired.append(replace(s, depends_on=tuple(deps)))
+    return tuple(rewired)
+
+
 def parse_plan(
     text: str,
     registry: Registry,
@@ -133,6 +172,9 @@ def parse_plan(
     if not isinstance(subtasks_raw, list) or not subtasks_raw:
         raise PlanValidationError("subtasks must be a non-empty list")
     subtasks = tuple(_parse_subtask(raw, registry, i) for i, raw in enumerate(subtasks_raw))
+    # Collapse exact-duplicate subtasks (same app + title) so a redundant decomposition doesn't run
+    # the same call twice / show duplicate cards. Deterministic; validated (ids, deps, DAG) below.
+    subtasks = _dedupe_subtasks(subtasks)
 
     ids = [s.id for s in subtasks]
     if len(set(ids)) != len(ids):

@@ -219,3 +219,74 @@ def test_deep_copy_isolation() -> None:
     # sanity: the builder returns a fresh dict each time (tests don't leak state)
     assert _payload() is not _payload()
     assert copy.deepcopy(_payload()) == _payload()
+
+
+# --- fix 5: collapse exact-duplicate subtasks -------------------------------
+
+from orchestrator.validation import _dedupe_subtasks, _norm_title  # noqa: E402
+
+
+def _dup_payload() -> dict[str, Any]:
+    a = {"app_id": "arxiv-papers", "rationale": "search", "confidence": 0.9}
+    return {
+        "intent": "find and summarize papers",
+        "subtasks": [
+            {
+                "id": "t1",
+                "title": "Find research papers on X",
+                "description": "d",
+                "depends_on": [],
+                "app": a,
+            },
+            # exact duplicate of t1 (case + trailing punctuation differ)
+            {
+                "id": "t2",
+                "title": "find research papers on x.",
+                "description": "d2",
+                "depends_on": [],
+                "app": a,
+            },
+            {
+                "id": "t3",
+                "title": "Summarize the papers",
+                "description": "d3",
+                "depends_on": ["t2"],
+                "app": a,
+            },
+        ],
+    }
+
+
+def test_parse_plan_collapses_duplicate_subtasks() -> None:
+    plan = _parse(_dup_payload())
+    ids = [s.id for s in plan.subtasks]
+    assert ids == ["t1", "t3"]  # the duplicate t2 was dropped
+    t3 = next(s for s in plan.subtasks if s.id == "t3")
+    assert t3.depends_on == (
+        "t1",
+    )  # its dependency on the dropped twin was rewired to the kept one
+
+
+def test_parse_plan_keeps_distinct_subtasks() -> None:
+    plan = _parse(_payload())
+    assert len(plan.subtasks) == 2  # different apps/titles -> untouched
+
+
+def test_norm_title_normalizes_case_space_punct() -> None:
+    assert _norm_title("  Find   Papers on X. ") == "find papers on x"
+    assert _norm_title("Summarize!!!") == "summarize"
+
+
+def test_dedupe_is_noop_without_duplicates() -> None:
+    plan = _parse(_payload())  # already parsed distinct plan
+    assert _dedupe_subtasks(plan.subtasks) is plan.subtasks
+
+
+def test_dedupe_different_app_same_title_not_merged() -> None:
+    from orchestrator.models import AppSelection, Subtask
+
+    def s(i: str, app: str) -> Subtask:
+        return Subtask(i, "Do the thing", "d", (), AppSelection(app, "A", "r", 0.9, False))
+
+    subs = (s("t1", "arxiv-papers"), s("t2", "teach-me"))
+    assert len(_dedupe_subtasks(subs)) == 2  # same title but different app -> kept separate

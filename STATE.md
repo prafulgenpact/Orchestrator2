@@ -1,8 +1,17 @@
 # Project State — A multi agent orchestrator system calling relevant apps basis intent recognition
 
-Last updated: 2026-08-04 (multi-paper-summarize task)
+Last updated: 2026-08-04 (plan-dedup-subtasks task)
 
 ## In progress
+
+- 2026-08-04 plan-dedup-subtasks (fix 5/5 of the RCA set — the last one). Redundant decomposition is
+  now collapsed at the source: `validation.parse_plan` runs `_dedupe_subtasks`, which merges
+  subtasks that are exact duplicates — same app AND normalized title (case/whitespace/trailing
+  punctuation insensitive) — keeping the first, dropping later twins, and rewiring any dependency on
+  a dropped twin to the kept id. Deterministic and conservative (title-exact), so it's a no-op on
+  the decomposition eval's distinct scenarios (verified: eval still 16/16) — the fuzzy cases stay
+  covered by fix 2 (call cache) and fix 3 (UI dedup). New tests in test_validation. `make verify`
+  PASS. This completes the 5-fix RCA set (2 RCAs: duplicate outputs + "only 1 paper").
 
 - 2026-08-04 multi-paper-summarize (fix 4/5 of the RCA set). "Summarize the papers" now covers more
   than one. ArXiv's `analyze_paper` is single-paper and the executor runs one op per subtask, so a

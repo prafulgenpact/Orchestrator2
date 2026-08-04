@@ -1,1 +1,1 @@
-20260804-multi-paper-summarize.md
+20260804-plan-dedup-subtasks.md

@@ -1,8 +1,11 @@
 {
   "schema": "proof/v1",
-  "created_utc": "2026-07-14T10:25:51+00:00",
-  "result": "PASS",
-  "failed_checks": [],
+  "created_utc": "2026-08-04T10:16:23+00:00",
+  "result": "FAIL",
+  "failed_checks": [
+    "py-lint",
+    "py-format"
+  ],
   "missing_required_checks": [],
   "required_checks": [
     "py-lint",
@@ -12,35 +15,35 @@
     "e2e",
     "secrets"
   ],
-  "fingerprint": "0df516602ec2abaf351fdbec55246a9d88787661353a3d1b72340fd2ac21faf4",
+  "fingerprint": "cd2dd1312f8fd9bea2357f6142d14f45489ff52063cff799524213758aac82dc",
   "git": {
-    "commit": "288b5b0b47784c325e566680efee4d9939c6582b",
+    "commit": "5afcf025cffd38959a1ee42faed8850774a4a840",
     "branch": "Orchestrator2",
     "dirty_tracked_files": true
   },
   "checks": [
     {
       "name": "py-lint",
-      "status": "pass",
-      "duration_s": 1,
+      "status": "fail",
+      "duration_s": 0,
       "evidence": "reports/py-lint.log"
     },
     {
       "name": "py-format",
-      "status": "pass",
+      "status": "fail",
       "duration_s": 0,
       "evidence": "reports/py-format.log"
     },
     {
       "name": "py-types",
       "status": "pass",
-      "duration_s": 2,
+      "duration_s": 3,
       "evidence": "reports/py-types.log"
     },
     {
       "name": "py-unit",
       "status": "pass",
-      "duration_s": 3,
+      "duration_s": 10,
       "evidence": "reports/py-unit.log"
     },
     {
@@ -52,45 +55,45 @@
     {
       "name": "secrets",
       "status": "pass",
-      "duration_s": 0,
+      "duration_s": 1,
       "evidence": "reports/secrets.log"
     },
     {
       "name": "secrets-gitleaks",
       "status": "pass",
-      "duration_s": 1,
+      "duration_s": 2,
       "evidence": "reports/secrets-gitleaks.log"
     },
     {
       "name": "dep-audit",
       "status": "pass",
-      "duration_s": 24,
+      "duration_s": 18,
       "evidence": "reports/dep-audit.log"
     },
     {
       "name": "diff-cover",
       "status": "pass",
-      "duration_s": 1,
+      "duration_s": 0,
       "evidence": "reports/diff-cover.log"
     }
   ],
   "tests": {
     "unit": {
-      "tests": 306,
+      "tests": 917,
       "failures": 0,
       "errors": 0,
       "skipped": 0,
-      "time_s": 1.81
+      "time_s": 8.07
     },
     "e2e": {
       "tests": 2,
       "failures": 0,
       "errors": 0,
       "skipped": 0,
-      "time_s": 0.69
+      "time_s": 0.66
     },
     "web_e2e": null,
-    "coverage_pct": 100.0
+    "coverage_pct": 96.0
   },
   "environment": {
     "python": "Python 3.10.0",
@@ -99,5 +102,5 @@
     "pytest": "pytest 8.3.2",
     "os": "Darwin 25.5.0"
   },
-  "content_hash": "d5a78db71de4837b60d77f06036332c6aa0b8c192462dabe08971a72932f8f3a"
+  "content_hash": "ce886008aa1b552eb24e89fc33a3444ddd7715393776d67671f984239f71e9eb"
 }
