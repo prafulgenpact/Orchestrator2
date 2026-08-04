@@ -1,6 +1,6 @@
 {
   "schema": "proof/v1",
-  "created_utc": "2026-08-04T09:10:48+00:00",
+  "created_utc": "2026-08-04T09:19:40+00:00",
   "result": "PASS",
   "failed_checks": [],
   "missing_required_checks": [],
@@ -12,11 +12,11 @@
     "e2e",
     "secrets"
   ],
-  "fingerprint": "8d91b3c340b9a8b0ad2d190dc6c8699bda346e80f8862276517e12ef391750c4",
+  "fingerprint": "b8396d30d7a2ba12be2f16a6d0548e661a12a9cf9985da437e8564af14ee5099",
   "git": {
-    "commit": "cfd28074529065ba8e320be334628adb729409f5",
+    "commit": "84fce4bb1423ba18e8480985cf587309bcb2ef3a",
     "branch": "Orchestrator2",
-    "dirty_tracked_files": false
+    "dirty_tracked_files": true
   },
   "checks": [
     {
@@ -40,7 +40,7 @@
     {
       "name": "py-unit",
       "status": "pass",
-      "duration_s": 15,
+      "duration_s": 11,
       "evidence": "reports/py-unit.log"
     },
     {
@@ -58,13 +58,13 @@
     {
       "name": "secrets-gitleaks",
       "status": "pass",
-      "duration_s": 1,
+      "duration_s": 2,
       "evidence": "reports/secrets-gitleaks.log"
     },
     {
       "name": "dep-audit",
       "status": "pass",
-      "duration_s": 17,
+      "duration_s": 23,
       "evidence": "reports/dep-audit.log"
     },
     {
@@ -80,14 +80,14 @@
       "failures": 0,
       "errors": 0,
       "skipped": 0,
-      "time_s": 13.47
+      "time_s": 9.79
     },
     "e2e": {
       "tests": 2,
       "failures": 0,
       "errors": 0,
       "skipped": 0,
-      "time_s": 0.8
+      "time_s": 0.89
     },
     "web_e2e": null,
     "coverage_pct": 95.95
@@ -99,5 +99,5 @@
     "pytest": "pytest 8.3.2",
     "os": "Darwin 25.5.0"
   },
-  "content_hash": "3ce9f801ed0bbe7b61eb8e1e2d12ad67947a6585803cad7da5c50abd1b159fa9"
+  "content_hash": "80f2e9d1917dc17020c724bdeec6b54ab8f7d51bf09f279abbfe76010ebc0069"
 }

@@ -624,6 +624,7 @@ const CHECK_ICON = CHECK_SVG;
 /* ---- run state ---- */
 let steps = [], stepById = {}, running = false, noteText = '';
 let answerCard = null, answerBody = null, answerTextEl = null, answerRaw = '';
+let seenResultSigs = new Set();   // per-run: (app|op|status|output) already shown, to skip duplicate cards
 let zTop = 20, colY = [24,24,24];
 const COL_W = 372, COL_X0 = 24;
 
@@ -946,6 +947,13 @@ function addResultCard(r){
     step.output = (r.status!=='ok' && r.error) ? r.error : r.output;
     if(r.app_name) step.appName = r.app_name;
   }
+  // Intermediate outputs must be unique: if an identical (app + op + output) card is already on the
+  // canvas — two subtasks that ran the same call — don't render a second one. The step still shows
+  // in the feed/trace (the technical view stays honest); only the duplicate canvas card is skipped.
+  let outSig; try { outSig = JSON.stringify(r.output ?? r.error ?? ''); } catch(e){ outSig = String(r.output); }
+  const sig = [r.app_name||'', r.operation||'', r.status||'', outSig].join(' ');
+  if(seenResultSigs.has(sig)){ renderFeed(); renderTrace(); return; }
+  seenResultSigs.add(sig);
   const isErr = r.status!=='ok';
   const card = cardShell(r.app_name||'App', isErr?'error':'result', 'int');
   const label = step ? step.title : (r.operation || 'Output');
@@ -999,7 +1007,7 @@ function runTask(task){
   if(feedHead) feedHead.style.display = '';
   canvas.querySelectorAll('.block').forEach(b => b.remove());   // clear the previous run
   steps = []; stepById = {}; running = true; noteText = 'Planning your task…';
-  answerCard = null; answerBody = null; answerTextEl = null; answerRaw = ''; colY = [24,24,24];
+  answerCard = null; answerBody = null; answerTextEl = null; answerRaw = ''; seenResultSigs = new Set(); colY = [24,24,24];
   setSummary('running', 'starting…'); renderFeed(); renderTrace();
   let es;
   try { es = new EventSource('/run?task=' + encodeURIComponent(task)); }

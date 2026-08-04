@@ -1,6 +1,6 @@
 {
   "schema": "proof/v1",
-  "created_utc": "2026-07-13T09:24:20+00:00",
+  "created_utc": "2026-08-04T09:19:40+00:00",
   "result": "PASS",
   "failed_checks": [],
   "missing_required_checks": [],
@@ -12,9 +12,9 @@
     "e2e",
     "secrets"
   ],
-  "fingerprint": "a28a5a6871ea436f07d79c14b9c763f37407c4f3c8ed7631f9de72859cb1f0c0",
+  "fingerprint": "b8396d30d7a2ba12be2f16a6d0548e661a12a9cf9985da437e8564af14ee5099",
   "git": {
-    "commit": "69307112d1eaffe410e3d0a5f700a82f662c6d8a",
+    "commit": "84fce4bb1423ba18e8480985cf587309bcb2ef3a",
     "branch": "Orchestrator2",
     "dirty_tracked_files": true
   },
@@ -40,13 +40,13 @@
     {
       "name": "py-unit",
       "status": "pass",
-      "duration_s": 3,
+      "duration_s": 11,
       "evidence": "reports/py-unit.log"
     },
     {
       "name": "e2e",
       "status": "pass",
-      "duration_s": 2,
+      "duration_s": 3,
       "evidence": "reports/e2e.log"
     },
     {
@@ -58,7 +58,7 @@
     {
       "name": "secrets-gitleaks",
       "status": "pass",
-      "duration_s": 1,
+      "duration_s": 2,
       "evidence": "reports/secrets-gitleaks.log"
     },
     {
@@ -70,27 +70,27 @@
     {
       "name": "diff-cover",
       "status": "pass",
-      "duration_s": 1,
+      "duration_s": 0,
       "evidence": "reports/diff-cover.log"
     }
   ],
   "tests": {
     "unit": {
-      "tests": 304,
+      "tests": 904,
       "failures": 0,
       "errors": 0,
       "skipped": 0,
-      "time_s": 2.06
+      "time_s": 9.79
     },
     "e2e": {
       "tests": 2,
       "failures": 0,
       "errors": 0,
       "skipped": 0,
-      "time_s": 0.81
+      "time_s": 0.89
     },
     "web_e2e": null,
-    "coverage_pct": 100.0
+    "coverage_pct": 95.95
   },
   "environment": {
     "python": "Python 3.10.0",
@@ -99,5 +99,5 @@
     "pytest": "pytest 8.3.2",
     "os": "Darwin 25.5.0"
   },
-  "content_hash": "efc621d874ed67da11e321993bc801c109dc2672204030cb194d2b17a2bb40fd"
+  "content_hash": "80f2e9d1917dc17020c724bdeec6b54ab8f7d51bf09f279abbfe76010ebc0069"
 }

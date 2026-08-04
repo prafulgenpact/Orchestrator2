@@ -1,8 +1,19 @@
 # Project State — A multi agent orchestrator system calling relevant apps basis intent recognition
 
-Last updated: 2026-08-04 (within-run-call-cache task)
+Last updated: 2026-08-04 (ui-dedup-identical-cards task)
 
 ## In progress
+
+- 2026-08-04 ui-dedup-identical-cards (fix 3/5 of the RCA set). Intermediate output cards are now
+  unique. `web/atelier-workspace.html` only: `addResultCard` computes a signature
+  `app | operation | status | JSON(output/error)` and, using a per-run `seenResultSigs` Set (reset
+  in `runTask`), skips creating a second canvas card when an identical one already exists — the
+  duplicate step is still enriched onto its trace step and the feed/trace re-render, so the
+  technical view stays honest (one node per subtask). Live-verified in headless Chrome: three
+  result events (two identical + one different) → 2 canvas cards but 3 trace nodes, deduped step
+  still enriched, 0 JS errors. Together with fix 2 (which removes the duplicate WORK), a redundant
+  decomposition no longer produces duplicate visible outputs. `make verify` PASS.
+  Remaining: 4) multi-paper summarize, 5) plan-level dedup of overlapping subtasks.
 
 - 2026-08-04 within-run-call-cache (fix 2/5 of the RCA set). When two subtasks resolve to the exact
   same app call (same app, operation, args) — the redundant-decomposition case behind the duplicate
