@@ -1,8 +1,16 @@
 # Project State — A multi agent orchestrator system calling relevant apps basis intent recognition
 
-Last updated: 2026-08-04 (codegen-inline-charts task)
+Last updated: 2026-08-04 (final-answer-charts task)
 
 ## In progress
+
+- 2026-08-04 final-answer-charts (chart fix 2/3). The final deliverable (the blog) now shows the
+  charts made during the run. `web.py`: pure `_collect_images(plan_result)` gathers base64 PNGs from
+  ok steps' `output['images']` (deduped, capped at 8), and the connector's `final` event now carries
+  `images`. `atelier-workspace.html`: the answer card has an `.answer-charts` section that
+  `finalizeAnswer` fills with the chart images. Unit tests for `_collect_images`; live-verified in
+  headless Chrome (answer card renders the chart <img>s + the blog markdown, 0 errors). `make verify`
+  PASS. Remaining: 3) embed charts into the published Blogs Playground post.
 
 - 2026-08-04 codegen-inline-charts (chart fix 1/3). Intermediate charts now render. Root cause: the
   Coding Playground kernel captures a figure only when the code DISPLAYS it inline (`plt.show()` ->

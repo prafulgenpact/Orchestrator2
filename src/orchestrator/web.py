@@ -56,6 +56,26 @@ def sse(event: str, data: dict[str, Any]) -> bytes:
     return f"event: {event}\ndata: {json.dumps(data, default=str)}\n\n".encode()
 
 
+def _collect_images(result: PlanResult, limit: int = 8) -> list[str]:
+    """Base64 PNG charts produced across the run's successful steps (deduped, capped).
+
+    Carried onto the FINAL answer so the whole deliverable — the blog — shows its charts, not just
+    the intermediate step that made them. Reads each ok result's ``output['images']`` (the kernel's
+    displayed figures the executor already captured)."""
+    seen: set[str] = set()
+    images: list[str] = []
+    for r in result.results:
+        if r.status != "ok" or not isinstance(r.output, dict):
+            continue
+        for img in r.output.get("images") or []:
+            if isinstance(img, str) and img and img not in seen:
+                seen.add(img)
+                images.append(img)
+                if len(images) >= limit:
+                    return images
+    return images
+
+
 def _execute_plan_sync(
     plan: Plan,
     registry: Registry,
@@ -135,7 +155,12 @@ def run_events(task: str, *, client: LLMClient, registry: Registry, model: str) 
             bus.put(
                 (
                     "final",
-                    {"answer": synth.answer, "sources": list(synth.sources), "mode": synth.mode},
+                    {
+                        "answer": synth.answer,
+                        "sources": list(synth.sources),
+                        "mode": synth.mode,
+                        "images": _collect_images(result),
+                    },
                 )
             )
         except Exception as exc:  # - surface any run failure as one event

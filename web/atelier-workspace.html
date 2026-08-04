@@ -966,7 +966,7 @@ function ensureAnswerCard(){
   const synth = stepById['__synth__']; if(synth && synth.status==='queued'){ synth.status='running'; synth.t=now(); }
   const card = cardShell('Final answer', 'final output', 'fin'); card.classList.add('final'); card.style.width='440px';
   answerBody = card.querySelector('.padded');
-  answerBody.innerHTML = `<div class="kicker" style="font-family:var(--mono); font-size:10px; letter-spacing:.16em; color:var(--accent); text-transform:uppercase; font-weight:600; margin-bottom:8px">Answer</div><div class="answer-text md"></div><div class="answer-src"></div>`;
+  answerBody.innerHTML = `<div class="kicker" style="font-family:var(--mono); font-size:10px; letter-spacing:.16em; color:var(--accent); text-transform:uppercase; font-weight:600; margin-bottom:8px">Answer</div><div class="answer-text md"></div><div class="answer-charts"></div><div class="answer-src"></div>`;
   answerTextEl = answerBody.querySelector('.answer-text');
   placeCard(card); answerCard = card; renderFeed(); renderTrace();
 }
@@ -975,6 +975,12 @@ function finalizeAnswer(data){
   ensureAnswerCard();
   if(data.answer && !answerRaw.trim()){ answerRaw = data.answer; answerTextEl.innerHTML = mdToHtml(answerRaw); }
   const synth = stepById['__synth__']; if(synth){ synth.status='done'; synth.t=now(); }
+  // Charts made during the run belong on the final deliverable (the blog), not just the step card.
+  if(data.images && data.images.length){
+    answerBody.querySelector('.answer-charts').innerHTML =
+      '<div class="rule" style="height:1px; background:var(--rule); margin:12px 0 8px; opacity:.6"></div><div class="sc-label">Charts</div>'
+      + data.images.map(b => `<img class="out-img" src="data:image/png;base64,${esc(b)}" alt="chart">`).join('');
+  }
   if(data.sources && data.sources.length){
     answerBody.querySelector('.answer-src').innerHTML = '<div class="rule" style="height:1px; background:var(--rule); margin:12px 0 8px; opacity:.6"></div><div class="sc-label">Sources</div>'
       + data.sources.map(s => `<div style="font-size:11.5px; margin-top:3px"><a href="${esc(s)}" target="_blank" rel="noopener" style="color:var(--accent)">${esc(s)}</a></div>`).join('');

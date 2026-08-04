@@ -1,6 +1,6 @@
 {
   "schema": "proof/v1",
-  "created_utc": "2026-07-14T10:37:59+00:00",
+  "created_utc": "2026-08-04T11:43:39+00:00",
   "result": "PASS",
   "failed_checks": [],
   "missing_required_checks": [],
@@ -12,9 +12,9 @@
     "e2e",
     "secrets"
   ],
-  "fingerprint": "e81f276cc7ffb5045c55ac29f7631d196d541e5dde490684a7fb79013c132c38",
+  "fingerprint": "ecb59febe6608489ce25bd6b9ddec85e197aa902fdac4e68158b7a6732b47b75",
   "git": {
-    "commit": "b140016ec1572644dfad022716b2d1210d6d6e10",
+    "commit": "d7e0bad605a47d06af90803582bd1b25ef6b1592",
     "branch": "Orchestrator2",
     "dirty_tracked_files": true
   },
@@ -34,37 +34,37 @@
     {
       "name": "py-types",
       "status": "pass",
-      "duration_s": 2,
+      "duration_s": 1,
       "evidence": "reports/py-types.log"
     },
     {
       "name": "py-unit",
       "status": "pass",
-      "duration_s": 3,
+      "duration_s": 14,
       "evidence": "reports/py-unit.log"
     },
     {
       "name": "e2e",
       "status": "pass",
-      "duration_s": 2,
+      "duration_s": 3,
       "evidence": "reports/e2e.log"
     },
     {
       "name": "secrets",
       "status": "pass",
-      "duration_s": 0,
+      "duration_s": 1,
       "evidence": "reports/secrets.log"
     },
     {
       "name": "secrets-gitleaks",
       "status": "pass",
-      "duration_s": 0,
+      "duration_s": 1,
       "evidence": "reports/secrets-gitleaks.log"
     },
     {
       "name": "dep-audit",
       "status": "pass",
-      "duration_s": 18,
+      "duration_s": 19,
       "evidence": "reports/dep-audit.log"
     },
     {
@@ -76,21 +76,21 @@
   ],
   "tests": {
     "unit": {
-      "tests": 316,
+      "tests": 921,
       "failures": 0,
       "errors": 0,
       "skipped": 0,
-      "time_s": 2.36
+      "time_s": 11.54
     },
     "e2e": {
       "tests": 2,
       "failures": 0,
       "errors": 0,
       "skipped": 0,
-      "time_s": 0.47
+      "time_s": 0.86
     },
     "web_e2e": null,
-    "coverage_pct": 100.0
+    "coverage_pct": 96.02
   },
   "environment": {
     "python": "Python 3.10.0",
@@ -99,5 +99,5 @@
     "pytest": "pytest 8.3.2",
     "os": "Darwin 25.5.0"
   },
-  "content_hash": "173e9f5085a51cb49f3e5a19fdd95e02f8525e4cba36c968be1053d18793686b"
+  "content_hash": "0e342fd46492cc6e5f08cd387c14e044df5503273c8e50d346eacc63d4dcda58"
 }

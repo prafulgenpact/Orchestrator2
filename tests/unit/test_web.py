@@ -154,3 +154,36 @@ def test_is_benign_disconnect_false_for_real_errors() -> None:
     assert web._is_benign_disconnect(ValueError("boom")) is False
     assert web._is_benign_disconnect(RuntimeError()) is False
     assert web._is_benign_disconnect(None) is False
+
+
+def _res(status: str, output: Any) -> Any:
+    from orchestrator.models import SubtaskResult
+
+    return SubtaskResult(
+        "t", "coding-playground", "Coding", status, "run_code", output, None, None, 0.0
+    )
+
+
+def _plan_result(*results: Any) -> Any:
+    from orchestrator.models import PlanResult
+
+    return PlanResult(task="t", intent="i", results=tuple(results))
+
+
+def test_collect_images_gathers_dedupes_and_caps() -> None:
+    pr = _plan_result(
+        _res("ok", {"text": "done", "images": ["AAA", "BBB"]}),
+        _res("error", {"images": ["ZZZ"]}),  # failed step -> ignored
+        _res("ok", {"images": ["BBB", "CCC"]}),  # BBB duplicate -> deduped
+        _res("ok", "just text"),  # non-dict output -> skipped
+    )
+    assert web._collect_images(pr) == ["AAA", "BBB", "CCC"]
+
+
+def test_collect_images_caps_at_limit() -> None:
+    pr = _plan_result(_res("ok", {"images": [str(i) for i in range(20)]}))
+    assert len(web._collect_images(pr, limit=8)) == 8
+
+
+def test_collect_images_empty_when_no_charts() -> None:
+    assert web._collect_images(_plan_result(_res("ok", {"text": "no charts"}))) == []
