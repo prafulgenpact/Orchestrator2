@@ -233,6 +233,36 @@ def test_operation_arg_min_must_be_numbers(tmp_path: Path) -> None:
         load_registry(_write(tmp_path, _registry([bad, FALLBACK_APP])))
 
 
+def test_operation_fan_out_parsed(tmp_path: Path) -> None:
+    fo = {"arg": "arxiv_id", "source": "arxiv_id", "title_from": "title", "max": 3}
+    op = {**VALID_OP, "fan_out": fo}
+    reg = load_registry(
+        _write(tmp_path, _registry([{**VALID_APP, "operations": [op]}, FALLBACK_APP]))
+    )
+    parsed = reg.get("teach-me").operation("start_topic")  # type: ignore[union-attr]
+    assert parsed is not None
+    assert parsed.fan_out == fo
+    assert parsed.to_dict()["fan_out"] == fo
+
+
+def test_operation_fan_out_defaults_none(tmp_path: Path) -> None:
+    reg = load_registry(_write(tmp_path, _registry([VALID_APP, FALLBACK_APP])))
+    assert reg.get("teach-me").operation("start_topic").fan_out is None  # type: ignore[union-attr]
+
+
+def test_operation_fan_out_max_must_be_positive_int(tmp_path: Path) -> None:
+    fo = {"arg": "arxiv_id", "source": "arxiv_id", "max": 0}
+    bad = {**VALID_APP, "operations": [{**VALID_OP, "fan_out": fo}]}
+    with pytest.raises(RegistryError, match="fan_out.max"):
+        load_registry(_write(tmp_path, _registry([bad, FALLBACK_APP])))
+
+
+def test_operation_fan_out_requires_arg_and_source(tmp_path: Path) -> None:
+    bad = {**VALID_APP, "operations": [{**VALID_OP, "fan_out": {"source": "x", "max": 2}}]}
+    with pytest.raises(RegistryError, match="fan_out.arg"):
+        load_registry(_write(tmp_path, _registry([bad, FALLBACK_APP])))
+
+
 _POLL = {
     "poll_op": "get_run",
     "run_id_field": "run_id",

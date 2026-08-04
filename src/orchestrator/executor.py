@@ -102,6 +102,87 @@ async def _call_cached(
     return result
 
 
+def _collect_fan_items(
+    upstream: tuple[SubtaskResult, ...], fan_out: dict[str, Any]
+) -> list[tuple[Any, Any]]:
+    """(id, title) pairs to fan a per-item op over — the top-N distinct items from upstream."""
+    source = fan_out["source"]
+    title_from = fan_out.get("title_from")
+    max_n = int(fan_out["max"])
+    items: list[tuple[Any, Any]] = []
+    seen: set[Any] = set()
+    for r in upstream:
+        rows = r.output if isinstance(r.output, list) else []
+        for it in rows:
+            if not isinstance(it, dict):
+                continue
+            pid = it.get(source)
+            if pid in (None, "") or pid in seen:
+                continue
+            seen.add(pid)
+            items.append((pid, it.get(title_from) if title_from else None))
+            if len(items) >= max_n:
+                return items
+    return items
+
+
+async def _run_fan_out(
+    sub: Subtask,
+    app: AppEntry,
+    op: AppOperation,
+    base_args: dict[str, Any],
+    items: list[tuple[Any, Any]],
+    *,
+    http_client: httpx.AsyncClient,
+    breaker: CircuitBreaker,
+    endpoints: AppEndpoints | None,
+    call_cache: CallCache | None,
+) -> SubtaskResult:
+    """Call ``op`` once per upstream item and aggregate into ONE result covering every paper.
+
+    Each entry is shaped ``{arg: id, title?, content}`` so the UI renders it as a titled summary.
+    Reuses the per-run call cache. Ok if at least one item analyzed; a clean error if none did.
+    """
+    assert op.fan_out is not None
+    arg = op.fan_out["arg"]
+    start = time.monotonic()
+    entries: list[dict[str, Any]] = []
+    for pid, title in items:
+        res = await _call_cached(
+            app,
+            op,
+            {**base_args, arg: pid},
+            http_client=http_client,
+            breaker=breaker,
+            endpoints=endpoints,
+            call_cache=call_cache,
+        )
+        if not res.ok:
+            continue
+        content = res.data.get("content") if isinstance(res.data, dict) else res.data
+        entry: dict[str, Any] = {arg: pid, "content": content}
+        if title:
+            entry["title"] = title
+        entries.append(entry)
+    duration = time.monotonic() - start
+    if not entries:
+        return SubtaskResult(
+            sub.id,
+            app.id,
+            app.name,
+            "error",
+            op.name,
+            None,
+            None,
+            "none of the papers could be analyzed",
+            duration,
+            args=base_args,
+        )
+    return SubtaskResult(
+        sub.id, app.id, app.name, "ok", op.name, entries, None, None, duration, args=base_args
+    )
+
+
 # Independent subtasks in a wave run concurrently; this bounds how many at once so a wide wave
 # never floods the Foundry API / sibling apps. Env-tunable; blank/non-numeric/<1 uses the default.
 _DEFAULT_MAX_CONCURRENCY = 5
@@ -245,6 +326,23 @@ async def _run_app_op(
         # failed (e.g. a truncated selection response). Either way, return a clean error so the
         # run never crashes and the web safety net (in _run_subtask) can answer with disclosure.
         return SubtaskResult(sub.id, app.id, app.name, "error", None, None, None, str(exc), 0.0)
+
+    # Fan-out: a single-item op (analyze ONE paper) is run once per top-N upstream item, so
+    # "summarize the papers" covers many, not one. Only when the upstream actually yields >=2 items.
+    if op.fan_out is not None:
+        items = _collect_fan_items(upstream, op.fan_out)
+        if len(items) >= 2:
+            return await _run_fan_out(
+                sub,
+                app,
+                op,
+                args,
+                items,
+                http_client=http_client,
+                breaker=breaker,
+                endpoints=endpoints,
+                call_cache=call_cache,
+            )
 
     # Skip a doomed call: if the op needs inputs the selector could not ground (e.g. a course
     # module id this task never mentioned), don't fire a request that would only 422 — skip

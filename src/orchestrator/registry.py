@@ -96,6 +96,9 @@ class AppOperation:
     # numeric floors the selector clamps UP to: a guard against the model under-setting a count
     # (e.g. reading "some papers" as max_results=1). Honors larger explicit values; only raises.
     arg_min: dict[str, float] = field(default_factory=dict)
+    # when set, a single-item op (e.g. analyze ONE paper) is called once per top-N upstream item so
+    # "summarize the papers" covers many, not one. See _parse_fan_out for the shape.
+    fan_out: dict[str, Any] | None = None
     poll: AsyncSpec | None = None  # present for start-then-poll async operations
     produces: str | None = None  # "chart" => the executor keeps the output as a chart artifact
     stream: str | None = None  # "sse" => response is a text/event-stream, consumed + assembled
@@ -114,6 +117,7 @@ class AppOperation:
             "required_fields": list(self.required_fields),
             "defaults": dict(self.defaults),
             "arg_min": dict(self.arg_min),
+            "fan_out": dict(self.fan_out) if self.fan_out else None,
             "poll": self.poll.to_dict() if self.poll else None,
             "produces": self.produces,
             "stream": self.stream,
@@ -243,6 +247,27 @@ def _parse_arg_min(raw: Any, where: str) -> dict[str, float]:
     return out
 
 
+def _parse_fan_out(raw: Any, where: str) -> dict[str, Any] | None:
+    """Validate a fan-out spec: call this op once per top-N upstream item.
+
+    Shape: ``{"arg": <op field to vary>, "source": <upstream item field to read the id from>,
+    "max": <int >= 1>, "title_from": <optional upstream item field for a display title>}``.
+    """
+    if raw is None:
+        return None
+    if not isinstance(raw, dict):
+        raise RegistryError(f"{where} fan_out must be an object")
+    arg = _require_str(raw.get("arg"), f"{where} fan_out.arg")
+    source = _require_str(raw.get("source"), f"{where} fan_out.source")
+    max_n = raw.get("max")
+    if isinstance(max_n, bool) or not isinstance(max_n, int) or max_n < 1:
+        raise RegistryError(f"{where} fan_out.max must be an integer >= 1")
+    spec: dict[str, Any] = {"arg": arg, "source": source, "max": max_n}
+    if raw.get("title_from") is not None:
+        spec["title_from"] = _require_str(raw.get("title_from"), f"{where} fan_out.title_from")
+    return spec
+
+
 def _parse_async_spec(raw: Any, where: str) -> AsyncSpec | None:
     if raw is None:
         return None
@@ -295,6 +320,7 @@ def _parse_operation(raw: Any, app_id: str, index: int) -> AppOperation:
         ),
         defaults=_parse_defaults(raw.get("defaults", {}), f"{where} ({name})"),
         arg_min=_parse_arg_min(raw.get("arg_min", {}), f"{where} ({name})"),
+        fan_out=_parse_fan_out(raw.get("fan_out"), f"{where} ({name})"),
         poll=_parse_async_spec(raw.get("poll"), f"{where} ({name})"),
         produces=raw.get("produces") or None,
         stream=raw.get("stream") or None,

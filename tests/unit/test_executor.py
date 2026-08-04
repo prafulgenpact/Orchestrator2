@@ -16,8 +16,10 @@ from orchestrator.app_caller import AppEndpoints, CallResult
 from orchestrator.executor import (
     _ASYNC_MAX_SILENT_POLLS,
     _call_cached,
+    _collect_fan_items,
     _dig,
     _run_async,
+    _run_fan_out,
     execute_plan,
 )
 from orchestrator.llm.base import LLMError
@@ -960,3 +962,145 @@ def test_call_cache_none_disables_caching(monkeypatch: pytest.MonkeyPatch) -> No
 
     asyncio.run(go())
     assert calls["n"] == 2  # no cache -> each call runs
+
+
+# --- fan-out: summarize covers the top-N found papers, not 1 (fix 4) ---
+
+_ANALYZE_FO = {"arg": "arxiv_id", "source": "arxiv_id", "title_from": "title", "max": 3}
+
+
+def _analyze_op() -> AppOperation:
+    return AppOperation(
+        name="analyze_paper",
+        description="d",
+        method="POST",
+        path="/api/ai/analyze",
+        timeout_s=90,
+        destructive=False,
+        idempotency="supported",
+        request_fields=("arxiv_id", "mode"),
+        fan_out=_ANALYZE_FO,
+    )
+
+
+def test_collect_fan_items_dedupes_and_caps() -> None:
+    up = (
+        SubtaskResult(
+            "t1",
+            "arxiv-papers",
+            "ArXiv",
+            "ok",
+            "search",
+            [
+                {"arxiv_id": "1", "title": "A"},
+                {"arxiv_id": "2", "title": "B"},
+                {"arxiv_id": "1", "title": "dup"},
+                {"arxiv_id": "3", "title": "C"},
+                {"arxiv_id": "4", "title": "D"},
+            ],
+            None,
+            None,
+            0.1,
+        ),
+    )
+    assert _collect_fan_items(up, _ANALYZE_FO) == [("1", "A"), ("2", "B"), ("3", "C")]
+
+
+def test_run_fan_out_analyzes_each_and_aggregates(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls = []
+
+    async def fake_call(
+        _app: AppEntry, op: AppOperation, args: dict[str, Any], **_kw: Any
+    ) -> CallResult:
+        calls.append(args["arxiv_id"])
+        return CallResult(
+            "arxiv-papers",
+            op.name,
+            "u",
+            True,
+            200,
+            {"content": "sum " + args["arxiv_id"]},
+            None,
+            0.0,
+        )
+
+    monkeypatch.setattr("orchestrator.executor.call_operation", fake_call)
+    op = _analyze_op()
+    app = AppEntry(
+        "arxiv-papers", "ArXiv", "d", (), (), False, port=8002, health="/h", operations=(op,)
+    )
+    sub = _sub_id("t2", ("t1",))
+
+    async def go() -> SubtaskResult:
+        return await _run_fan_out(
+            sub,
+            app,
+            op,
+            {"mode": "summary"},
+            [("1", "A"), ("2", "B")],
+            http_client=None,
+            breaker=CircuitBreaker(),
+            endpoints=None,
+            call_cache={},  # type: ignore[arg-type]
+        )
+
+    res = asyncio.run(go())
+    assert calls == ["1", "2"]  # analyzed BOTH papers, not one
+    assert res.status == "ok"
+    assert [e["arxiv_id"] for e in res.output] == ["1", "2"]
+    assert res.output[0] == {"arxiv_id": "1", "content": "sum 1", "title": "A"}
+
+
+def test_run_fan_out_all_fail_is_error(monkeypatch: pytest.MonkeyPatch) -> None:
+    async def fake_call(_app: AppEntry, op: AppOperation, _args: Any, **_kw: Any) -> CallResult:
+        return CallResult("arxiv-papers", op.name, "u", False, 500, None, "boom", 0.0)
+
+    monkeypatch.setattr("orchestrator.executor.call_operation", fake_call)
+    op = _analyze_op()
+    app = AppEntry(
+        "arxiv-papers", "ArXiv", "d", (), (), False, port=8002, health="/h", operations=(op,)
+    )
+
+    async def go() -> SubtaskResult:
+        return await _run_fan_out(
+            _sub_id("t2"),
+            app,
+            op,
+            {},
+            [("1", "A"), ("2", "B")],
+            http_client=None,
+            breaker=CircuitBreaker(),
+            endpoints=None,
+            call_cache={},  # type: ignore[arg-type]
+        )
+
+    res = asyncio.run(go())
+    assert res.status == "error"
+
+
+def test_execute_plan_fans_out_summarize_over_found_papers(monkeypatch: pytest.MonkeyPatch) -> None:
+    # End-to-end: t1 searches (2 papers), t2 summarizes -> fan-out analyzes BOTH via one subtask.
+    async def fake_call(
+        app: AppEntry, op: AppOperation, args: dict[str, Any], **_kw: Any
+    ) -> CallResult:
+        if op.name == "search_papers_by_query":
+            data = [{"arxiv_id": "1", "title": "A"}, {"arxiv_id": "2", "title": "B"}]
+            return CallResult(app.id, op.name, "u", True, 200, data, None, 0.0)
+        return CallResult(
+            app.id, op.name, "u", True, 200, {"content": "summary " + args["arxiv_id"]}, None, 0.0
+        )
+
+    monkeypatch.setattr("orchestrator.executor.call_operation", fake_call)
+    t1 = _sub_id("t1")
+    t2 = _sub_id("t2", ("t1",))
+    client = FakeLLM(
+        [
+            '{"operation": "search_papers_by_query", "arguments": {"query": "clt"}}',
+            _RELEVANT,
+            '{"operation": "analyze_paper", "arguments": {"arxiv_id": "1", "mode": "summary"}}',
+        ]
+    )
+    res = _run(_plan(t1, t2), client)
+    summarize = res.results[1]
+    assert summarize.status == "ok"
+    assert [e["arxiv_id"] for e in summarize.output] == ["1", "2"]  # both papers summarized

@@ -155,7 +155,13 @@
             "arxiv_id",
             "mode",
             "question"
-          ]
+          ],
+          "fan_out": {
+            "arg": "arxiv_id",
+            "source": "arxiv_id",
+            "title_from": "title",
+            "max": 3
+          }
         },
         {
           "name": "chat_about_paper",

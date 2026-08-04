@@ -1,8 +1,22 @@
 # Project State — A multi agent orchestrator system calling relevant apps basis intent recognition
 
-Last updated: 2026-08-04 (ui-dedup-identical-cards task)
+Last updated: 2026-08-04 (multi-paper-summarize task)
 
 ## In progress
+
+- 2026-08-04 multi-paper-summarize (fix 4/5 of the RCA set). "Summarize the papers" now covers more
+  than one. ArXiv's `analyze_paper` is single-paper and the executor runs one op per subtask, so a
+  summarize step analyzed only 1 of the found papers. Added a contract-driven fan-out:
+  `AppOperation.fan_out` (`{arg, source, max, title_from?}`, parsed + validated + round-tripped) and,
+  in `_run_app_op`, when the op declares `fan_out` and upstream yields >=2 distinct items, the
+  executor calls the op once per top-N item (deduped, reusing the fix-2 call cache) and aggregates
+  into ONE ok result — a list of `{arxiv_id, title, content}` entries the existing UI renders as
+  titled per-paper summaries. Fewer than 2 items keeps the single-call path. `registry/apps.json`:
+  `analyze_paper` carries `fan_out {arg: arxiv_id, source: arxiv_id, title_from: title, max: 3}`.
+  New tests: registry parse/validation, `_collect_fan_items` (dedupe+cap), `_run_fan_out`
+  (analyzes each / all-fail=error), and an execute_plan integration proving both papers summarized.
+  Routing untouched; eval unchanged. `make verify` PASS.
+  Remaining: 5) plan-level dedup of overlapping subtasks (riskiest — touches the planner/eval).
 
 - 2026-08-04 ui-dedup-identical-cards (fix 3/5 of the RCA set). Intermediate output cards are now
   unique. `web/atelier-workspace.html` only: `addResultCard` computes a signature

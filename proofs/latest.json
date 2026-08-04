@@ -1,6 +1,6 @@
 {
   "schema": "proof/v1",
-  "created_utc": "2026-08-04T09:20:39+00:00",
+  "created_utc": "2026-08-04T10:08:27+00:00",
   "result": "PASS",
   "failed_checks": [],
   "missing_required_checks": [],
@@ -12,11 +12,11 @@
     "e2e",
     "secrets"
   ],
-  "fingerprint": "b8396d30d7a2ba12be2f16a6d0548e661a12a9cf9985da437e8564af14ee5099",
+  "fingerprint": "4c3766de1b6fccb277211aad2494a702326a949e2bb99fbff55feb42a700f461",
   "git": {
-    "commit": "44281e0ae532b23add9516800606b8bd3c518dd6",
+    "commit": "862e9a069e7bf4eac691a08c3a486d6ad97e2633",
     "branch": "Orchestrator2",
-    "dirty_tracked_files": false
+    "dirty_tracked_files": true
   },
   "checks": [
     {
@@ -34,19 +34,19 @@
     {
       "name": "py-types",
       "status": "pass",
-      "duration_s": 2,
+      "duration_s": 3,
       "evidence": "reports/py-types.log"
     },
     {
       "name": "py-unit",
       "status": "pass",
-      "duration_s": 10,
+      "duration_s": 13,
       "evidence": "reports/py-unit.log"
     },
     {
       "name": "e2e",
       "status": "pass",
-      "duration_s": 2,
+      "duration_s": 3,
       "evidence": "reports/e2e.log"
     },
     {
@@ -64,7 +64,7 @@
     {
       "name": "dep-audit",
       "status": "pass",
-      "duration_s": 17,
+      "duration_s": 19,
       "evidence": "reports/dep-audit.log"
     },
     {
@@ -76,21 +76,21 @@
   ],
   "tests": {
     "unit": {
-      "tests": 904,
+      "tests": 912,
       "failures": 0,
       "errors": 0,
       "skipped": 0,
-      "time_s": 8.64
+      "time_s": 11.02
     },
     "e2e": {
       "tests": 2,
       "failures": 0,
       "errors": 0,
       "skipped": 0,
-      "time_s": 0.8
+      "time_s": 0.58
     },
     "web_e2e": null,
-    "coverage_pct": 95.95
+    "coverage_pct": 95.96
   },
   "environment": {
     "python": "Python 3.10.0",
@@ -99,5 +99,5 @@
     "pytest": "pytest 8.3.2",
     "os": "Darwin 25.5.0"
   },
-  "content_hash": "a870f760c7feff364a08498716fa7bf559dc4752035a0e3085c5ecbd8a82bf63"
+  "content_hash": "8658c6465f693afee4f70be7b0920031d3c5dbbf56a528aa5da506ad9e50239a"
 }
