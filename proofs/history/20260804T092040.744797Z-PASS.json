@@ -1,6 +1,6 @@
 {
   "schema": "proof/v1",
-  "created_utc": "2026-07-13T13:06:25+00:00",
+  "created_utc": "2026-08-04T09:20:39+00:00",
   "result": "PASS",
   "failed_checks": [],
   "missing_required_checks": [],
@@ -12,17 +12,17 @@
     "e2e",
     "secrets"
   ],
-  "fingerprint": "26af517621058fb2ea8fe1f0eda44a2eb439d4992b1da18f628aa50493b90c75",
+  "fingerprint": "b8396d30d7a2ba12be2f16a6d0548e661a12a9cf9985da437e8564af14ee5099",
   "git": {
-    "commit": "bbd803b76b4cc4a07d7ad10a01e00b6c36b68817",
+    "commit": "44281e0ae532b23add9516800606b8bd3c518dd6",
     "branch": "Orchestrator2",
-    "dirty_tracked_files": true
+    "dirty_tracked_files": false
   },
   "checks": [
     {
       "name": "py-lint",
       "status": "pass",
-      "duration_s": 1,
+      "duration_s": 0,
       "evidence": "reports/py-lint.log"
     },
     {
@@ -34,13 +34,13 @@
     {
       "name": "py-types",
       "status": "pass",
-      "duration_s": 4,
+      "duration_s": 2,
       "evidence": "reports/py-types.log"
     },
     {
       "name": "py-unit",
       "status": "pass",
-      "duration_s": 3,
+      "duration_s": 10,
       "evidence": "reports/py-unit.log"
     },
     {
@@ -64,33 +64,33 @@
     {
       "name": "dep-audit",
       "status": "pass",
-      "duration_s": 25,
+      "duration_s": 17,
       "evidence": "reports/dep-audit.log"
     },
     {
       "name": "diff-cover",
       "status": "pass",
-      "duration_s": 0,
+      "duration_s": 1,
       "evidence": "reports/diff-cover.log"
     }
   ],
   "tests": {
     "unit": {
-      "tests": 304,
+      "tests": 904,
       "failures": 0,
       "errors": 0,
       "skipped": 0,
-      "time_s": 1.89
+      "time_s": 8.64
     },
     "e2e": {
       "tests": 2,
       "failures": 0,
       "errors": 0,
       "skipped": 0,
-      "time_s": 0.6
+      "time_s": 0.8
     },
     "web_e2e": null,
-    "coverage_pct": 100.0
+    "coverage_pct": 95.95
   },
   "environment": {
     "python": "Python 3.10.0",
@@ -99,5 +99,5 @@
     "pytest": "pytest 8.3.2",
     "os": "Darwin 25.5.0"
   },
-  "content_hash": "e376228fca22e2bc7eced42f48dc44e7be623654c07395c44a4aab5ff2a50a74"
+  "content_hash": "a870f760c7feff364a08498716fa7bf559dc4752035a0e3085c5ecbd8a82bf63"
 }
