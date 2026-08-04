@@ -42,6 +42,14 @@ def test_prompt_requires_filling_primary_input_even_with_upstream() -> None:
     assert "Never return empty" in prompt
 
 
+def test_prompt_requires_inline_chart_display() -> None:
+    # Guards the fix for charts saved-to-disk-not-shown: code producing charts must display them
+    # inline (plt.show) so the kernel captures them; saving to a file returns nothing to render.
+    prompt = load_system_prompt()
+    assert "plt.show()" in prompt
+    assert "savefig" in prompt  # named as the thing NOT to do
+
+
 def _blog_sub(title: str, desc: str) -> Subtask:
     app = AppSelection("blogs-playground", "Blogs Playground", "drafts blogs", 0.9, False)
     return Subtask("t2", title, desc, ("t1",), app)

@@ -1,8 +1,18 @@
 # Project State — A multi agent orchestrator system calling relevant apps basis intent recognition
 
-Last updated: 2026-08-04 (plan-dedup-subtasks task)
+Last updated: 2026-08-04 (codegen-inline-charts task)
 
 ## In progress
+
+- 2026-08-04 codegen-inline-charts (chart fix 1/3). Intermediate charts now render. Root cause: the
+  Coding Playground kernel captures a figure only when the code DISPLAYS it inline (`plt.show()` ->
+  a `display_data` image frame the executor already turns into `output.images`); the model's code
+  was `savefig`-ing to disk and printing "chart saved", so no image frames came back and the card
+  showed only text. Fix: the operation-select prompt now requires code that produces charts to call
+  `plt.show()` per figure and forbids `savefig`/file backends; prompt `version:` bumped 3->4. Guard
+  test added. Selector prompt only (planner/eval untouched — the eval fixtures are the separate
+  planner prompt). `make verify` PASS.
+  Remaining chart fixes: 2) carry chart images to the final-answer card, 3) embed charts in the blog.
 
 - 2026-08-04 plan-dedup-subtasks (fix 5/5 of the RCA set — the last one). Redundant decomposition is
   now collapsed at the source: `validation.parse_plan` runs `_dedupe_subtasks`, which merges

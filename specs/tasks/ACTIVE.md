@@ -1,1 +1,1 @@
-20260804-plan-dedup-subtasks.md
+20260804-codegen-inline-charts.md

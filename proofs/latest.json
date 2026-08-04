@@ -1,6 +1,6 @@
 {
   "schema": "proof/v1",
-  "created_utc": "2026-08-04T10:19:19+00:00",
+  "created_utc": "2026-08-04T11:37:00+00:00",
   "result": "PASS",
   "failed_checks": [],
   "missing_required_checks": [],
@@ -12,17 +12,17 @@
     "e2e",
     "secrets"
   ],
-  "fingerprint": "7b5de058e573363c224c3e5dbc51d9f7ae951de9a0fba0d7cd574034e3922b92",
+  "fingerprint": "6dd93f3317082937f0e342e91d8075a0d6d5bf5a6010e694c407e9ca297bdd74",
   "git": {
-    "commit": "1a7fd7457288ebaea67c0ad94710aa79a629623e",
+    "commit": "05077cf301fa07ac8a9a581070dfd03a9ab7fb59",
     "branch": "Orchestrator2",
-    "dirty_tracked_files": false
+    "dirty_tracked_files": true
   },
   "checks": [
     {
       "name": "py-lint",
       "status": "pass",
-      "duration_s": 0,
+      "duration_s": 1,
       "evidence": "reports/py-lint.log"
     },
     {
@@ -34,13 +34,13 @@
     {
       "name": "py-types",
       "status": "pass",
-      "duration_s": 1,
+      "duration_s": 2,
       "evidence": "reports/py-types.log"
     },
     {
       "name": "py-unit",
       "status": "pass",
-      "duration_s": 8,
+      "duration_s": 11,
       "evidence": "reports/py-unit.log"
     },
     {
@@ -52,7 +52,7 @@
     {
       "name": "secrets",
       "status": "pass",
-      "duration_s": 0,
+      "duration_s": 1,
       "evidence": "reports/secrets.log"
     },
     {
@@ -64,7 +64,7 @@
     {
       "name": "dep-audit",
       "status": "pass",
-      "duration_s": 14,
+      "duration_s": 24,
       "evidence": "reports/dep-audit.log"
     },
     {
@@ -76,18 +76,18 @@
   ],
   "tests": {
     "unit": {
-      "tests": 917,
+      "tests": 918,
       "failures": 0,
       "errors": 0,
       "skipped": 0,
-      "time_s": 7.28
+      "time_s": 8.63
     },
     "e2e": {
       "tests": 2,
       "failures": 0,
       "errors": 0,
       "skipped": 0,
-      "time_s": 0.51
+      "time_s": 0.64
     },
     "web_e2e": null,
     "coverage_pct": 96.0
@@ -99,5 +99,5 @@
     "pytest": "pytest 8.3.2",
     "os": "Darwin 25.5.0"
   },
-  "content_hash": "671ebec6d38e289d9c4ead483cc2376cc3667b8beee666526120bd5a96a606ad"
+  "content_hash": "6305dd21400873f8f81a8de337256ddcfcafeb930fd34e8fa9bea357c8ea98e5"
 }
