@@ -1,6 +1,6 @@
 {
   "schema": "proof/v1",
-  "created_utc": "2026-08-04T11:59:02+00:00",
+  "created_utc": "2026-08-04T13:11:51+00:00",
   "result": "PASS",
   "failed_checks": [],
   "missing_required_checks": [],
@@ -12,11 +12,11 @@
     "e2e",
     "secrets"
   ],
-  "fingerprint": "0e80ae15b0b598ab74f917f99895276046a72ae2989ac9d39726e50520fd6190",
+  "fingerprint": "2ad0d881650dda2b6757dd5db1be38631789c28e81c1e30b42ad1e2de4da6706",
   "git": {
-    "commit": "a28ed8f64c85c74e6eb98b9e908b79378f2cba8c",
+    "commit": "ee27522ab78b9605edfd04cced81c517b3f8e6fc",
     "branch": "Orchestrator2",
-    "dirty_tracked_files": false
+    "dirty_tracked_files": true
   },
   "checks": [
     {
@@ -34,13 +34,13 @@
     {
       "name": "py-types",
       "status": "pass",
-      "duration_s": 1,
+      "duration_s": 2,
       "evidence": "reports/py-types.log"
     },
     {
       "name": "py-unit",
       "status": "pass",
-      "duration_s": 10,
+      "duration_s": 7,
       "evidence": "reports/py-unit.log"
     },
     {
@@ -64,33 +64,33 @@
     {
       "name": "dep-audit",
       "status": "pass",
-      "duration_s": 13,
+      "duration_s": 22,
       "evidence": "reports/dep-audit.log"
     },
     {
       "name": "diff-cover",
       "status": "pass",
-      "duration_s": 0,
+      "duration_s": 1,
       "evidence": "reports/diff-cover.log"
     }
   ],
   "tests": {
     "unit": {
-      "tests": 927,
+      "tests": 937,
       "failures": 0,
       "errors": 0,
       "skipped": 0,
-      "time_s": 8.69
+      "time_s": 6.05
     },
     "e2e": {
       "tests": 2,
       "failures": 0,
       "errors": 0,
       "skipped": 0,
-      "time_s": 0.74
+      "time_s": 0.68
     },
     "web_e2e": null,
-    "coverage_pct": 96.02
+    "coverage_pct": 96.31
   },
   "environment": {
     "python": "Python 3.10.0",
@@ -99,5 +99,5 @@
     "pytest": "pytest 8.3.2",
     "os": "Darwin 25.5.0"
   },
-  "content_hash": "ad64380d05cf59aad81b88a5e1a8efe6073bad178b9400de876e322d1cde4c5f"
+  "content_hash": "4e695fae0ebcb4f79ffcd2d1dab4de0da893b019a14b5be3e6be5c3b6410363e"
 }
