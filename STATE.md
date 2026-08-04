@@ -1,8 +1,20 @@
 # Project State — A multi agent orchestrator system calling relevant apps basis intent recognition
 
-Last updated: 2026-07-31 (connector-quiet-disconnects task)
+Last updated: 2026-08-04 (search-count-floor task)
 
 ## In progress
+
+- 2026-08-04 search-count-floor (fix 1/5 of the RCA set). A vague "find some good papers" no longer
+  collapses to 1 result. The paper count is the LLM selector's `max_results`, previously with no
+  floor. Added `AppOperation.arg_min` (a numeric floor map, parsed + round-tripped) and
+  `selector._enforce_arg_floors`, which — after type coercion — raises any present numeric arg below
+  its floor UP to it (honors larger explicit counts; leaves omitted args alone so the app default
+  applies; ignores bools/non-numbers). `registry/apps.json`: the two ArXiv search ops
+  (`search_papers_by_query`, `search_papers_by_topic`) carry `arg_min: {max_results: 5}`. Verified:
+  a selection returning `max_results: 1` yields `5`. New tests in test_registry + test_selector.
+  Value-level guard only (no routing change; eval unchanged). `make verify` PASS.
+  Remaining RCA fixes (in order): 2) within-run duplicate-call cache, 3) UI dedup of identical
+  cards, 4) multi-paper summarize, 5) plan-level dedup of overlapping subtasks.
 
 - 2026-07-31 connector-quiet-disconnects (Whole-app UI — connector). The connector no longer dumps
   a traceback when a browser closes a socket early (preconnect / refresh / navigating away

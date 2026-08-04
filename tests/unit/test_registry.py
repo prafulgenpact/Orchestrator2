@@ -212,6 +212,27 @@ def test_operation_defaults_must_be_object(tmp_path: Path) -> None:
         load_registry(_write(tmp_path, _registry([bad, FALLBACK_APP])))
 
 
+def test_operation_arg_min_parsed(tmp_path: Path) -> None:
+    op = {**VALID_OP, "arg_min": {"max_results": 5}}
+    app = {**VALID_APP, "operations": [op]}
+    reg = load_registry(_write(tmp_path, _registry([app, FALLBACK_APP])))
+    parsed = reg.get("teach-me").operation("start_topic")  # type: ignore[union-attr]
+    assert parsed is not None
+    assert parsed.arg_min == {"max_results": 5.0}
+    assert parsed.to_dict()["arg_min"] == {"max_results": 5.0}
+
+
+def test_operation_arg_min_default_empty(tmp_path: Path) -> None:
+    reg = load_registry(_write(tmp_path, _registry([VALID_APP, FALLBACK_APP])))
+    assert reg.get("teach-me").operation("start_topic").arg_min == {}  # type: ignore[union-attr]
+
+
+def test_operation_arg_min_must_be_numbers(tmp_path: Path) -> None:
+    bad = {**VALID_APP, "operations": [{**VALID_OP, "arg_min": {"max_results": "lots"}}]}
+    with pytest.raises(RegistryError, match="arg_min"):
+        load_registry(_write(tmp_path, _registry([bad, FALLBACK_APP])))
+
+
 _POLL = {
     "poll_op": "get_run",
     "run_id_field": "run_id",

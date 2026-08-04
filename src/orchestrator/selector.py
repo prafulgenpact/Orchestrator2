@@ -266,6 +266,21 @@ def _enforce_field_types(args: dict[str, Any], types: dict[str, str]) -> None:
             del args[field]
 
 
+def _enforce_arg_floors(op: AppOperation, args: dict[str, Any]) -> None:
+    """Raise any present numeric arg below the op's declared floor (``arg_min``) up to it.
+
+    Guards against the model under-setting a count — reading "some good papers" as ``max_results:
+    1``. Only raises a value the model actually set; an omitted arg is left alone so the app's own
+    default applies. Booleans and non-numbers are ignored.
+    """
+    for field, floor in op.arg_min.items():
+        value = args.get(field)
+        if isinstance(value, bool) or not isinstance(value, int | float):
+            continue
+        if value < floor:
+            args[field] = int(floor) if isinstance(value, int) else float(floor)
+
+
 def select_operation(
     client: LLMClient,
     app: AppEntry,
@@ -320,6 +335,9 @@ def select_operation(
         else:
             # Value-level gate: coerce/drop wrongly-typed arguments BEFORE they can 422 the app.
             _enforce_field_types(args, types_by_op.get(op.name, {}))
+            # Floor guard: raise any numeric arg the model under-set below the op's declared minimum
+            # (e.g. a search count read as 1 from "some papers"). Runs after coercion so "1" is a 1.
+            _enforce_arg_floors(op, args)
             # Guarantee the primary input is present even if the model left it blank (deterministic,
             # grounded in the subtask) — a chosen app must run on the request, not fall back to web.
             _backfill_primary_fields(op, args, subtask)

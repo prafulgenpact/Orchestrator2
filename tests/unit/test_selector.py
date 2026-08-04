@@ -11,6 +11,7 @@ from orchestrator.models import AppSelection, Subtask, SubtaskResult
 from orchestrator.registry import AppEntry, AppOperation, RetrySpec, load_registry
 from orchestrator.selector import (
     SelectionError,
+    _enforce_arg_floors,
     build_select_message,
     load_system_prompt,
     select_operation,
@@ -316,3 +317,48 @@ def test_wrong_type_required_dropped_causes_skip(fake_llm: MakeLLM) -> None:
     assert op.name == "post_blog_restore"
     assert "version_num" not in args  # dropped -> executor skips instead of 422
     assert args["blog_id"] == "b1"
+
+
+def _op_with_floor() -> AppEntry:
+    op = AppOperation(
+        name="search",
+        description="d",
+        method="POST",
+        path="/search",
+        timeout_s=30,
+        destructive=False,
+        idempotency="none",
+        request_fields=("query", "max_results"),
+        arg_min={"max_results": 5},
+    )
+    return AppEntry(
+        "custom", "Custom", "d", (), (), False, port=8099, health="/h", operations=(op,)
+    )
+
+
+def test_enforce_arg_floors_raises_undersized_keeps_larger() -> None:
+    op = _op_with_floor().operations[0]
+    a = {"query": "x", "max_results": 1}
+    _enforce_arg_floors(op, a)
+    assert a["max_results"] == 5  # under-set 1 raised to the floor
+    b = {"query": "x", "max_results": 20}
+    _enforce_arg_floors(op, b)
+    assert b["max_results"] == 20  # larger explicit value untouched
+
+
+def test_enforce_arg_floors_ignores_bools_and_omitted() -> None:
+    op = _op_with_floor().operations[0]
+    a = {"query": "x"}  # max_results omitted -> left alone (app default applies)
+    _enforce_arg_floors(op, a)
+    assert "max_results" not in a
+    b = {"query": "x", "max_results": True}  # bool is not a count
+    _enforce_arg_floors(op, b)
+    assert b["max_results"] is True
+
+
+def test_select_clamps_undersized_count(fake_llm: MakeLLM) -> None:
+    # The model reads "some papers" as max_results=1; the floor raises it so search isn't starved.
+    app = _op_with_floor()
+    client = fake_llm(['{"operation": "search", "arguments": {"query": "clt", "max_results": 1}}'])
+    _, args = select_operation(client, app, _subtask(), model="m")
+    assert args["max_results"] == 5

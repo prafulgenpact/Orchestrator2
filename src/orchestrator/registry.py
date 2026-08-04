@@ -93,6 +93,9 @@ class AppOperation:
     request_fields: tuple[str, ...] = ()
     required_fields: tuple[str, ...] = ()
     defaults: dict[str, Any] = field(default_factory=dict)  # values the selector fills if absent
+    # numeric floors the selector clamps UP to: a guard against the model under-setting a count
+    # (e.g. reading "some papers" as max_results=1). Honors larger explicit values; only raises.
+    arg_min: dict[str, float] = field(default_factory=dict)
     poll: AsyncSpec | None = None  # present for start-then-poll async operations
     produces: str | None = None  # "chart" => the executor keeps the output as a chart artifact
     stream: str | None = None  # "sse" => response is a text/event-stream, consumed + assembled
@@ -110,6 +113,7 @@ class AppOperation:
             "request_fields": list(self.request_fields),
             "required_fields": list(self.required_fields),
             "defaults": dict(self.defaults),
+            "arg_min": dict(self.arg_min),
             "poll": self.poll.to_dict() if self.poll else None,
             "produces": self.produces,
             "stream": self.stream,
@@ -228,6 +232,17 @@ def _parse_defaults(raw: Any, where: str) -> dict[str, Any]:
     return dict(raw)
 
 
+def _parse_arg_min(raw: Any, where: str) -> dict[str, float]:
+    if not isinstance(raw, dict):
+        raise RegistryError(f"{where} arg_min must be an object keyed by field name")
+    out: dict[str, float] = {}
+    for key, value in raw.items():
+        if isinstance(value, bool) or not isinstance(value, int | float):
+            raise RegistryError(f"{where} arg_min[{key!r}] must be a number")
+        out[key] = float(value)
+    return out
+
+
 def _parse_async_spec(raw: Any, where: str) -> AsyncSpec | None:
     if raw is None:
         return None
@@ -279,6 +294,7 @@ def _parse_operation(raw: Any, app_id: str, index: int) -> AppOperation:
             raw.get("required_fields", []), f"{where} ({name}) required_fields"
         ),
         defaults=_parse_defaults(raw.get("defaults", {}), f"{where} ({name})"),
+        arg_min=_parse_arg_min(raw.get("arg_min", {}), f"{where} ({name})"),
         poll=_parse_async_spec(raw.get("poll"), f"{where} ({name})"),
         produces=raw.get("produces") or None,
         stream=raw.get("stream") or None,
