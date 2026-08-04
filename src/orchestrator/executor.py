@@ -102,6 +102,44 @@ async def _call_cached(
     return result
 
 
+def _embed_upstream_images(
+    args: dict[str, Any],
+    field: str,
+    upstream: tuple[SubtaskResult, ...],
+    *,
+    budget: int = 180_000,
+    max_images: int = 4,
+) -> None:
+    """Append upstream chart images (base64 PNGs) into ``args[field]`` as markdown data-URIs.
+
+    So a blog whose content we author carries the charts a code step produced. Deduped, bounded by
+    ``max_images`` and a total-size ``budget`` (the app's content cap), and a no-op with no charts.
+    In place: mutates ``args``.
+    """
+    seen: set[str] = set()
+    images: list[str] = []
+    for r in upstream:
+        if r.status != "ok" or not isinstance(r.output, dict):
+            continue
+        for img in r.output.get("images") or []:
+            if isinstance(img, str) and img and img not in seen:
+                seen.add(img)
+                images.append(img)
+    if not images:
+        return
+    base = str(args.get(field) or "")
+    parts: list[str] = []
+    used = len(base)
+    for img in images[:max_images]:
+        snippet = f"\n\n![chart](data:image/png;base64,{img})"
+        if used + len(snippet) > budget:
+            break
+        parts.append(snippet)
+        used += len(snippet)
+    if parts:
+        args[field] = base + "\n\n## Charts" + "".join(parts)
+
+
 def _collect_fan_items(
     upstream: tuple[SubtaskResult, ...], fan_out: dict[str, Any]
 ) -> list[tuple[Any, Any]]:
@@ -356,6 +394,11 @@ async def _run_app_op(
         return SubtaskResult(
             sub.id, app.id, app.name, "skipped", op.name, None, None, reason, 0.0, args=args
         )
+
+    # Embed charts produced upstream into a content field (e.g. a blog's body) so the published
+    # deliverable carries its charts, not just the Atelier answer card. Best-effort + size-bounded.
+    if op.embed_images and upstream:
+        _embed_upstream_images(args, op.embed_images, upstream)
 
     if op.poll is not None:
         result = await _run_async(

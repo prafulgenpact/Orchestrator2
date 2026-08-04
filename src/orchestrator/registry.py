@@ -99,6 +99,9 @@ class AppOperation:
     # when set, a single-item op (e.g. analyze ONE paper) is called once per top-N upstream item so
     # "summarize the papers" covers many, not one. See _parse_fan_out for the shape.
     fan_out: dict[str, Any] | None = None
+    # when set to a request-field name, the executor appends any charts produced upstream into that
+    # field (as markdown data-URI images) before the call, so a published blog contains its charts.
+    embed_images: str | None = None
     poll: AsyncSpec | None = None  # present for start-then-poll async operations
     produces: str | None = None  # "chart" => the executor keeps the output as a chart artifact
     stream: str | None = None  # "sse" => response is a text/event-stream, consumed + assembled
@@ -118,6 +121,7 @@ class AppOperation:
             "defaults": dict(self.defaults),
             "arg_min": dict(self.arg_min),
             "fan_out": dict(self.fan_out) if self.fan_out else None,
+            "embed_images": self.embed_images,
             "poll": self.poll.to_dict() if self.poll else None,
             "produces": self.produces,
             "stream": self.stream,
@@ -321,6 +325,7 @@ def _parse_operation(raw: Any, app_id: str, index: int) -> AppOperation:
         defaults=_parse_defaults(raw.get("defaults", {}), f"{where} ({name})"),
         arg_min=_parse_arg_min(raw.get("arg_min", {}), f"{where} ({name})"),
         fan_out=_parse_fan_out(raw.get("fan_out"), f"{where} ({name})"),
+        embed_images=(raw.get("embed_images") or None),
         poll=_parse_async_spec(raw.get("poll"), f"{where} ({name})"),
         produces=raw.get("produces") or None,
         stream=raw.get("stream") or None,

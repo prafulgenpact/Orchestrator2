@@ -1,8 +1,19 @@
 # Project State — A multi agent orchestrator system calling relevant apps basis intent recognition
 
-Last updated: 2026-08-04 (final-answer-charts task)
+Last updated: 2026-08-04 (blog-embed-charts task)
 
 ## In progress
+
+- 2026-08-04 blog-embed-charts (chart fix 3/3 — completes the chart set). The published blog can now
+  carry its charts. Added `AppOperation.embed_images` (a request-field name; parsed + round-tripped)
+  and `executor._embed_upstream_images`, which appends upstream chart images (base64 PNGs) into that
+  field as markdown data-URIs — deduped, capped by count (4) and a size budget (180k, the content
+  cap), a no-op without charts. `_run_app_op` calls it before the request. `registry/apps.json`:
+  `post_blog_import` carries `embed_images: "content"`. Best-effort + honest caveats (import path
+  only; needs the blog subtask to depend on the chart step; display depends on the app rendering
+  data-URI images; large charts skipped) — the charts always show on the Atelier answer card
+  regardless (fix 2). New registry + executor tests. `make verify` PASS. This completes chart fixes
+  1–3 (inline display, final-card charts, blog embed).
 
 - 2026-08-04 final-answer-charts (chart fix 2/3). The final deliverable (the blog) now shows the
   charts made during the run. `web.py`: pure `_collect_images(plan_result)` gathers base64 PNGs from

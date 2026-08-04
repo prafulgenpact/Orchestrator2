@@ -18,6 +18,7 @@ from orchestrator.executor import (
     _call_cached,
     _collect_fan_items,
     _dig,
+    _embed_upstream_images,
     _run_async,
     _run_fan_out,
     execute_plan,
@@ -1104,3 +1105,55 @@ def test_execute_plan_fans_out_summarize_over_found_papers(monkeypatch: pytest.M
     summarize = res.results[1]
     assert summarize.status == "ok"
     assert [e["arxiv_id"] for e in summarize.output] == ["1", "2"]  # both papers summarized
+
+
+# --- embed charts into a content field (chart fix 3) ---
+
+
+def _img_upstream(images: list[str], status: str = "ok") -> tuple[SubtaskResult, ...]:
+    return (
+        SubtaskResult(
+            "t1",
+            "coding-playground",
+            "Coding",
+            status,
+            "run_code",
+            {"text": "done", "images": images},
+            None,
+            None,
+            0.1,
+        ),
+    )
+
+
+def test_embed_upstream_images_appends_deduped() -> None:
+    args = {"content": "# Blog\n\nBody."}
+    _embed_upstream_images(args, "content", _img_upstream(["AAA", "BBB", "AAA"]))
+    assert "## Charts" in args["content"]
+    assert args["content"].count("data:image/png;base64,") == 2  # AAA deduped
+    assert args["content"].startswith("# Blog")  # original content preserved
+
+
+def test_embed_upstream_images_noop_without_charts() -> None:
+    args = {"content": "# Blog"}
+    _embed_upstream_images(args, "content", _img_upstream([]))
+    _embed_upstream_images(args, "content", _img_upstream(["ZZZ"], status="error"))  # failed step
+    assert args["content"] == "# Blog"
+
+
+def test_embed_upstream_images_respects_size_budget() -> None:
+    args = {"content": "x"}
+    big = "Q" * 1000
+    _embed_upstream_images(
+        args, "content", _img_upstream([big, big[:-1]]), budget=1100, max_images=4
+    )
+    # only the first image fits under the 1100-char budget
+    assert args["content"].count("data:image/png;base64,") == 1
+
+
+def test_embed_upstream_images_caps_count() -> None:
+    args = {"content": ""}
+    _embed_upstream_images(
+        args, "content", _img_upstream(["a", "b", "c", "d", "e", "f"]), max_images=3
+    )
+    assert args["content"].count("data:image/png;base64,") == 3

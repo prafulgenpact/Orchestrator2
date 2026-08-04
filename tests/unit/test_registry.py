@@ -263,6 +263,22 @@ def test_operation_fan_out_requires_arg_and_source(tmp_path: Path) -> None:
         load_registry(_write(tmp_path, _registry([bad, FALLBACK_APP])))
 
 
+def test_operation_embed_images_parsed(tmp_path: Path) -> None:
+    op = {**VALID_OP, "embed_images": "content"}
+    reg = load_registry(
+        _write(tmp_path, _registry([{**VALID_APP, "operations": [op]}, FALLBACK_APP]))
+    )
+    parsed = reg.get("teach-me").operation("start_topic")  # type: ignore[union-attr]
+    assert parsed is not None
+    assert parsed.embed_images == "content"
+    assert parsed.to_dict()["embed_images"] == "content"
+
+
+def test_operation_embed_images_defaults_none(tmp_path: Path) -> None:
+    reg = load_registry(_write(tmp_path, _registry([VALID_APP, FALLBACK_APP])))
+    assert reg.get("teach-me").operation("start_topic").embed_images is None  # type: ignore[union-attr]
+
+
 _POLL = {
     "poll_op": "get_run",
     "run_id_field": "run_id",

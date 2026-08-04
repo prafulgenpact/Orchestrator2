@@ -3314,7 +3314,8 @@
           ],
           "defaults": {
             "run_critique": false
-          }
+          },
+          "embed_images": "content"
         },
         {
           "name": "delete_blog",

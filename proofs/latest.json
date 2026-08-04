@@ -1,6 +1,6 @@
 {
   "schema": "proof/v1",
-  "created_utc": "2026-08-04T11:44:50+00:00",
+  "created_utc": "2026-08-04T11:58:30+00:00",
   "result": "PASS",
   "failed_checks": [],
   "missing_required_checks": [],
@@ -12,11 +12,11 @@
     "e2e",
     "secrets"
   ],
-  "fingerprint": "ecb59febe6608489ce25bd6b9ddec85e197aa902fdac4e68158b7a6732b47b75",
+  "fingerprint": "0e80ae15b0b598ab74f917f99895276046a72ae2989ac9d39726e50520fd6190",
   "git": {
-    "commit": "0ece52850c8961c537ff73d975813ca1919f537c",
+    "commit": "d0020653bde14b77a735d8bd7a68a33bf268e8e8",
     "branch": "Orchestrator2",
-    "dirty_tracked_files": false
+    "dirty_tracked_files": true
   },
   "checks": [
     {
@@ -34,19 +34,19 @@
     {
       "name": "py-types",
       "status": "pass",
-      "duration_s": 2,
+      "duration_s": 3,
       "evidence": "reports/py-types.log"
     },
     {
       "name": "py-unit",
       "status": "pass",
-      "duration_s": 21,
+      "duration_s": 9,
       "evidence": "reports/py-unit.log"
     },
     {
       "name": "e2e",
       "status": "pass",
-      "duration_s": 9,
+      "duration_s": 2,
       "evidence": "reports/e2e.log"
     },
     {
@@ -58,36 +58,36 @@
     {
       "name": "secrets-gitleaks",
       "status": "pass",
-      "duration_s": 3,
+      "duration_s": 2,
       "evidence": "reports/secrets-gitleaks.log"
     },
     {
       "name": "dep-audit",
       "status": "pass",
-      "duration_s": 16,
+      "duration_s": 15,
       "evidence": "reports/dep-audit.log"
     },
     {
       "name": "diff-cover",
       "status": "pass",
-      "duration_s": 0,
+      "duration_s": 1,
       "evidence": "reports/diff-cover.log"
     }
   ],
   "tests": {
     "unit": {
-      "tests": 921,
+      "tests": 927,
       "failures": 0,
       "errors": 0,
       "skipped": 0,
-      "time_s": 19.46
+      "time_s": 8.07
     },
     "e2e": {
       "tests": 2,
       "failures": 0,
       "errors": 0,
       "skipped": 0,
-      "time_s": 2.92
+      "time_s": 0.77
     },
     "web_e2e": null,
     "coverage_pct": 96.02
@@ -99,5 +99,5 @@
     "pytest": "pytest 8.3.2",
     "os": "Darwin 25.5.0"
   },
-  "content_hash": "de1da54dba3ade65c5b719ece60b8854a72c4a0bb6f4acaf9fb54d1513cb3701"
+  "content_hash": "c6368b2bff544b4b362663e46134cc7930717957283cb5d11ec0c11f989280dd"
 }
