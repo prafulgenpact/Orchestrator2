@@ -1,6 +1,6 @@
 {
   "schema": "proof/v1",
-  "created_utc": "2026-07-13T07:56:06+00:00",
+  "created_utc": "2026-08-04T08:07:42+00:00",
   "result": "PASS",
   "failed_checks": [],
   "missing_required_checks": [],
@@ -12,11 +12,11 @@
     "e2e",
     "secrets"
   ],
-  "fingerprint": "5d0b05d7e6c9b7984503f49992742e34a7079c2cb7a07464c1b2561bbbb7e5f0",
+  "fingerprint": "578a11ffcfa1bc9b194018b95c6f32768d8670a5f18cc6d9be90ad2aa4edc6ea",
   "git": {
-    "commit": "55f50ca1fdebcd4fc54b215d55608bd766e2df10",
+    "commit": "5c5b11443fd5dba8ae3f95567a6b9ded28d809bb",
     "branch": "Orchestrator2",
-    "dirty_tracked_files": true
+    "dirty_tracked_files": false
   },
   "checks": [
     {
@@ -34,13 +34,13 @@
     {
       "name": "py-types",
       "status": "pass",
-      "duration_s": 2,
+      "duration_s": 1,
       "evidence": "reports/py-types.log"
     },
     {
       "name": "py-unit",
       "status": "pass",
-      "duration_s": 3,
+      "duration_s": 9,
       "evidence": "reports/py-unit.log"
     },
     {
@@ -64,33 +64,33 @@
     {
       "name": "dep-audit",
       "status": "pass",
-      "duration_s": 25,
+      "duration_s": 14,
       "evidence": "reports/dep-audit.log"
     },
     {
       "name": "diff-cover",
       "status": "pass",
-      "duration_s": 1,
+      "duration_s": 0,
       "evidence": "reports/diff-cover.log"
     }
   ],
   "tests": {
     "unit": {
-      "tests": 299,
+      "tests": 899,
       "failures": 0,
       "errors": 0,
       "skipped": 0,
-      "time_s": 1.74
+      "time_s": 7.63
     },
     "e2e": {
       "tests": 2,
       "failures": 0,
       "errors": 0,
       "skipped": 0,
-      "time_s": 0.85
+      "time_s": 0.65
     },
     "web_e2e": null,
-    "coverage_pct": 100.0
+    "coverage_pct": 95.92
   },
   "environment": {
     "python": "Python 3.10.0",
@@ -99,5 +99,5 @@
     "pytest": "pytest 8.3.2",
     "os": "Darwin 25.5.0"
   },
-  "content_hash": "f86e45cca7b5c20e161cf26a8b547e47f776a22ca7eab4317999deabaddbd3ca"
+  "content_hash": "0e7a1b086422a62f2231590c12946bb7f3b7d1fa2e38b49c92b23e69ec51815e"
 }
