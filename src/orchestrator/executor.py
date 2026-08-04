@@ -10,6 +10,7 @@ subtask's failure never aborts the rest.
 from __future__ import annotations
 
 import asyncio
+import json
 import os
 import time
 from collections.abc import Awaitable, Callable
@@ -49,6 +50,11 @@ ProgressFn = Callable[[str], None]
 # UI can show an app's output live instead of waiting for the whole run. Default: no-op.
 ResultFn = Callable[["SubtaskResult"], None]
 
+# Per-run coalescing cache: identical app calls (same app, operation, args) share ONE in-flight
+# Task, so two subtasks that resolve to the same idempotent call — the redundant-decomposition case
+# — hit the app once instead of twice, even when they run concurrently in the same wave.
+CallCache = dict[tuple[str, str, str], "asyncio.Task[CallResult]"]
+
 
 def _null_progress(_message: str) -> None:
     return None
@@ -56,6 +62,44 @@ def _null_progress(_message: str) -> None:
 
 def _null_result(_result: SubtaskResult) -> None:
     return None
+
+
+def _args_key(args: dict[str, Any]) -> str:
+    """A stable string key for an argument dict (order-independent)."""
+    return json.dumps(args, sort_keys=True, default=str)
+
+
+async def _call_cached(
+    app: AppEntry,
+    op: AppOperation,
+    args: dict[str, Any],
+    *,
+    http_client: httpx.AsyncClient,
+    breaker: CircuitBreaker,
+    endpoints: AppEndpoints | None,
+    call_cache: CallCache | None,
+) -> CallResult:
+    """Call ``op`` once per identical (app, op, args) within a run, sharing the result.
+
+    Only idempotent, non-destructive ops are coalesced (repeating them is safe and returns the same
+    thing). Concurrent duplicates await the SAME Task, so the app is hit once. A not-ok result is
+    evicted so a later identical attempt can retry. ``call_cache=None`` disables caching entirely.
+    """
+    if call_cache is None or op.idempotency != "supported" or op.destructive:
+        return await call_operation(
+            app, op, args, client=http_client, breaker=breaker, endpoints=endpoints
+        )
+    key = (app.id, op.name, _args_key(args))
+    task = call_cache.get(key)
+    if task is None:  # no await between get and set -> concurrent duplicates coalesce safely
+        task = asyncio.ensure_future(
+            call_operation(app, op, args, client=http_client, breaker=breaker, endpoints=endpoints)
+        )
+        call_cache[key] = task
+    result = await task
+    if not result.ok:
+        call_cache.pop(key, None)  # don't let one failure poison later identical calls
+    return result
 
 
 # Independent subtasks in a wave run concurrently; this bounds how many at once so a wide wave
@@ -99,6 +143,8 @@ async def execute_plan(
     # One endpoint cache for the whole run: each app is launcher-resolved + health-confirmed once,
     # so repeated calls (especially the async poll loop) skip the duplicate resolve/health pings.
     endpoints = AppEndpoints()
+    # And one call cache: two subtasks that resolve to the same idempotent app call share one call.
+    call_cache: CallCache = {}
 
     async def _guarded(sub: Subtask) -> SubtaskResult:
         # The semaphore bounds concurrency; upstream is read here (all of this subtask's
@@ -107,7 +153,16 @@ async def execute_plan(
             upstream = _upstream_for(sub, by_id)
             progress(f"-> {sub.title}")
             result = await _run_subtask(
-                sub, registry, llm_client, http_client, model, cb, upstream, endpoints, progress
+                sub,
+                registry,
+                llm_client,
+                http_client,
+                model,
+                cb,
+                upstream,
+                endpoints,
+                progress,
+                call_cache,
             )
             progress(f"[{result.status}] {sub.title} ({result.duration_s:.1f}s)")
             on_result(result)  # stream this result now, the moment its app finished
@@ -139,6 +194,7 @@ async def _run_subtask(
     upstream: tuple[SubtaskResult, ...] = (),
     endpoints: AppEndpoints | None = None,
     progress: ProgressFn = _null_progress,
+    call_cache: CallCache | None = None,
 ) -> SubtaskResult:
     app = registry.get(sub.app.app_id)
     if app is None:  # validated upstream; defensive
@@ -161,7 +217,7 @@ async def _run_subtask(
     # we do NOT silently substitute a web answer wearing the app's badge. Web is only for subtasks
     # the planner routed to it (above). An honest failure beats a masked one (accuracy first).
     return await _run_app_op(
-        app, sub, llm_client, http_client, model, breaker, upstream, endpoints, progress
+        app, sub, llm_client, http_client, model, breaker, upstream, endpoints, progress, call_cache
     )
 
 
@@ -175,6 +231,7 @@ async def _run_app_op(
     upstream: tuple[SubtaskResult, ...],
     endpoints: AppEndpoints | None = None,
     progress: ProgressFn = _null_progress,
+    call_cache: CallCache | None = None,
 ) -> SubtaskResult:
     """Run one non-fallback app operation: select -> required-field skip -> call -> relevance."""
     try:
@@ -213,8 +270,14 @@ async def _run_app_op(
             progress=progress,
         )
     else:
-        result = await call_operation(
-            app, op, args, client=http_client, breaker=breaker, endpoints=endpoints
+        result = await _call_cached(
+            app,
+            op,
+            args,
+            http_client=http_client,
+            breaker=breaker,
+            endpoints=endpoints,
+            call_cache=call_cache,
         )
     source = result.url or None
     if not result.ok:

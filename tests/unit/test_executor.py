@@ -13,7 +13,13 @@ import pytest
 from conftest import FakeLLM
 
 from orchestrator.app_caller import AppEndpoints, CallResult
-from orchestrator.executor import _ASYNC_MAX_SILENT_POLLS, _dig, _run_async, execute_plan
+from orchestrator.executor import (
+    _ASYNC_MAX_SILENT_POLLS,
+    _call_cached,
+    _dig,
+    _run_async,
+    execute_plan,
+)
 from orchestrator.llm.base import LLMError
 from orchestrator.models import AppSelection, Plan, PlanResult, Subtask, SubtaskResult
 from orchestrator.registry import AppEntry, AppOperation, AsyncSpec, load_registry
@@ -843,3 +849,114 @@ def test_iterate_without_blog_id_skips(monkeypatch: pytest.MonkeyPatch, fake_llm
     r = _run(_plan(sub), client).results[0]
     assert r.status == "skipped"
     assert "blog_id" in (r.error or "")
+
+
+# --- within-run call cache (fix 2: two subtasks that resolve to the same call hit the app once) ---
+
+
+def _cache_op(idem: str = "supported", destructive: bool = False) -> AppOperation:
+    return AppOperation(
+        name="search",
+        description="d",
+        method="POST",
+        path="/x",
+        timeout_s=10,
+        destructive=destructive,
+        idempotency=idem,
+    )
+
+
+def _cache_app(op: AppOperation) -> AppEntry:
+    return AppEntry("a1", "A1", "d", (), (), False, port=8099, health="/h", operations=(op,))
+
+
+def _mk_counter(monkeypatch: pytest.MonkeyPatch, ok: bool = True) -> dict[str, int]:
+    calls = {"n": 0}
+
+    async def fake_call(_app: AppEntry, o: AppOperation, _args: Any, **_kw: Any) -> CallResult:
+        calls["n"] += 1
+        await asyncio.sleep(0)  # yield so concurrent callers overlap on the shared task
+        return CallResult(
+            "a1", o.name, "u", ok, 200 if ok else 500, "R", None if ok else "boom", 0.0
+        )
+
+    monkeypatch.setattr("orchestrator.executor.call_operation", fake_call)
+    return calls
+
+
+def _call(op: AppEntry, args: dict[str, Any], cache: Any) -> Any:
+    return _call_cached(
+        op,
+        op.operations[0],
+        args,
+        http_client=None,
+        breaker=CircuitBreaker(),
+        endpoints=None,
+        call_cache=cache,  # type: ignore[arg-type]
+    )
+
+
+def test_call_cache_dedupes_sequential_identical(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls = _mk_counter(monkeypatch)
+    app = _cache_app(_cache_op())
+    cache: dict[Any, Any] = {}
+
+    async def go() -> tuple[CallResult, CallResult]:
+        r1 = await _call(app, {"query": "clt"}, cache)
+        r2 = await _call(app, {"query": "clt"}, cache)
+        return r1, r2
+
+    r1, r2 = asyncio.run(go())
+    assert calls["n"] == 1  # the second identical call reused the first
+    assert r1.data == r2.data == "R"
+
+
+def test_call_cache_dedupes_concurrent_identical(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls = _mk_counter(monkeypatch)
+    app = _cache_app(_cache_op())
+    cache: dict[Any, Any] = {}
+
+    async def go() -> list[CallResult]:
+        return list(await asyncio.gather(*(_call(app, {"query": "clt"}, cache) for _ in range(4))))
+
+    results = asyncio.run(go())
+    assert calls["n"] == 1  # four concurrent duplicates coalesced into ONE app call
+    assert all(r.data == "R" for r in results)
+
+
+def test_call_cache_skips_non_idempotent_and_destructive(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls = _mk_counter(monkeypatch)
+    cache: dict[Any, Any] = {}
+    for app in (_cache_app(_cache_op(idem="none")), _cache_app(_cache_op(destructive=True))):
+
+        async def go(a: AppEntry = app) -> None:
+            await _call(a, {"query": "x"}, cache)
+            await _call(a, {"query": "x"}, cache)
+
+        asyncio.run(go())
+    assert calls["n"] == 4  # neither op was cached -> every call ran
+
+
+def test_call_cache_evicts_failures(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls = _mk_counter(monkeypatch, ok=False)
+    app = _cache_app(_cache_op())
+    cache: dict[Any, Any] = {}
+
+    async def go() -> None:
+        await _call(app, {"query": "x"}, cache)
+        await _call(app, {"query": "x"}, cache)
+
+    asyncio.run(go())
+    assert calls["n"] == 2  # a not-ok result is evicted, so the retry actually runs
+
+
+def test_call_cache_none_disables_caching(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls = _mk_counter(monkeypatch)
+    app = _cache_app(_cache_op())
+
+    async def go() -> None:
+        await _call(app, {"query": "x"}, None)
+        await _call(app, {"query": "x"}, None)
+
+    asyncio.run(go())
+    assert calls["n"] == 2  # no cache -> each call runs

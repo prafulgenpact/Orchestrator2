@@ -1,8 +1,21 @@
 # Project State — A multi agent orchestrator system calling relevant apps basis intent recognition
 
-Last updated: 2026-08-04 (search-count-floor task)
+Last updated: 2026-08-04 (within-run-call-cache task)
 
 ## In progress
+
+- 2026-08-04 within-run-call-cache (fix 2/5 of the RCA set). When two subtasks resolve to the exact
+  same app call (same app, operation, args) — the redundant-decomposition case behind the duplicate
+  ArXiv cards — the executor now issues that call ONCE and shares the result instead of hitting the
+  app twice. A per-run `call_cache` of in-flight `asyncio.Task`s (created in `execute_plan`, threaded
+  to `_run_subtask`/`_run_app_op`) coalesces by `(app_id, op_name, json(args))`; the crucial case is
+  the two duplicate "find" subtasks that run CONCURRENTLY in the same wave — they await the SAME task
+  because there's no await between the cache get and set. Only idempotent, non-destructive ops are
+  coalesced; a not-ok result is evicted so a later identical call can retry; `call_cache=None` (the
+  default for direct callers) disables it. New tests in test_executor (concurrent + sequential dedup,
+  non-idempotent/destructive skip, failure eviction, None-off). This removes the duplicate WORK; the
+  duplicate CARD is fix 3 (UI dedup, next). `make verify` PASS; eval unchanged.
+  Remaining: 3) UI dedup of identical cards, 4) multi-paper summarize, 5) plan-level subtask dedup.
 
 - 2026-08-04 search-count-floor (fix 1/5 of the RCA set). A vague "find some good papers" no longer
   collapses to 1 result. The paper count is the LLM selector's `max_results`, previously with no

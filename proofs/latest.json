@@ -1,6 +1,6 @@
 {
   "schema": "proof/v1",
-  "created_utc": "2026-08-04T08:07:42+00:00",
+  "created_utc": "2026-08-04T09:09:51+00:00",
   "result": "PASS",
   "failed_checks": [],
   "missing_required_checks": [],
@@ -12,17 +12,17 @@
     "e2e",
     "secrets"
   ],
-  "fingerprint": "578a11ffcfa1bc9b194018b95c6f32768d8670a5f18cc6d9be90ad2aa4edc6ea",
+  "fingerprint": "8d91b3c340b9a8b0ad2d190dc6c8699bda346e80f8862276517e12ef391750c4",
   "git": {
-    "commit": "5c5b11443fd5dba8ae3f95567a6b9ded28d809bb",
+    "commit": "40bd86e19ba43b920f3c226e363d7eccd6b4a115",
     "branch": "Orchestrator2",
-    "dirty_tracked_files": false
+    "dirty_tracked_files": true
   },
   "checks": [
     {
       "name": "py-lint",
       "status": "pass",
-      "duration_s": 1,
+      "duration_s": 0,
       "evidence": "reports/py-lint.log"
     },
     {
@@ -34,13 +34,13 @@
     {
       "name": "py-types",
       "status": "pass",
-      "duration_s": 1,
+      "duration_s": 4,
       "evidence": "reports/py-types.log"
     },
     {
       "name": "py-unit",
       "status": "pass",
-      "duration_s": 9,
+      "duration_s": 8,
       "evidence": "reports/py-unit.log"
     },
     {
@@ -64,7 +64,7 @@
     {
       "name": "dep-audit",
       "status": "pass",
-      "duration_s": 14,
+      "duration_s": 10,
       "evidence": "reports/dep-audit.log"
     },
     {
@@ -76,21 +76,21 @@
   ],
   "tests": {
     "unit": {
-      "tests": 899,
+      "tests": 904,
       "failures": 0,
       "errors": 0,
       "skipped": 0,
-      "time_s": 7.63
+      "time_s": 7.01
     },
     "e2e": {
       "tests": 2,
       "failures": 0,
       "errors": 0,
       "skipped": 0,
-      "time_s": 0.65
+      "time_s": 0.83
     },
     "web_e2e": null,
-    "coverage_pct": 95.92
+    "coverage_pct": 95.95
   },
   "environment": {
     "python": "Python 3.10.0",
@@ -99,5 +99,5 @@
     "pytest": "pytest 8.3.2",
     "os": "Darwin 25.5.0"
   },
-  "content_hash": "0e7a1b086422a62f2231590c12946bb7f3b7d1fa2e38b49c92b23e69ec51815e"
+  "content_hash": "a38ca8bb8c71823e7cadd32372013bdc4269dce094b491b0c43d9d738a15b3d7"
 }
