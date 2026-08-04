@@ -1,8 +1,20 @@
 # Project State — A multi agent orchestrator system calling relevant apps basis intent recognition
 
-Last updated: 2026-08-04 (blog-embed-charts task)
+Last updated: 2026-08-04 (web-charts-and-run-logging task)
 
 ## In progress
+
+- 2026-08-04 web-charts-and-run-logging (two user-reported web-connector parity gaps). 1) Spec-based
+  charts now render in the UI: `web.py` renders each known-shape chart artifact to inline SVG with
+  the existing `render_chart_svg` (`_chart_svg`/`_result_payload`), and the `final` event carries
+  `charts` (`_collect_chart_svgs`, deduped/capped at 8) next to the kernel-PNG `images`; the Atelier
+  page draws artifact SVGs on step cards (skipping the raw key/value dump when the chart IS the
+  output) and in the answer card's Charts section. 2) Every web run is now logged: `run_events`
+  calls `record_run` (same trail as the CLI — runs/<id>.json, sqlite, hash-chained events.jsonl)
+  with exit_code 0/1; planning failures have no plan to record; recording is wrapped so a bad disk
+  never breaks the SSE stream. 20/20 web unit tests; live-verified in headless Chrome (Titanic
+  correlation heatmap SVG on step + final cards, 0 JS errors) with the run recorded as events.jsonl
+  seq 4. `make verify` PASS.
 
 - 2026-08-04 blog-embed-charts (chart fix 3/3 — completes the chart set). The published blog can now
   carry its charts. Added `AppOperation.embed_images` (a request-field name; parsed + round-tripped)

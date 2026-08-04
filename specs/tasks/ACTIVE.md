@@ -1,1 +1,1 @@
-20260804-blog-embed-charts.md
+20260804-web-charts-and-run-logging.md

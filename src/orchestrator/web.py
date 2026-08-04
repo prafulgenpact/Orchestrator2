@@ -26,14 +26,17 @@ import os
 import queue
 import sys
 import threading
+import time
 from collections.abc import Callable, Iterator
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlparse
 
+from orchestrator.artifacts import _KNOWN_SHAPE_KEYS, render_chart_svg
 from orchestrator.llm.base import LLMClient
-from orchestrator.models import Plan, PlanResult
+from orchestrator.models import Artifact, Plan, PlanResult, SubtaskResult
+from orchestrator.observability import record_run
 from orchestrator.planner import plan_task
 from orchestrator.registry import Registry
 from orchestrator.synthesis import synthesize
@@ -74,6 +77,59 @@ def _collect_images(result: PlanResult, limit: int = 8) -> list[str]:
                 if len(images) >= limit:
                     return images
     return images
+
+
+def _chart_svg(artifact: Artifact) -> str:
+    """The artifact rendered to inline SVG, or "" when it isn't a drawable chart.
+
+    Only known spec shapes are drawn (same gate as the CLI's HTML renderer) — an unknown shape
+    would render as an empty titled frame, which is worse than the card's key/value view of the
+    raw data. A renderer error also yields "" so one bad spec can never break the stream."""
+    if artifact.kind != "chart":
+        return ""
+    spec = artifact.spec
+    known = spec.get("type") in ("box", "histogram", "bar", "scatter") or any(
+        k in spec for k in _KNOWN_SHAPE_KEYS
+    )
+    if not known:
+        return ""
+    try:
+        return render_chart_svg(artifact)
+    except Exception:
+        return ""
+
+
+def _result_payload(r: SubtaskResult) -> dict[str, Any]:
+    """The subtask result as an event payload, with each drawable chart artifact carrying its
+    rendered ``svg`` so the browser can show a picture instead of the raw spec numbers."""
+    payload = r.to_dict()
+    artifacts = getattr(r, "artifacts", ()) or ()
+    if artifacts:
+        rendered = []
+        for art, art_dict in zip(artifacts, payload.get("artifacts") or [], strict=False):
+            svg = _chart_svg(art)
+            rendered.append({**art_dict, "svg": svg} if svg else art_dict)
+        payload["artifacts"] = rendered
+    return payload
+
+
+def _collect_chart_svgs(result: PlanResult, limit: int = 8) -> list[str]:
+    """Rendered SVGs for every ok step's drawable chart artifact (deduped, capped) — carried onto
+    the FINAL answer so spec-based charts (eda_correlation, …) reach the deliverable exactly like
+    the kernel's PNG charts do via ``_collect_images``."""
+    seen: set[str] = set()
+    svgs: list[str] = []
+    for r in result.results:
+        if r.status != "ok":
+            continue
+        for art in getattr(r, "artifacts", ()) or ():
+            svg = _chart_svg(art)
+            if svg and svg not in seen:
+                seen.add(svg)
+                svgs.append(svg)
+                if len(svgs) >= limit:
+                    return svgs
+    return svgs
 
 
 def _execute_plan_sync(
@@ -122,6 +178,7 @@ def run_events(task: str, *, client: LLMClient, registry: Registry, model: str) 
     callbacks push onto a queue this generator drains, so browser updates arrive as they happen
     rather than all at the end. Any failure becomes a single ``error`` event — never an exception.
     """
+    started_at = time.time()
     yield ("status", {"message": "Planning your task…"})
     try:
         plan = plan_task(client, registry, task, model=model)
@@ -134,6 +191,8 @@ def run_events(task: str, *, client: LLMClient, registry: Registry, model: str) 
     deps = {s.id: s.depends_on for s in plan.subtasks}
 
     bus: queue.Queue[Event | None] = queue.Queue()
+    # The worker's outcome, kept for the run record written after the stream drains.
+    outcome: dict[str, Any] = {"result": None, "synth": None, "failed": False}
 
     def worker() -> None:
         try:
@@ -143,8 +202,10 @@ def run_events(task: str, *, client: LLMClient, registry: Registry, model: str) 
                 client,
                 model,
                 lambda m: bus.put(("progress", {"message": m})),
-                lambda r: bus.put(("result", r.to_dict())),  # streamed as each subtask finishes
+                # streamed as each subtask finishes, chart artifacts rendered to inline SVG
+                lambda r: bus.put(("result", _result_payload(r))),
             )
+            outcome["result"] = result
             synth = synthesize(
                 client,
                 result,
@@ -152,6 +213,7 @@ def run_events(task: str, *, client: LLMClient, registry: Registry, model: str) 
                 subtask_deps=deps,
                 on_delta=lambda d: bus.put(("answer", {"delta": d})),
             )
+            outcome["synth"] = synth
             bus.put(
                 (
                     "final",
@@ -160,10 +222,12 @@ def run_events(task: str, *, client: LLMClient, registry: Registry, model: str) 
                         "sources": list(synth.sources),
                         "mode": synth.mode,
                         "images": _collect_images(result),
+                        "charts": _collect_chart_svgs(result),
                     },
                 )
             )
         except Exception as exc:  # - surface any run failure as one event
+            outcome["failed"] = True
             bus.put(("error", {"message": str(exc), "stage": "execute"}))
         finally:
             bus.put(None)  # sentinel: worker finished
@@ -177,7 +241,38 @@ def run_events(task: str, *, client: LLMClient, registry: Registry, model: str) 
             break
         yield item
 
+    _record(plan, outcome, client=client, model=model, started_at=started_at)
     yield ("done", {})
+
+
+def _record(
+    plan: Plan,
+    outcome: dict[str, Any],
+    *,
+    client: LLMClient,
+    model: str,
+    started_at: float,
+) -> None:
+    """Save this run to the same audit trail as CLI runs (runs/<id>.json, sqlite, events.jsonl).
+
+    Every web run is recorded — success or failure. Best-effort by contract: recording can never
+    break or delay the answer the browser already received."""
+    try:
+        drain: Callable[[], list[dict[str, Any]]] | None = getattr(client, "drain_usage", None)
+        usage = list(drain()) if callable(drain) else []  # duck-typed, as in the CLI
+        record_run(
+            plan,
+            outcome["result"],
+            outcome["synth"],
+            mode="live",
+            model=model,
+            exit_code=1 if outcome["failed"] else 0,
+            started_at=started_at,
+            ended_at=time.time(),
+            usage=usage,
+        )
+    except Exception:  # - a bad disk must not kill the SSE stream
+        pass
 
 
 class _Handler(BaseHTTPRequestHandler):  # pragma: no cover - socket I/O, run manually in acceptance

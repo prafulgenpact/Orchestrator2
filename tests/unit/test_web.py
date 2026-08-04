@@ -46,8 +46,13 @@ class _Synth:
     mode: str
 
 
-def _install_fakes(monkeypatch: pytest.MonkeyPatch, *, fail: str | None = None) -> None:
-    """Replace plan/execute/synthesize with deterministic in-memory doubles."""
+def _install_fakes(
+    monkeypatch: pytest.MonkeyPatch, *, fail: str | None = None
+) -> list[dict[str, Any]]:
+    """Replace plan/execute/synthesize/record_run with deterministic in-memory doubles.
+
+    Returns the list of record_run calls (one kwargs dict each) so tests can assert every web run
+    is recorded — the connector's always-log contract."""
 
     def fake_plan_task(client: Any, registry: Any, task: str, *, model: str) -> _Plan:
         _ = (client, registry, task, model)  # accepted to match the real signature
@@ -75,9 +80,17 @@ def _install_fakes(monkeypatch: pytest.MonkeyPatch, *, fail: str | None = None) 
             on_delta(" world")
         return _Synth("Hello world", ("http://example/x",), "synthesized")
 
+    record_calls: list[dict[str, Any]] = []
+
+    def fake_record_run(plan: Any, result: Any, synth: Any, **kwargs: Any) -> str:
+        record_calls.append({"plan": plan, "result": result, "synth": synth, **kwargs})
+        return "rid"
+
     monkeypatch.setattr(web, "plan_task", fake_plan_task)
     monkeypatch.setattr(web, "_execute_plan_sync", fake_execute)
     monkeypatch.setattr(web, "synthesize", fake_synthesize)
+    monkeypatch.setattr(web, "record_run", fake_record_run)
+    return record_calls
 
 
 def _run() -> list[web.Event]:
@@ -156,11 +169,20 @@ def test_is_benign_disconnect_false_for_real_errors() -> None:
     assert web._is_benign_disconnect(None) is False
 
 
-def _res(status: str, output: Any) -> Any:
+def _res(status: str, output: Any, artifacts: tuple[Any, ...] = ()) -> Any:
     from orchestrator.models import SubtaskResult
 
     return SubtaskResult(
-        "t", "coding-playground", "Coding", status, "run_code", output, None, None, 0.0
+        "t",
+        "coding-playground",
+        "Coding",
+        status,
+        "run_code",
+        output,
+        None,
+        None,
+        0.0,
+        artifacts=artifacts,
     )
 
 
@@ -187,3 +209,99 @@ def test_collect_images_caps_at_limit() -> None:
 
 def test_collect_images_empty_when_no_charts() -> None:
     assert web._collect_images(_plan_result(_res("ok", {"text": "no charts"}))) == []
+
+
+def _chart_artifact(title: str = "Histogram", spec: dict[str, Any] | None = None) -> Any:
+    from orchestrator.models import Artifact
+
+    return Artifact(
+        "chart", title, spec or {"type": "histogram", "bins": [0, 1, 2], "counts": [3, 4]}, "t"
+    )
+
+
+def test_result_payload_renders_chart_svg() -> None:
+    r = _res("ok", {"bins": [0, 1, 2], "counts": [3, 4]}, artifacts=(_chart_artifact(),))
+    payload = web._result_payload(r)
+
+    assert payload["subtask_id"] == "t"  # the base to_dict fields are intact
+    svg = payload["artifacts"][0]["svg"]
+    assert svg.startswith("<svg") and "Histogram" in svg
+
+
+def test_result_payload_skips_unknown_chart_shapes() -> None:
+    unknown = _chart_artifact(spec={"mystery": 42})
+    payload = web._result_payload(_res("ok", {"mystery": 42}, artifacts=(unknown,)))
+
+    assert "svg" not in payload["artifacts"][0]  # spec table stays the honest view
+
+
+def test_result_payload_no_artifacts_passthrough() -> None:
+    r = _res("ok", {"text": "plain"})
+    assert web._result_payload(r) == r.to_dict()
+
+
+def test_collect_chart_svgs_gathers_dedupes_and_caps() -> None:
+    hist = _chart_artifact()
+    scatter = _chart_artifact("Scatter", {"type": "scatter", "x": [1], "y": [2]})
+    pr = _plan_result(
+        _res("ok", {}, artifacts=(hist, scatter)),
+        _res("error", {}, artifacts=(_chart_artifact("Failed"),)),  # failed step -> ignored
+        _res("ok", {}, artifacts=(hist,)),  # identical chart -> deduped
+    )
+    svgs = web._collect_chart_svgs(pr)
+
+    assert len(svgs) == 2
+    assert all(s.startswith("<svg") for s in svgs)
+
+
+def test_collect_chart_svgs_caps_at_limit() -> None:
+    arts = tuple(_chart_artifact(f"C{i}") for i in range(10))
+    pr = _plan_result(_res("ok", {}, artifacts=arts))
+    assert len(web._collect_chart_svgs(pr, limit=3)) == 3
+
+
+def test_final_event_carries_charts_key(monkeypatch: pytest.MonkeyPatch) -> None:
+    _install_fakes(monkeypatch)
+    final = dict(_run())["final"]
+    assert final["charts"] == []  # present (empty here — the fake run makes no charts)
+
+
+def test_run_events_records_run(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls = _install_fakes(monkeypatch)
+    events = _run()
+
+    assert [name for name, _ in events][-1] == "done"
+    assert len(calls) == 1
+    call = calls[0]
+    assert call["exit_code"] == 0
+    assert call["mode"] == "live"
+    assert call["result"] is not None and call["synth"] is not None
+    assert call["started_at"] <= call["ended_at"]
+
+
+def test_run_events_records_execute_failure(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls = _install_fakes(monkeypatch, fail="execute")
+    _run()
+
+    assert len(calls) == 1
+    assert calls[0]["exit_code"] == 1
+    assert calls[0]["result"] is None
+
+
+def test_run_events_no_record_without_plan(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls = _install_fakes(monkeypatch, fail="plan")
+    _run()
+
+    assert calls == []  # planning failed -> there is no plan object to record
+
+
+def test_record_failure_never_breaks_the_stream(monkeypatch: pytest.MonkeyPatch) -> None:
+    _install_fakes(monkeypatch)
+
+    def boom(*args: Any, **kwargs: Any) -> str:
+        _ = (args, kwargs)  # accepted to match the real signature
+        raise OSError("disk full")
+
+    monkeypatch.setattr(web, "record_run", boom)
+    events = _run()
+    assert [name for name, _ in events][-1] == "done"  # the browser still gets its answer
