@@ -1,6 +1,6 @@
 {
   "schema": "proof/v1",
-  "created_utc": "2026-08-04T11:43:39+00:00",
+  "created_utc": "2026-08-04T11:44:50+00:00",
   "result": "PASS",
   "failed_checks": [],
   "missing_required_checks": [],
@@ -14,9 +14,9 @@
   ],
   "fingerprint": "ecb59febe6608489ce25bd6b9ddec85e197aa902fdac4e68158b7a6732b47b75",
   "git": {
-    "commit": "d7e0bad605a47d06af90803582bd1b25ef6b1592",
+    "commit": "0ece52850c8961c537ff73d975813ca1919f537c",
     "branch": "Orchestrator2",
-    "dirty_tracked_files": true
+    "dirty_tracked_files": false
   },
   "checks": [
     {
@@ -34,19 +34,19 @@
     {
       "name": "py-types",
       "status": "pass",
-      "duration_s": 1,
+      "duration_s": 2,
       "evidence": "reports/py-types.log"
     },
     {
       "name": "py-unit",
       "status": "pass",
-      "duration_s": 14,
+      "duration_s": 21,
       "evidence": "reports/py-unit.log"
     },
     {
       "name": "e2e",
       "status": "pass",
-      "duration_s": 3,
+      "duration_s": 9,
       "evidence": "reports/e2e.log"
     },
     {
@@ -58,19 +58,19 @@
     {
       "name": "secrets-gitleaks",
       "status": "pass",
-      "duration_s": 1,
+      "duration_s": 3,
       "evidence": "reports/secrets-gitleaks.log"
     },
     {
       "name": "dep-audit",
       "status": "pass",
-      "duration_s": 19,
+      "duration_s": 16,
       "evidence": "reports/dep-audit.log"
     },
     {
       "name": "diff-cover",
       "status": "pass",
-      "duration_s": 1,
+      "duration_s": 0,
       "evidence": "reports/diff-cover.log"
     }
   ],
@@ -80,14 +80,14 @@
       "failures": 0,
       "errors": 0,
       "skipped": 0,
-      "time_s": 11.54
+      "time_s": 19.46
     },
     "e2e": {
       "tests": 2,
       "failures": 0,
       "errors": 0,
       "skipped": 0,
-      "time_s": 0.86
+      "time_s": 2.92
     },
     "web_e2e": null,
     "coverage_pct": 96.02
@@ -99,5 +99,5 @@
     "pytest": "pytest 8.3.2",
     "os": "Darwin 25.5.0"
   },
-  "content_hash": "0e342fd46492cc6e5f08cd387c14e044df5503273c8e50d346eacc63d4dcda58"
+  "content_hash": "de1da54dba3ade65c5b719ece60b8854a72c4a0bb6f4acaf9fb54d1513cb3701"
 }
