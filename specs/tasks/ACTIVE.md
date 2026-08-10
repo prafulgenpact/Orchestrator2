@@ -1,1 +1,1 @@
-20260810-route-graph-work-to-coding-playground.md
+20260810-step-status-honesty.md

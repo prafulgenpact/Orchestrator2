@@ -1,22 +1,30 @@
 # Project State — A multi agent orchestrator system calling relevant apps basis intent recognition
 
-Last updated: 2026-08-10 (route-graph-work-to-coding-playground task)
+Last updated: 2026-08-10 (step-status-honesty task)
 
 ## Next — agreed with the user 2026-08-04 (RCA: CLT-graphs run failed silently)
 
 1. ~~**route-graph-work-to-coding-playground**~~ DONE 2026-08-10 — see In progress below.
-2. **step-status-honesty** (executor fix, bugfix-first). An app reply that itself says it failed
-   (`success: false` / error-only body) must mark the step "error" (carrying the app's message),
-   not "ok" — trace badge, feed, run record, synthesis all follow. Failing test first.
-   Optional follow-up: one retry on the correct app when a step errors this way.
+2. ~~**step-status-honesty**~~ DONE 2026-08-10 — see In progress below. The optional
+   "retry once on the correct app" was consciously NOT built (the registry fix already removes
+   the misroute; keep the fix small and honest).
 
-   Agreed e2e proof for both: failing unit tests first → decomposition eval green → `make verify` →
-   restart connector, re-run the user's exact failing prompt ("Create graphs and charts illustrating
-   CLT concepts") headless: graph step routed to coding-playground, chart drawn on step + final
-   cards, 0 JS errors, run recorded; plus a live negative case (import of a missing module) showing
-   an Error badge. User runs it themselves before push.
+   Still owed (agreed e2e proof for both): restart connector, re-run the user's exact failing
+   prompt ("Create graphs and charts illustrating CLT concepts") headless: graph step routed to
+   coding-playground, chart drawn on step + final cards, 0 JS errors, run recorded; plus a live
+   negative case (import of a missing module) showing an Error badge. User runs it themselves
+   before push.
 
 ## In progress
+
+- 2026-08-10 step-status-honesty (executor fix, 2 of the 2 agreed CLT-RCA fixes; bugfix-first).
+  The executor now looks INSIDE a successful HTTP reply: `_app_reported_failure` in `executor.py`
+  marks a step "error" (carrying the app's own message) when the body says the work failed —
+  an explicit false `success`/`ok` verdict, or an error-only body. An explicit TRUE verdict wins
+  over stderr noise in an `error` field, so chatty successes are never demoted. Fan-out items with
+  in-band failures are skipped too. Trace badge, feed, run record, and synthesis all follow the
+  status automatically. 4 new tests written first against Simulated Learning's real crash shape
+  (3 failed pre-fix, the stderr-noise guard passed); 60/60 executor tests; `make verify` PASS.
 
 - 2026-08-10 route-graph-work-to-coding-playground (registry fix, 1 of the 2 agreed CLT-RCA fixes).
   Simulated Learning's card now says plainly it CANNOT make charts/graphs (no plotting library,

@@ -140,6 +140,50 @@ def _embed_upstream_images(
         args[field] = base + "\n\n## Charts" + "".join(parts)
 
 
+# Where an app's reply may carry its own failure message, in preference order.
+_FAILURE_MESSAGE_KEYS = ("error", "detail", "message", "stderr", "traceback")
+
+
+def _failure_message(data: dict[str, Any]) -> str | None:
+    """The first non-empty failure message the reply carries, if any."""
+    for key in _FAILURE_MESSAGE_KEYS:
+        value = data.get(key)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    return None
+
+
+def _app_reported_failure(data: Any) -> str | None:
+    """The app's own message when its reply SAYS the work failed, else None.
+
+    A transport-level 200 can still carry an in-band failure (the CLT-graphs RCA: the code
+    sandbox replied ``{"success": false, "error": "<traceback>"}`` and the step showed Done).
+    Two app-agnostic signals:
+
+    * an explicit false verdict — a boolean ``success``/``ok`` field that is false;
+    * an error-only body — an ``error`` message with no other substantive content.
+
+    An explicit TRUE verdict wins even when an ``error`` field carries stderr noise next to real
+    output, so honest-but-chatty successes are never demoted.
+    """
+    if not isinstance(data, dict):
+        return None
+    verdicts = [data[k] for k in ("success", "ok") if isinstance(data.get(k), bool)]
+    if verdicts:
+        if all(verdicts):
+            return None
+        return _failure_message(data) or "the app reported the step failed"
+    error = data.get("error")
+    if isinstance(error, str) and error.strip():
+        substantive_rest = any(
+            key not in _FAILURE_MESSAGE_KEYS and value not in (None, "", [], {})
+            for key, value in data.items()
+        )
+        if not substantive_rest:
+            return error.strip()
+    return None
+
+
 def _collect_fan_items(
     upstream: tuple[SubtaskResult, ...], fan_out: dict[str, Any]
 ) -> list[tuple[Any, Any]]:
@@ -195,7 +239,7 @@ async def _run_fan_out(
             endpoints=endpoints,
             call_cache=call_cache,
         )
-        if not res.ok:
+        if not res.ok or _app_reported_failure(res.data) is not None:
             continue
         content = res.data.get("content") if isinstance(res.data, dict) else res.data
         entry: dict[str, Any] = {arg: pid, "content": content}
@@ -431,6 +475,24 @@ async def _run_app_op(
             None,
             source,
             result.error,
+            result.duration_s,
+            args=args,
+        )
+
+    # Status honesty: the transport succeeded, but does the reply itself say the work failed
+    # (e.g. 200 + ``success: false`` + a traceback)? Then the step is an error carrying the
+    # app's own message — a polite crash must never wear a Done badge.
+    app_failure = _app_reported_failure(result.data)
+    if app_failure is not None:
+        return SubtaskResult(
+            sub.id,
+            app.id,
+            app.name,
+            "error",
+            op.name,
+            None,
+            source,
+            app_failure,
             result.duration_s,
             args=args,
         )

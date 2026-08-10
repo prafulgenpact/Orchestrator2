@@ -1157,3 +1157,66 @@ def test_embed_upstream_images_caps_count() -> None:
         args, "content", _img_upstream(["a", "b", "c", "d", "e", "f"]), max_images=3
     )
     assert args["content"].count("data:image/png;base64,") == 3
+
+
+# Status honesty: an app reply that itself says the work failed (HTTP 200, polite JSON) must mark
+# the step "error" carrying the app's own message — never "ok". This is the CLT-graphs RCA: the
+# sandbox replied {"success": false, "error": "<traceback>"} and the trace showed Done.
+
+_CRASH_REPLY = {
+    "output": "",
+    "error": (
+        'Traceback (most recent call last):\n  File "<user_code>", line 1, in <module>\n'
+        "ModuleNotFoundError: No module named 'matplotlib'"
+    ),
+    "success": False,
+}
+
+
+def test_app_reported_failure_marks_step_error(
+    monkeypatch: pytest.MonkeyPatch, fake_llm: MakeLLM
+) -> None:
+    # The real Simulated Learning /api/execute crash shape: transport ok, body says failed.
+    monkeypatch.setattr("orchestrator.executor.call_operation", _stub_call(data=_CRASH_REPLY))
+    client = fake_llm([_SELECT, _RELEVANT])  # relevance would be next — it must never be reached
+    r = _run(_plan(_sub("arxiv-papers", "ArXiv Paper Guide")), client).results[0]
+    assert r.status == "error"
+    assert r.error is not None and "ModuleNotFoundError" in r.error  # the app's own message
+    assert r.output is None  # a failed step carries no output to ground an answer on
+
+
+def test_success_with_stderr_noise_stays_ok(
+    monkeypatch: pytest.MonkeyPatch, fake_llm: MakeLLM
+) -> None:
+    # success: true + stderr noise in "error" next to real output is NOT a failure — the app's
+    # explicit verdict wins over the mere presence of an error field.
+    noisy = {"output": "42\n", "error": "FutureWarning: something minor", "success": True}
+    monkeypatch.setattr("orchestrator.executor.call_operation", _stub_call(data=noisy))
+    client = fake_llm([_SELECT, _RELEVANT])
+    r = _run(_plan(_sub("arxiv-papers", "ArXiv Paper Guide")), client).results[0]
+    assert r.status == "ok"
+    assert r.output == noisy
+
+
+def test_error_only_body_marks_step_error(
+    monkeypatch: pytest.MonkeyPatch, fake_llm: MakeLLM
+) -> None:
+    # No verdict field at all: a body that is nothing but an error message is a failure.
+    monkeypatch.setattr(
+        "orchestrator.executor.call_operation",
+        _stub_call(data={"error": "kernel died: no heartbeat", "images": []}),
+    )
+    client = fake_llm([_SELECT, _RELEVANT])
+    r = _run(_plan(_sub("arxiv-papers", "ArXiv Paper Guide")), client).results[0]
+    assert r.status == "error"
+    assert r.error == "kernel died: no heartbeat"
+
+
+def test_app_failure_without_message_gets_generic_error(
+    monkeypatch: pytest.MonkeyPatch, fake_llm: MakeLLM
+) -> None:
+    monkeypatch.setattr("orchestrator.executor.call_operation", _stub_call(data={"success": False}))
+    client = fake_llm([_SELECT, _RELEVANT])
+    r = _run(_plan(_sub("arxiv-papers", "ArXiv Paper Guide")), client).results[0]
+    assert r.status == "error"
+    assert r.error == "the app reported the step failed"
