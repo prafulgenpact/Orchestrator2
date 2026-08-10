@@ -1,6 +1,6 @@
 # Task: route-graph-work-to-coding-playground
 
-Status: in progress
+Status: DONE (code + eval; live headless CLT proof owed together with step-status-honesty per the agreed e2e protocol)
 Type: bugfix
 Scope: registry/apps.json, tests/eval/cases.json, tests/eval/fixtures/**, tests/e2e/fixtures/**, STATE.md
 Phase: Phase 3 — routing accuracy
@@ -44,4 +44,4 @@ Each one names the test that proves it.
 
 ## Done
 
-Proof commit: <sha>   Auditor verdict: <ON_TRACK/...>   Docs updated: yes/no/n-a
+Proof commit: 6527c9c (sealed by 34a9864)   Auditor verdict: pending   Docs updated: STATE.md
