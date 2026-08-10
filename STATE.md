@@ -1,14 +1,10 @@
 # Project State — A multi agent orchestrator system calling relevant apps basis intent recognition
 
-Last updated: 2026-08-07 (conversational-feed task)
+Last updated: 2026-08-10 (route-graph-work-to-coding-playground task)
 
-## Next — agreed with the user 2026-08-04, not started (RCA: CLT-graphs run failed silently)
+## Next — agreed with the user 2026-08-04 (RCA: CLT-graphs run failed silently)
 
-1. **route-graph-work-to-coding-playground** (registry fix). Simulated Learning has no matplotlib —
-   its card must say it cannot make charts; remove Coding Playground's `when_not` line that
-   redirects code snippets to simulated-learning (chart/plot code belongs to Coding Playground's
-   kernel, proven live). Referee: decomposition eval (baseline 16/16) + a new routing case
-   "create graphs illustrating CLT" → coding-playground.
+1. ~~**route-graph-work-to-coding-playground**~~ DONE 2026-08-10 — see In progress below.
 2. **step-status-honesty** (executor fix, bugfix-first). An app reply that itself says it failed
    (`success: false` / error-only body) must mark the step "error" (carrying the app's message),
    not "ok" — trace badge, feed, run record, synthesis all follow. Failing test first.
@@ -21,6 +17,20 @@ Last updated: 2026-08-07 (conversational-feed task)
    an Error badge. User runs it themselves before push.
 
 ## In progress
+
+- 2026-08-10 route-graph-work-to-coding-playground (registry fix, 1 of the 2 agreed CLT-RCA fixes).
+  Simulated Learning's card now says plainly it CANNOT make charts/graphs (no plotting library,
+  text output only; when_not points chart work at coding-playground), and Coding Playground's
+  when_not no longer redirects code snippets to simulated-learning (that line caused the live
+  CLT-graphs misroute; the card's WS run_code op renders matplotlib, so the line was wrong).
+  Bugfix-first proof: new eval case clt-graphs-to-coding-playground recorded against the OLD
+  registry FAILED (planner chose simulated-learning for the chart step, claiming it could draw
+  matplotlib); after the card fix, all 17 fixtures re-recorded (registry text is in the request
+  hash) + the 2 e2e dry-run fixtures: eval 17/17 + wellformed, 0 skips — old baseline intact,
+  incl. run-code-to-simulated-not-coding-playground (plain snippets still go to
+  simulated-learning). `make verify` PASS. Still owed for full close-out (with task 2): restart
+  connector + live headless CLT re-run routed to coding-playground with charts drawn, then user
+  runs it before push.
 
 - 2026-08-07 conversational-feed (user request, with reference screenshots). The left task panel now
   talks like an agent instead of showing only a checklist. 1) Plan bubble (UI-only, no new LLM

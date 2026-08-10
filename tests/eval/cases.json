@@ -1,11 +1,15 @@
 {
-  "description": "Labelled decomposition cases. For each task we assert which app(s) MUST be chosen, which MUST NOT be, and a sensible subtask-count range. Routing is model-driven, so bounds are deliberately loose — the point is to catch clear misroutes and over/under-decomposition, not to pin exact prose.",
+  "description": "Labelled decomposition cases. For each task we assert which app(s) MUST be chosen, which MUST NOT be, and a sensible subtask-count range. Routing is model-driven, so bounds are deliberately loose \u2014 the point is to catch clear misroutes and over/under-decomposition, not to pin exact prose.",
   "cases": [
     {
       "id": "attention-to-stanford-not-teachme",
       "task": "Explain how self-attention works in transformers.",
-      "must_include": ["stanford-llm"],
-      "must_not_include": ["teach-me"],
+      "must_include": [
+        "stanford-llm"
+      ],
+      "must_not_include": [
+        "teach-me"
+      ],
       "min_subtasks": 1,
       "max_subtasks": 3,
       "note": "LLM/transformer topic -> the CME 295 specialist, not the generic Teach Me app (the collision that caused the live failure)."
@@ -13,8 +17,13 @@
     {
       "id": "pvalue-to-stats-not-teachme",
       "task": "Help me understand p-values and hypothesis testing.",
-      "must_include": ["stats-teacher"],
-      "must_not_include": ["teach-me", "stanford-llm"],
+      "must_include": [
+        "stats-teacher"
+      ],
+      "must_not_include": [
+        "teach-me",
+        "stanford-llm"
+      ],
       "min_subtasks": 1,
       "max_subtasks": 3,
       "note": "Statistics -> the stats tutor, not the generic learner."
@@ -22,8 +31,13 @@
     {
       "id": "photosynthesis-to-teachme",
       "task": "Teach me the basics of photosynthesis from first principles.",
-      "must_include": ["teach-me"],
-      "must_not_include": ["stanford-llm", "stats-teacher"],
+      "must_include": [
+        "teach-me"
+      ],
+      "must_not_include": [
+        "stanford-llm",
+        "stats-teacher"
+      ],
       "min_subtasks": 1,
       "max_subtasks": 3,
       "note": "General non-LLM/non-stats topic -> Teach Me is correct here."
@@ -31,7 +45,9 @@
     {
       "id": "arxiv-moe-papers",
       "task": "Find recent papers on mixture-of-experts and summarize the key takeaways.",
-      "must_include": ["arxiv-papers"],
+      "must_include": [
+        "arxiv-papers"
+      ],
       "must_not_include": [],
       "min_subtasks": 1,
       "max_subtasks": 3,
@@ -40,8 +56,12 @@
     {
       "id": "run-code-to-simulated-not-coding-playground",
       "task": "Run Python code to compute the first 20 Fibonacci numbers and show the output.",
-      "must_include": ["simulated-learning"],
-      "must_not_include": ["coding-playground"],
+      "must_include": [
+        "simulated-learning"
+      ],
+      "must_not_include": [
+        "coding-playground"
+      ],
       "min_subtasks": 1,
       "max_subtasks": 2,
       "note": "Code execution -> Simulated Learning; Coding Playground has no REST execute (WS-only)."
@@ -49,8 +69,12 @@
     {
       "id": "ai-news-to-deck-not-social",
       "task": "Give me a summary of this week's AI news.",
-      "must_include": ["ai-intelligence-deck"],
-      "must_not_include": ["social-media-ai"],
+      "must_include": [
+        "ai-intelligence-deck"
+      ],
+      "must_not_include": [
+        "social-media-ai"
+      ],
       "min_subtasks": 1,
       "max_subtasks": 2,
       "note": "Curated AI news -> Intelligence Deck, not social aggregation."
@@ -58,8 +82,12 @@
     {
       "id": "twitter-to-social-not-deck",
       "task": "What is trending on Twitter about AI right now?",
-      "must_include": ["social-media-ai"],
-      "must_not_include": ["ai-intelligence-deck"],
+      "must_include": [
+        "social-media-ai"
+      ],
+      "must_not_include": [
+        "ai-intelligence-deck"
+      ],
       "min_subtasks": 1,
       "max_subtasks": 2,
       "note": "Twitter/X trends -> Social Media AI, not the news deck."
@@ -67,7 +95,9 @@
     {
       "id": "github-repo-to-learnings",
       "task": "Ingest the LangChain GitHub repository and extract its key patterns.",
-      "must_include": ["github-learnings"],
+      "must_include": [
+        "github-learnings"
+      ],
       "must_not_include": [],
       "min_subtasks": 1,
       "max_subtasks": 3,
@@ -76,8 +106,12 @@
     {
       "id": "blog-to-blogs-not-research",
       "task": "Draft a blog post about agentic AI in my voice.",
-      "must_include": ["blogs-playground"],
-      "must_not_include": ["research-assistant"],
+      "must_include": [
+        "blogs-playground"
+      ],
+      "must_not_include": [
+        "research-assistant"
+      ],
       "min_subtasks": 1,
       "max_subtasks": 2,
       "note": "Personal blog drafting -> Blogs Playground, not the research report tool."
@@ -85,8 +119,12 @@
     {
       "id": "research-to-research-not-blogs",
       "task": "Do a deep research report on retrieval-augmented generation with citations.",
-      "must_include": ["research-assistant"],
-      "must_not_include": ["blogs-playground"],
+      "must_include": [
+        "research-assistant"
+      ],
+      "must_not_include": [
+        "blogs-playground"
+      ],
       "min_subtasks": 1,
       "max_subtasks": 3,
       "note": "Long-form cited research -> Research Assistant, not blog drafting."
@@ -94,7 +132,9 @@
     {
       "id": "nofit-to-websearch",
       "task": "What was the final score of the 2022 FIFA World Cup final?",
-      "must_include": ["web-search"],
+      "must_include": [
+        "web-search"
+      ],
       "must_not_include": [],
       "min_subtasks": 1,
       "max_subtasks": 1,
@@ -103,7 +143,9 @@
     {
       "id": "dataset-preview-to-coding-playground",
       "task": "Preview the first rows of the Titanic dataset.",
-      "must_include": ["coding-playground"],
+      "must_include": [
+        "coding-playground"
+      ],
       "must_not_include": [],
       "min_subtasks": 1,
       "max_subtasks": 2,
@@ -112,7 +154,11 @@
     {
       "id": "multiask-llm-explain-code-blog",
       "task": "Explain how LLM pre-training works, teach me the intuition, show runnable code that demonstrates it, and write a blog post about it.",
-      "must_include": ["stanford-llm", "simulated-learning", "blogs-playground"],
+      "must_include": [
+        "stanford-llm",
+        "simulated-learning",
+        "blogs-playground"
+      ],
       "must_not_include": [],
       "min_subtasks": 3,
       "max_subtasks": 6,
@@ -121,7 +167,10 @@
     {
       "id": "two-distinct-asks-news-and-papers",
       "task": "Summarize this week's AI news and also find recent arXiv papers on diffusion models.",
-      "must_include": ["ai-intelligence-deck", "arxiv-papers"],
+      "must_include": [
+        "ai-intelligence-deck",
+        "arxiv-papers"
+      ],
       "must_not_include": [],
       "min_subtasks": 2,
       "max_subtasks": 3,
@@ -130,7 +179,9 @@
     {
       "id": "explain-plus-code-gradient-descent",
       "task": "Explain gradient descent and show me runnable Python that demonstrates it.",
-      "must_include": ["simulated-learning"],
+      "must_include": [
+        "simulated-learning"
+      ],
       "must_not_include": [],
       "min_subtasks": 2,
       "max_subtasks": 3,
@@ -139,11 +190,26 @@
     {
       "id": "single-ask-dont-overdecompose",
       "task": "Explain what a p-value is.",
-      "must_include": ["stats-teacher"],
+      "must_include": [
+        "stats-teacher"
+      ],
       "must_not_include": [],
       "min_subtasks": 1,
       "max_subtasks": 2,
       "note": "A single simple ask should stay small (guards against over-decomposition)."
+    },
+    {
+      "id": "clt-graphs-to-coding-playground",
+      "task": "Create graphs and charts illustrating CLT concepts",
+      "must_include": [
+        "coding-playground"
+      ],
+      "must_not_include": [
+        "simulated-learning"
+      ],
+      "min_subtasks": 1,
+      "max_subtasks": 5,
+      "note": "Graph/chart work needs a plotting library. Simulated Learning's sandbox has none; Coding Playground's kernel renders matplotlib. This is the live CLT-graphs failure of 2026-08-04."
     }
   ]
 }

@@ -6,7 +6,7 @@
       "name": "Simulated Learning",
       "description": "Adaptive ML/AI learning with interactive simulations and sandboxed code execution inside lessons.",
       "capabilities": [
-        "run Python code in a one-shot sandbox for lesson practice",
+        "run Python code in a one-shot sandbox for lesson practice (text output only)",
         "answer in-lesson questions grounded in the current concept's theory"
       ],
       "example_tasks": [
@@ -15,6 +15,7 @@
       ],
       "fallback": false,
       "when_not": [
+        "CANNOT make charts, graphs, or plots — its Python sandbox has no plotting library (no matplotlib/seaborn) and returns text only; for any chart/graph/visualization use coding-playground",
         "not for LLM or transformer theory questions (use stanford-llm)",
         "not for statistics questions (use stats-teacher)",
         "not for general non-code topics (use teach-me)"
@@ -569,7 +570,6 @@
       ],
       "fallback": false,
       "when_not": [
-        "does NOT run arbitrary Python over REST (the kernel is WebSocket-only) \u2014 to execute a code snippet use simulated-learning",
         "EDA operates on a dataset by id \u2014 first find the dataset via list_datasets/preview_dataset if the id is unknown"
       ],
       "port": 8003,

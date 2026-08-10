@@ -1,10 +1,8 @@
 {
   "schema": "proof/v1",
-  "created_utc": "2026-07-16T09:18:21+00:00",
-  "result": "FAIL",
-  "failed_checks": [
-    "py-lint"
-  ],
+  "created_utc": "2026-08-10T05:55:13+00:00",
+  "result": "PASS",
+  "failed_checks": [],
   "missing_required_checks": [],
   "required_checks": [
     "py-lint",
@@ -14,17 +12,17 @@
     "e2e",
     "secrets"
   ],
-  "fingerprint": "7a73aa4d88bb776d01f321579c9816c747ee281215baa38970d4f708c1f7200b",
+  "fingerprint": "3d94c556940d65050098420f82ca69606a76ca5c50000659e1a4a948e6eedc2c",
   "git": {
-    "commit": "5c8ce71c68ebc5af9944294b122c3bb2330a7e25",
+    "commit": "172ab8778af99dd7f1a69fb57f8927dcad6958a2",
     "branch": "Orchestrator2",
     "dirty_tracked_files": true
   },
   "checks": [
     {
       "name": "py-lint",
-      "status": "fail",
-      "duration_s": 1,
+      "status": "pass",
+      "duration_s": 0,
       "evidence": "reports/py-lint.log"
     },
     {
@@ -36,19 +34,19 @@
     {
       "name": "py-types",
       "status": "pass",
-      "duration_s": 5,
+      "duration_s": 1,
       "evidence": "reports/py-types.log"
     },
     {
       "name": "py-unit",
       "status": "pass",
-      "duration_s": 7,
+      "duration_s": 10,
       "evidence": "reports/py-unit.log"
     },
     {
       "name": "e2e",
       "status": "pass",
-      "duration_s": 3,
+      "duration_s": 2,
       "evidence": "reports/e2e.log"
     },
     {
@@ -66,7 +64,7 @@
     {
       "name": "dep-audit",
       "status": "pass",
-      "duration_s": 21,
+      "duration_s": 13,
       "evidence": "reports/dep-audit.log"
     },
     {
@@ -78,21 +76,21 @@
   ],
   "tests": {
     "unit": {
-      "tests": 333,
+      "tests": 945,
       "failures": 0,
       "errors": 0,
       "skipped": 0,
-      "time_s": 4.2
+      "time_s": 8.57
     },
     "e2e": {
       "tests": 2,
       "failures": 0,
       "errors": 0,
       "skipped": 0,
-      "time_s": 1.41
+      "time_s": 0.62
     },
     "web_e2e": null,
-    "coverage_pct": 99.77
+    "coverage_pct": 96.31
   },
   "environment": {
     "python": "Python 3.10.0",
@@ -101,5 +99,5 @@
     "pytest": "pytest 8.3.2",
     "os": "Darwin 25.5.0"
   },
-  "content_hash": "e75f4786a4bc85dcd1dc7f03c2d61a66049e4724d676a1fbaddf548da2b3dc68"
+  "content_hash": "5405033055bb89b299f5f2e5a22b33ecf0f31936fa3ced10513cc09e927ce31c"
 }
