@@ -1,6 +1,7 @@
 # Task: step-status-honesty
 
-Status: in progress
+Status: DONE (live e2e proof complete — positive CLT run + red error badge on the deliberate
+failure, headless Chrome, zero JS errors; awaiting the user's own browser check before push)
 Type: bugfix
 Scope: src/orchestrator/executor.py, tests/unit/test_executor.py, web/atelier-workspace.html, STATE.md
 
@@ -52,4 +53,4 @@ Each one names the test that proves it.
 
 ## Done
 
-Proof commit: <sha>   Auditor verdict: <ON_TRACK/...>   Docs updated: yes/no/n-a
+Proof commit: 106b2f3 (executor, sealed 16f071b) + 20af059 (UI badge, sealed c7bcb12)   Auditor verdict: pending   Docs updated: STATE.md
