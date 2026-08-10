@@ -33,6 +33,10 @@ class _Res:
     def to_dict(self) -> dict[str, Any]:
         return self.data
 
+    @property
+    def subtask_id(self) -> str:  # the real SubtaskResult exposes this as an attribute
+        return str(self.data.get("subtask_id", ""))
+
 
 @dataclass
 class _PlanResult:
@@ -47,12 +51,14 @@ class _Synth:
 
 
 def _install_fakes(
-    monkeypatch: pytest.MonkeyPatch, *, fail: str | None = None
+    monkeypatch: pytest.MonkeyPatch, *, fail: str | None = None, narration: str = ""
 ) -> list[dict[str, Any]]:
-    """Replace plan/execute/synthesize/record_run with deterministic in-memory doubles.
+    """Replace plan/execute/synthesize/narrate/record_run with deterministic in-memory doubles.
 
-    Returns the list of record_run calls (one kwargs dict each) so tests can assert every web run
-    is recorded — the connector's always-log contract."""
+    ``narration`` is what the fake narrator says per result ("" -> no narrate event, the
+    real contract for a failed narration). Returns the list of record_run calls (one kwargs
+    dict each) so tests can assert every web run is recorded — the connector's always-log
+    contract."""
 
     def fake_plan_task(client: Any, registry: Any, task: str, *, model: str) -> _Plan:
         _ = (client, registry, task, model)  # accepted to match the real signature
@@ -80,6 +86,10 @@ def _install_fakes(
             on_delta(" world")
         return _Synth("Hello world", ("http://example/x",), "synthesized")
 
+    def fake_narrate(client: Any, *, model: str, task: str, result: Any, **kwargs: Any) -> str:
+        _ = (client, model, task, result, kwargs)  # accepted to match the real signature
+        return narration
+
     record_calls: list[dict[str, Any]] = []
 
     def fake_record_run(plan: Any, result: Any, synth: Any, **kwargs: Any) -> str:
@@ -89,6 +99,7 @@ def _install_fakes(
     monkeypatch.setattr(web, "plan_task", fake_plan_task)
     monkeypatch.setattr(web, "_execute_plan_sync", fake_execute)
     monkeypatch.setattr(web, "synthesize", fake_synthesize)
+    monkeypatch.setattr(web, "narrate_result", fake_narrate)
     monkeypatch.setattr(web, "record_run", fake_record_run)
     return record_calls
 
@@ -123,6 +134,34 @@ def test_run_events_order(monkeypatch: pytest.MonkeyPatch) -> None:
     final = dict(events)["final"]
     assert final["answer"] == "Hello world"
     assert final["sources"] == ["http://example/x"]
+
+
+def test_run_events_emits_narrate(monkeypatch: pytest.MonkeyPatch) -> None:
+    _install_fakes(monkeypatch, narration="Data loaded — 1,470 rows.")
+    events = _run()
+    names = [name for name, _ in events]
+
+    assert "narrate" in names
+    assert names.index("result") < names.index("narrate")  # narration follows its step's result
+    assert names[-1] == "done"  # in-flight narration is joined before the stream closes
+    narrate = dict(events)["narrate"]
+    assert narrate == {"subtask_id": "t1", "text": "Data loaded — 1,470 rows."}
+
+
+def test_narrate_failure_never_breaks_stream(monkeypatch: pytest.MonkeyPatch) -> None:
+    _install_fakes(monkeypatch)
+
+    def boom(*args: Any, **kwargs: Any) -> str:
+        _ = (args, kwargs)  # accepted to match the real signature
+        raise RuntimeError("narrator bug")
+
+    monkeypatch.setattr(web, "narrate_result", boom)
+    events = _run()
+    names = [name for name, _ in events]
+
+    assert "narrate" not in names  # a broken narrator says nothing…
+    assert "error" not in names  # …and never surfaces as a run error
+    assert names[-2:] == ["final", "done"]  # the run itself is untouched
 
 
 def test_run_events_error(monkeypatch: pytest.MonkeyPatch) -> None:

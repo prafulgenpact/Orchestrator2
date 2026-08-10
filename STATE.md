@@ -1,8 +1,48 @@
 # Project State — A multi agent orchestrator system calling relevant apps basis intent recognition
 
-Last updated: 2026-08-04 (web-charts-and-run-logging task)
+Last updated: 2026-08-07 (conversational-feed task)
+
+## Next — agreed with the user 2026-08-04, not started (RCA: CLT-graphs run failed silently)
+
+1. **route-graph-work-to-coding-playground** (registry fix). Simulated Learning has no matplotlib —
+   its card must say it cannot make charts; remove Coding Playground's `when_not` line that
+   redirects code snippets to simulated-learning (chart/plot code belongs to Coding Playground's
+   kernel, proven live). Referee: decomposition eval (baseline 16/16) + a new routing case
+   "create graphs illustrating CLT" → coding-playground.
+2. **step-status-honesty** (executor fix, bugfix-first). An app reply that itself says it failed
+   (`success: false` / error-only body) must mark the step "error" (carrying the app's message),
+   not "ok" — trace badge, feed, run record, synthesis all follow. Failing test first.
+   Optional follow-up: one retry on the correct app when a step errors this way.
+
+   Agreed e2e proof for both: failing unit tests first → decomposition eval green → `make verify` →
+   restart connector, re-run the user's exact failing prompt ("Create graphs and charts illustrating
+   CLT concepts") headless: graph step routed to coding-playground, chart drawn on step + final
+   cards, 0 JS errors, run recorded; plus a live negative case (import of a missing module) showing
+   an Error badge. User runs it themselves before push.
 
 ## In progress
+
+- 2026-08-07 conversational-feed (user request, with reference screenshots). The left task panel now
+  talks like an agent instead of showing only a checklist. 1) Plan bubble (UI-only, no new LLM
+  calls): on the `plan` event the panel shows a Master-Agent chat bubble — the recognized intent +
+  a numbered list of the steps' plain-English descriptions — above the live step checklist.
+  2) Live step narration: new `narrator.py` (+ `prompts/narrator_system.md`) makes ONE small LLM
+  call per finished step, turning that step's REAL output into 1–2 grounded sentences (real
+  numbers, honest failures; never invents); `web.py` fires it on a side daemon thread per result
+  and emits a new `narrate` SSE event (worker joins narrators before the sentinel so no narrate
+  lands after `done`); the UI appends each as a Master-Agent bubble, plus a plain-code closing
+  bubble on `final`. Narration is garnish by contract: `narrate_result` never raises, a failure
+  just means no bubble, and the run/answer path is untouched. 28 unit tests (6 new narrator, 2 new
+  web); `make verify` PASS; live headless proof: p-value task → 2 `narrate` events interleaved
+  after their `result` events with real numbers from the run ("The computed p-value is 0.0215…"),
+  `final` + `done` intact, UI JS syntax-checked. Also gitignored the user's `.vscode/` (scope
+  widened consciously — drift check flagged their debug config). Follow-up (user, after seeing it
+  live): the old per-step Progress checklist is gone — the feed now shows only a live "Working
+  on: …" spinner line per currently-running step (bubbles land on finish; without this a long
+  step would look frozen), the "Progress" header stays hidden; and the final-answer card now has
+  a RESERVED top-left canvas spot (`ANSWER_X/ANSWER_W`; intermediates masonry into 2 columns to
+  its right) with a smooth scroll-to-top when it appears — no scrolling to find the answer.
+  UI-file-only; `make verify` PASS. Awaiting user's browser check before seal/push.
 
 - 2026-08-04 web-charts-and-run-logging (two user-reported web-connector parity gaps). 1) Spec-based
   charts now render in the UI: `web.py` renders each known-shape chart artifact to inline SVG with

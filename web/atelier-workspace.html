@@ -129,6 +129,15 @@ body.conv-off .conv-mini{ display:flex; flex-direction:column; align-items:cente
 .bubble-user{ background:color-mix(in oklab, var(--accent) 10%, var(--paper)); border:1px solid color-mix(in oklab, var(--accent) 25%, var(--line));
   padding:10px 12px; border-radius:12px 12px 12px 4px; font-size:var(--fs-3); color:var(--ink); }
 
+/* Master-Agent chat bubbles: the plan + one narration per finished step */
+.msg.agent .avatar{ background:var(--paper-2); border:1px solid var(--line-2); color:var(--accent) }
+.bubble-agent{ background:var(--paper-2); border:1px solid var(--line); box-shadow:var(--shadow-1);
+  padding:10px 12px; border-radius:12px 12px 12px 4px; font-size:var(--fs-3); color:var(--ink); line-height:1.55; }
+.bubble-agent p{ margin:0 }
+.bubble-agent p + p{ margin-top:7px }
+.bubble-agent ol{ margin:7px 0 0; padding-left:20px; display:flex; flex-direction:column; gap:4px }
+.bubble-agent ol li::marker{ color:var(--accent); font-weight:600 }
+
 /* progress feed (plain-English narration) */
 .feed-head{ font-family:var(--mono); font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:var(--ink-3); font-weight:600;
   margin:4px 0 2px; display:flex; align-items:center; gap:8px }
@@ -438,8 +447,16 @@ body.theme-open .drawer{ transform:translateX(0) }
           <div class="bubble-user" id="taskEcho"></div>
         </div>
       </div>
+      <div class="msg agent" id="agentPlanMsg" style="display:none">
+        <div class="avatar">A</div>
+        <div class="body">
+          <div class="who">Master Agent <time id="agentPlanTime"></time></div>
+          <div class="bubble-agent" id="agentPlan"></div>
+        </div>
+      </div>
       <div class="feed-head" id="feedHead" style="display:none">Progress</div>
       <div class="feed" id="feed"></div>
+      <div id="agentNotes" style="display:flex; flex-direction:column; gap:12px"></div>
     </div>
 
     <div class="composer">
@@ -626,26 +643,26 @@ const CHECK_ICON = CHECK_SVG;
 let steps = [], stepById = {}, running = false, noteText = '';
 let answerCard = null, answerBody = null, answerTextEl = null, answerRaw = '';
 let seenResultSigs = new Set();   // per-run: (app|op|status|output) already shown, to skip duplicate cards
-let zTop = 20, colY = [24,24,24];
-const COL_W = 372, COL_X0 = 24;
+let zTop = 20, colY = [24,24];
+// The top-left spot is RESERVED for the final answer card (so it lands where the eye starts,
+// no scrolling); intermediate cards masonry into the columns to its right.
+const ANSWER_X = 24, ANSWER_W = 440;
+const COL_W = 372, COL_X0 = ANSWER_X + ANSWER_W + 18;
 
-/* ---- feed (plain-English narration) ---- */
+/* ---- feed: only what's happening RIGHT NOW (the chat bubbles carry the full story).
+   Bubbles appear when a step finishes, so without this line a long step would look frozen. ---- */
 function renderFeed(){
   feed.innerHTML = '';
-  steps.forEach(s => {
-    const st = s.status;
+  if(!running) return;
+  steps.filter(s => s.status==='running').forEach(s => {
     const row = document.createElement('div');
-    row.className = 'frow ' + (st==='error' ? 'done' : st);
-    const icon = (st==='done'||st==='error') ? CHECK_SVG : st==='running' ? SPIN_SVG : '';
-    // The feed is the conversational view: show the fuller plain-English description of the step
-    // (the technical short title lives in the Agent Trace instead).
-    const say = s.description || s.title;
-    row.innerHTML = `<span class="fi">${icon}</span>
-      <div class="ft"><div class="fmsg">${esc(say)}${st==='running'?'…':''}</div>
-      <div class="fmeta">${s.appName?'<span class="fapp">'+esc(s.appName)+'</span>':''}${s.t?'<time>'+s.t+'</time>':''}</div></div>`;
+    row.className = 'frow running';
+    row.innerHTML = `<span class="fi">${SPIN_SVG}</span>
+      <div class="ft"><div class="fmsg">Working on: ${esc(s.description||s.title)}…</div>
+      <div class="fmeta">${s.appName?'<span class="fapp">'+esc(s.appName)+'</span>':''}</div></div>`;
     feed.appendChild(row);
   });
-  if(running && noteText){
+  if(noteText){
     const row = document.createElement('div'); row.className = 'frow running';
     row.innerHTML = `<span class="fi">${SPIN_SVG}</span><div class="ft"><div class="fmsg">${esc(noteText)}</div></div>`;
     feed.appendChild(row);
@@ -941,12 +958,40 @@ function answerCopyText(){
   return t.trim();
 }
 
+/* ---- conversation: Master-Agent bubbles (the plan + one narration per finished step) ---- */
+const threadEl = document.getElementById('thread');
+function scrollThread(){ if(threadEl) threadEl.scrollTop = threadEl.scrollHeight; }
+function showPlanBubble(plan){
+  const msg = document.getElementById('agentPlanMsg'), body = document.getElementById('agentPlan');
+  if(!msg || !body) return;
+  // The plan's own plain-English pieces, spoken as a chat message: intent, numbered steps, go.
+  const items = (plan.subtasks||[]).map(s => `<li>${esc(s.description||s.title||'')}</li>`).join('');
+  body.innerHTML = (plan.intent ? `<p>${esc(plan.intent)}</p>` : '')
+    + `<p><strong>Here’s my plan:</strong></p><ol>${items}</ol><p>Let’s go.</p>`;
+  const t = document.getElementById('agentPlanTime'); if(t) t.textContent = now();
+  msg.style.display = ''; scrollThread();
+}
+function addAgentNote(text){
+  text = String(text||'').trim(); if(!text) return;
+  const notes = document.getElementById('agentNotes'); if(!notes) return;
+  const msg = document.createElement('div'); msg.className = 'msg agent';
+  msg.innerHTML = `<div class="avatar">A</div><div class="body">
+    <div class="who">Master Agent <time>${now()}</time></div>
+    <div class="bubble-agent">${esc(text)}</div></div>`;
+  notes.appendChild(msg); scrollThread();
+}
+function resetConversation(){
+  const msg = document.getElementById('agentPlanMsg'); if(msg) msg.style.display = 'none';
+  const notes = document.getElementById('agentNotes'); if(notes) notes.innerHTML = '';
+}
+
 /* ---- SSE event handlers ---- */
 function buildSteps(plan){
   steps = (plan.subtasks||[]).map(s => ({ id:s.id, title:s.title, description:s.description||'', appName:(s.app&&s.app.app_name)||'', status:'queued' }));
   steps.push({ id:'__synth__', title:'Compose final answer', description:'Bringing every app’s results together into one grounded answer.', appName:'Orchestrator', status:'queued' });
   stepById = {}; steps.forEach(s => stepById[s.id] = s);
   setSummary('running', steps.length+' steps'); renderTrace(); renderFeed();
+  showPlanBubble(plan);
 }
 function findByTitle(t){ return steps.find(s => s.title===t); }
 function applyProgress(msg){
@@ -984,11 +1029,16 @@ function addResultCard(r){
 function ensureAnswerCard(){
   if(answerCard) return;
   const synth = stepById['__synth__']; if(synth && synth.status==='queued'){ synth.status='running'; synth.t=now(); }
-  const card = cardShell('Final answer', 'final output', 'fin'); card.classList.add('final'); card.style.width='440px';
+  const card = cardShell('Final answer', 'final output', 'fin'); card.classList.add('final'); card.style.width=ANSWER_W+'px';
   answerBody = card.querySelector('.padded');
   answerBody.innerHTML = `<div class="kicker" style="font-family:var(--mono); font-size:10px; letter-spacing:.16em; color:var(--accent); text-transform:uppercase; font-weight:600; margin-bottom:8px">Answer</div><div class="answer-text md"></div><div class="answer-charts"></div><div class="answer-src"></div>`;
   answerTextEl = answerBody.querySelector('.answer-text');
-  placeCard(card); answerCard = card; renderFeed(); renderTrace();
+  // The answer takes its reserved top-left spot and the canvas comes to it — no scrolling to find it.
+  card.style.left = ANSWER_X+'px'; card.style.top = '24px'; card.style.zIndex = ++zTop;
+  canvas.appendChild(card); card.style.visibility = 'visible';
+  makeCardInteractive(card);
+  canvas.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+  answerCard = card; renderFeed(); renderTrace();
 }
 function appendAnswer(delta){ ensureAnswerCard(); answerRaw += delta; answerTextEl.innerHTML = mdToHtml(answerRaw); answerCard.dataset.copy = answerCopyText(); }
 function finalizeAnswer(data){
@@ -1009,6 +1059,7 @@ function finalizeAnswer(data){
       + data.sources.map(s => `<div style="font-size:11.5px; margin-top:3px"><a href="${esc(s)}" target="_blank" rel="noopener" style="color:var(--accent)">${esc(s)}</a></div>`).join('');
   }
   answerCard.dataset.copy = answerCopyText();
+  addAgentNote('All done — the final answer is on the canvas.');
   renderFeed(); renderTrace();
 }
 function showError(data){
@@ -1030,13 +1081,14 @@ function runTask(task){
   task = (task||'').trim(); if(!task) return;
   taskEcho.textContent = task;
   // reveal the conversation (hidden on a blank load) and stamp it
-  const userMsg = document.getElementById('userMsg'), userTime = document.getElementById('userTime'), feedHead = document.getElementById('feedHead');
+  const userMsg = document.getElementById('userMsg'), userTime = document.getElementById('userTime');
   if(userMsg) userMsg.style.display = '';
   if(userTime) userTime.textContent = now();
-  if(feedHead) feedHead.style.display = '';
+  // The old "Progress" checklist header stays hidden — the feed is now just a live activity line.
   canvas.querySelectorAll('.block').forEach(b => b.remove());   // clear the previous run
+  resetConversation();
   steps = []; stepById = {}; running = true; noteText = 'Planning your task…';
-  answerCard = null; answerBody = null; answerTextEl = null; answerRaw = ''; seenResultSigs = new Set(); colY = [24,24,24];
+  answerCard = null; answerBody = null; answerTextEl = null; answerRaw = ''; seenResultSigs = new Set(); colY = [24,24];
   setSummary('running', 'starting…'); renderFeed(); renderTrace();
   let es;
   try { es = new EventSource('/run?task=' + encodeURIComponent(task)); }
@@ -1045,6 +1097,7 @@ function runTask(task){
   es.addEventListener('plan',     e => buildSteps(JSON.parse(e.data)));
   es.addEventListener('progress', e => applyProgress(JSON.parse(e.data).message||''));
   es.addEventListener('result',   e => addResultCard(JSON.parse(e.data)));
+  es.addEventListener('narrate',  e => addAgentNote((JSON.parse(e.data)||{}).text||''));
   es.addEventListener('answer',   e => appendAnswer(JSON.parse(e.data).delta||''));
   es.addEventListener('final',    e => finalizeAnswer(JSON.parse(e.data)));
   es.addEventListener('error',    e => { if(e.data){ showError(JSON.parse(e.data)); } });   // server-sent (has data)

@@ -28,3 +28,6 @@ observability.db
 .env
 .env.*
 .claude/settings.local.json
+
+# editor / IDE config (per-user, not part of the app)
+.vscode/

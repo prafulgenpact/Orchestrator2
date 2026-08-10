@@ -9,6 +9,7 @@ that pipeline already emits, event by event, as it happens:
     plan    -> the decomposed plan (feeds the progress feed + agent trace)
     progress-> each executor progress line, live (incl. slow-step heartbeats)
     result  -> one executed subtask's real app output (feeds a canvas card)
+    narrate -> 1-2 plain-English sentences about a finished step (feeds a chat bubble)
     answer  -> a delta of the streamed final answer
     final   -> the whole answer + provenance sources
     error   -> any failure, surfaced instead of raised
@@ -36,6 +37,7 @@ from urllib.parse import parse_qs, urlparse
 from orchestrator.artifacts import _KNOWN_SHAPE_KEYS, render_chart_svg
 from orchestrator.llm.base import LLMClient
 from orchestrator.models import Artifact, Plan, PlanResult, SubtaskResult
+from orchestrator.narrator import narrate_result
 from orchestrator.observability import record_run
 from orchestrator.planner import plan_task
 from orchestrator.registry import Registry
@@ -189,10 +191,44 @@ def run_events(task: str, *, client: LLMClient, registry: Registry, model: str) 
 
     yield ("plan", plan.to_dict())
     deps = {s.id: s.depends_on for s in plan.subtasks}
+    subtask_by_id = {s.id: s for s in plan.subtasks}
 
     bus: queue.Queue[Event | None] = queue.Queue()
     # The worker's outcome, kept for the run record written after the stream drains.
     outcome: dict[str, Any] = {"result": None, "synth": None, "failed": False}
+    # Side threads turning each finished step's real output into a chat sentence (narrate events).
+    narrators: list[threading.Thread] = []
+
+    def narrate(r: Any) -> None:
+        """Fire-and-forget narration for one finished step — best-effort by contract.
+
+        Runs on its own daemon thread so the one-sentence LLM call never delays the next step or
+        the final answer. Any failure just means no bubble; the run is untouched."""
+        sub = subtask_by_id.get(getattr(r, "subtask_id", ""))
+
+        def go() -> None:
+            try:
+                text = narrate_result(
+                    client,
+                    model=model,
+                    task=task,
+                    result=r,
+                    step_title=getattr(sub, "title", ""),
+                    step_description=getattr(sub, "description", ""),
+                )
+            except Exception:
+                return  # narration can never surface as a run error
+            if text:
+                bus.put(("narrate", {"subtask_id": getattr(r, "subtask_id", ""), "text": text}))
+
+        thread = threading.Thread(target=go, daemon=True)
+        narrators.append(thread)
+        thread.start()
+
+    def on_result(r: Any) -> None:
+        # streamed as each subtask finishes, chart artifacts rendered to inline SVG
+        bus.put(("result", _result_payload(r)))
+        narrate(r)
 
     def worker() -> None:
         try:
@@ -202,8 +238,7 @@ def run_events(task: str, *, client: LLMClient, registry: Registry, model: str) 
                 client,
                 model,
                 lambda m: bus.put(("progress", {"message": m})),
-                # streamed as each subtask finishes, chart artifacts rendered to inline SVG
-                lambda r: bus.put(("result", _result_payload(r))),
+                on_result,
             )
             outcome["result"] = result
             synth = synthesize(
@@ -230,6 +265,10 @@ def run_events(task: str, *, client: LLMClient, registry: Registry, model: str) 
             outcome["failed"] = True
             bus.put(("error", {"message": str(exc), "stage": "execute"}))
         finally:
+            # Let in-flight narrations land before the stream closes; a hung one is abandoned
+            # (daemon thread) rather than holding the user's finished answer hostage.
+            for narrator in narrators:
+                narrator.join(timeout=20)
             bus.put(None)  # sentinel: worker finished
 
     thread = threading.Thread(target=worker, daemon=True)

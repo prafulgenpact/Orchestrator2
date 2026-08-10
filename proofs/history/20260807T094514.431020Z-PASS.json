@@ -1,0 +1,103 @@
+{
+  "schema": "proof/v1",
+  "created_utc": "2026-08-07T09:45:13+00:00",
+  "result": "PASS",
+  "failed_checks": [],
+  "missing_required_checks": [],
+  "required_checks": [
+    "py-lint",
+    "py-format",
+    "py-types",
+    "py-unit",
+    "e2e",
+    "secrets"
+  ],
+  "fingerprint": "67ecbac8a69e290fa006a562f1ab7cecfa9c6df309ba7e83fba09b6d7af283ac",
+  "git": {
+    "commit": "7b910d743b9741a881b4d3886cf4d3c3fbc03cff",
+    "branch": "Orchestrator2",
+    "dirty_tracked_files": true
+  },
+  "checks": [
+    {
+      "name": "py-lint",
+      "status": "pass",
+      "duration_s": 0,
+      "evidence": "reports/py-lint.log"
+    },
+    {
+      "name": "py-format",
+      "status": "pass",
+      "duration_s": 0,
+      "evidence": "reports/py-format.log"
+    },
+    {
+      "name": "py-types",
+      "status": "pass",
+      "duration_s": 2,
+      "evidence": "reports/py-types.log"
+    },
+    {
+      "name": "py-unit",
+      "status": "pass",
+      "duration_s": 8,
+      "evidence": "reports/py-unit.log"
+    },
+    {
+      "name": "e2e",
+      "status": "pass",
+      "duration_s": 2,
+      "evidence": "reports/e2e.log"
+    },
+    {
+      "name": "secrets",
+      "status": "pass",
+      "duration_s": 0,
+      "evidence": "reports/secrets.log"
+    },
+    {
+      "name": "secrets-gitleaks",
+      "status": "pass",
+      "duration_s": 2,
+      "evidence": "reports/secrets-gitleaks.log"
+    },
+    {
+      "name": "dep-audit",
+      "status": "pass",
+      "duration_s": 12,
+      "evidence": "reports/dep-audit.log"
+    },
+    {
+      "name": "diff-cover",
+      "status": "pass",
+      "duration_s": 1,
+      "evidence": "reports/diff-cover.log"
+    }
+  ],
+  "tests": {
+    "unit": {
+      "tests": 945,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time_s": 6.83
+    },
+    "e2e": {
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time_s": 0.54
+    },
+    "web_e2e": null,
+    "coverage_pct": 96.31
+  },
+  "environment": {
+    "python": "Python 3.10.0",
+    "node": "v24.7.0",
+    "ruff": "ruff 0.5.5",
+    "pytest": "pytest 8.3.2",
+    "os": "Darwin 25.5.0"
+  },
+  "content_hash": "8b2f2202fa8e5543cfa4bceb8e44e248ef06297fd083a89f4ea491a07ccefa1d"
+}
