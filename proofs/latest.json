@@ -1,6 +1,6 @@
 {
   "schema": "proof/v1",
-  "created_utc": "2026-08-10T05:55:13+00:00",
+  "created_utc": "2026-08-10T05:56:33+00:00",
   "result": "PASS",
   "failed_checks": [],
   "missing_required_checks": [],
@@ -12,11 +12,11 @@
     "e2e",
     "secrets"
   ],
-  "fingerprint": "3d94c556940d65050098420f82ca69606a76ca5c50000659e1a4a948e6eedc2c",
+  "fingerprint": "27bae17614ddb750967f7099cf10c57ce5cc2b8f7f2d81d06a87498e6f2ed387",
   "git": {
-    "commit": "172ab8778af99dd7f1a69fb57f8927dcad6958a2",
+    "commit": "6527c9caccefd3e7c7ebff3ba3d5bb89d76a2367",
     "branch": "Orchestrator2",
-    "dirty_tracked_files": true
+    "dirty_tracked_files": false
   },
   "checks": [
     {
@@ -40,31 +40,31 @@
     {
       "name": "py-unit",
       "status": "pass",
-      "duration_s": 10,
+      "duration_s": 9,
       "evidence": "reports/py-unit.log"
     },
     {
       "name": "e2e",
       "status": "pass",
-      "duration_s": 2,
+      "duration_s": 3,
       "evidence": "reports/e2e.log"
     },
     {
       "name": "secrets",
       "status": "pass",
-      "duration_s": 1,
+      "duration_s": 0,
       "evidence": "reports/secrets.log"
     },
     {
       "name": "secrets-gitleaks",
       "status": "pass",
-      "duration_s": 1,
+      "duration_s": 2,
       "evidence": "reports/secrets-gitleaks.log"
     },
     {
       "name": "dep-audit",
       "status": "pass",
-      "duration_s": 13,
+      "duration_s": 12,
       "evidence": "reports/dep-audit.log"
     },
     {
@@ -80,14 +80,14 @@
       "failures": 0,
       "errors": 0,
       "skipped": 0,
-      "time_s": 8.57
+      "time_s": 7.62
     },
     "e2e": {
       "tests": 2,
       "failures": 0,
       "errors": 0,
       "skipped": 0,
-      "time_s": 0.62
+      "time_s": 0.68
     },
     "web_e2e": null,
     "coverage_pct": 96.31
@@ -99,5 +99,5 @@
     "pytest": "pytest 8.3.2",
     "os": "Darwin 25.5.0"
   },
-  "content_hash": "5405033055bb89b299f5f2e5a22b33ecf0f31936fa3ced10513cc09e927ce31c"
+  "content_hash": "7e29d3ceaff4007220b3bce3e3bb2fe00e08e938d20b2c6567d6d3b58ac03b45"
 }
