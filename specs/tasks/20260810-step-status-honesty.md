@@ -2,7 +2,14 @@
 
 Status: in progress
 Type: bugfix
-Scope: src/orchestrator/executor.py, tests/unit/test_executor.py, STATE.md
+Scope: src/orchestrator/executor.py, tests/unit/test_executor.py, web/atelier-workspace.html, STATE.md
+
+<!-- Scope widened consciously during the live proof: the trace UI remapped an error step's
+     styling to the green "done" look (st = status==='error' ? 'done' : status) and had no
+     .sbadge.error/.step.error CSS — an honest error status would still wear a Done-green badge.
+     Fixed the mapping + added the red error styles; JS syntax-checked. -->
+
+
 Phase: Phase 3 — routing accuracy / honest status
 
 ## Goal

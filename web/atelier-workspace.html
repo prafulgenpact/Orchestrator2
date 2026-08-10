@@ -20,7 +20,7 @@
   --line: #e3e2db;
   --line-2: #d6d5cc;
   --rule: #c9c8be;
-  --ok:#10b981; --run:#f59e0b; --idle:#9b9ba4;
+  --ok:#10b981; --bad:#ef4444; --run:#f59e0b; --idle:#9b9ba4;
   --serif: 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, 'Times New Roman', serif;
   --sans: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
@@ -351,6 +351,7 @@ body.trace-off .trace-mini{ display:flex; flex-direction:column; align-items:cen
 .step .node{ position:absolute; left:-19px; top:11px; width:14px; height:14px; border-radius:50%;
   background:var(--paper); border:2px solid var(--accent); z-index:1; box-shadow:0 0 0 3px color-mix(in oklab, var(--accent) 20%, transparent); }
 .step.done .node{ background:var(--accent) }
+.step.error .node{ background:var(--bad) }
 .step.running .node{ border-color:var(--run); box-shadow:0 0 0 3px color-mix(in oklab,var(--run) 25%,transparent); animation:pulse 1.2s ease infinite }
 .step.queued .node{ border-color:var(--line-2); box-shadow:none; background:var(--paper) }
 .step .top{ display:flex; align-items:center; gap:8px; padding:9px 11px; cursor:pointer; }
@@ -360,6 +361,7 @@ body.trace-off .trace-mini{ display:flex; flex-direction:column; align-items:cen
 .step .lbl .name code{ font-family:var(--mono); font-size:11px; color:var(--accent) }
 .sbadge{ font-family:var(--mono); font-size:9px; letter-spacing:.06em; text-transform:uppercase; font-weight:700; padding:2px 6px; border-radius:5px }
 .sbadge.done{ color:var(--ok); background:color-mix(in oklab,var(--ok) 12%,var(--paper)); border:1px solid color-mix(in oklab,var(--ok) 30%,var(--line)) }
+.sbadge.error{ color:var(--bad); background:color-mix(in oklab,var(--bad) 12%,var(--paper)); border:1px solid color-mix(in oklab,var(--bad) 30%,var(--line)) }
 .sbadge.running{ color:var(--run); background:color-mix(in oklab,var(--run) 12%,var(--paper)); border:1px solid color-mix(in oklab,var(--run) 30%,var(--line)) }
 .sbadge.queued{ color:var(--ink-4); background:var(--bg-2); border:1px solid var(--line) }
 .step .caret{ width:14px; height:14px; color:var(--ink-3); transition: transform 220ms ease }
@@ -672,7 +674,7 @@ function renderFeed(){
 /* ---- trace (technical) ---- */
 const CARET_SVG = '<svg class="caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg>';
 function traceNode(o){                                       // one collapsible trace node
-  const st = o.status==='error' ? 'done' : o.status;
+  const st = o.status;
   const node = document.createElement('div'); node.className = 'step ' + st;
   const kv = (b, v, mono) => v == null ? '' : `<div class="kv"><b>${esc(b)}</b><span class="val${mono?' mono':''}">${esc(v)}</span></div>`;
   node.innerHTML = `<span class="node"></span>

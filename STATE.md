@@ -25,6 +25,21 @@ Last updated: 2026-08-10 (step-status-honesty task)
   in-band failures are skipped too. Trace badge, feed, run record, and synthesis all follow the
   status automatically. 4 new tests written first against Simulated Learning's real crash shape
   (3 failed pre-fix, the stderr-noise guard passed); 60/60 executor tests; `make verify` PASS.
+  Also (scope widened consciously): the trace UI remapped error→green "done" styling and had no
+  error CSS — an honest error status would still wear a Done-green badge; fixed the mapping and
+  added red `.sbadge.error`/`.step.error` styles (JS syntax-checked).
+
+  LIVE E2E PROOF (2026-08-10, fresh connector, headless Chrome driving the real UI):
+  - Positive: exact prompt "Create graphs and charts illustrating CLT concepts" → chart step
+    routed to coding-playground (planner rationale even cites "simulated-learning explicitly
+    cannot produce charts"), run_code drew real matplotlib charts on step + final answer cards,
+    trace complete, run recorded (d850e4f5, 2 ok). Same proven via raw SSE (740bb55b).
+  - Negative: "import xyzzy_not_installed" → routed to simulated-learning, app replied 200 +
+    success:false, step shows a RED ERROR badge carrying the app's ModuleNotFoundError traceback
+    on the step card + trace; final answer honestly says the task could not be completed; runs
+    recorded as partial with 1 error (0c8e5256, 412cff4a). Zero page JS errors both runs.
+  Screenshots: scratchpad clt-positive.png / neg-error-badge.png (session tmp).
+  Awaiting the user's own browser check before push (agreed protocol).
 
 - 2026-08-10 route-graph-work-to-coding-playground (registry fix, 1 of the 2 agreed CLT-RCA fixes).
   Simulated Learning's card now says plainly it CANNOT make charts/graphs (no plotting library,
