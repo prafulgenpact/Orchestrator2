@@ -1,1 +1,1 @@
-20260811-no-answer-without-inputs.md
+20260811-all-code-to-coding-playground.md

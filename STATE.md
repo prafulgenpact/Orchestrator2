@@ -1,6 +1,6 @@
 # Project State — A multi agent orchestrator system calling relevant apps basis intent recognition
 
-Last updated: 2026-08-11 (no-answer-without-inputs task)
+Last updated: 2026-08-11 (all-code-to-coding-playground task)
 
 ## Next — agreed with the user 2026-08-11 (RCA: the HR-dataset run; fixes taken ONE BY ONE)
 
@@ -10,7 +10,7 @@ failed) and invented its findings — "95% accuracy, 12% recall" that no computa
 fixes agreed, in this order:
 
 1. ~~**no-answer-without-inputs**~~ DONE 2026-08-11 — see In progress below.
-2. **all-code-to-coding-playground** + tell the code-writer the environment truth. USER RULE
+2. ~~**all-code-to-coding-playground**~~ DONE 2026-08-11 — see In progress below. USER RULE
    (2026-08-11): ALL coding requests go to coding-playground; simulated-learning is for LEARNING
    ONLY. NOTE this inverts THREE existing eval cases that currently assert code ->
    simulated-learning (`run-code-to-simulated-not-coding-playground`,
@@ -44,6 +44,25 @@ fixes agreed, in this order:
    before push.
 
 ## In progress
+
+- 2026-08-11 all-code-to-coding-playground (fix 2 of 6 from the HR-run RCA; bugfix-first). Three
+  things, because the live HR re-run showed they are one problem. (a) USER RULE: all coding /
+  analysis / modelling goes to coding-playground; simulated-learning is LEARNING ONLY — its card
+  now says so outright and states its sandbox has numpy + scikit-learn only. (b) Coding
+  Playground's card now leads with "THE app for running ANY code" and lists what IS installed
+  (pandas, numpy, matplotlib, seaborn, scikit-learn) plus the fact that `requests` is absent and
+  unnecessary (pandas reads a URL directly — proven live). (c) The selector prompt (v4 -> v5) now
+  forbids inventing data outright: no np.random stand-ins, no "representative" version of a real
+  dataset, no made-up numbers — if the data is not available the code must say so and fail.
+  That last rule is the one that matters: in the HR re-run the chart step generated 1,000 random
+  rows, called them "the same representative IBM HR Attrition dataset", drew six charts from noise
+  and reported SUCCESS — fabrication inside a green step, which no status rule can catch.
+  Eval: three cases flipped to the new rule (run-code-to-coding-playground — renamed,
+  explain-plus-code-gradient-descent, multiask-llm-explain-code-blog); all three FAILED against the
+  old registry, then passed after it. New case lesson-practice-to-simulated-learning proves the
+  learning app keeps its real purpose. 18 cases + wellformed green, 0 skips; all eval AND e2e
+  fixtures re-recorded (registry and prompt text are both inside the request hash). Two prompt
+  contract tests added. `make verify` PASS.
 
 - 2026-08-11 no-answer-without-inputs (fix 1 of 6 from the HR-run RCA; bugfix-first). A step that
   declares dependencies no longer runs when EVERY one of them failed: `_blocking_dependencies` +

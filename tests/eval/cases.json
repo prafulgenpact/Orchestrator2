@@ -54,17 +54,17 @@
       "note": "Paper discovery + analysis -> arXiv guide."
     },
     {
-      "id": "run-code-to-simulated-not-coding-playground",
+      "id": "run-code-to-coding-playground",
       "task": "Run Python code to compute the first 20 Fibonacci numbers and show the output.",
       "must_include": [
-        "simulated-learning"
+        "coding-playground"
       ],
       "must_not_include": [
-        "coding-playground"
+        "simulated-learning"
       ],
       "min_subtasks": 1,
       "max_subtasks": 2,
-      "note": "Code execution -> Simulated Learning; Coding Playground has no REST execute (WS-only)."
+      "note": "USER RULE 2026-08-11: ALL coding goes to coding-playground; simulated-learning is learning-only. This case asserted the opposite until 2026-08-11."
     },
     {
       "id": "ai-news-to-deck-not-social",
@@ -156,13 +156,15 @@
       "task": "Explain how LLM pre-training works, teach me the intuition, show runnable code that demonstrates it, and write a blog post about it.",
       "must_include": [
         "stanford-llm",
-        "simulated-learning",
+        "coding-playground",
         "blogs-playground"
       ],
-      "must_not_include": [],
+      "must_not_include": [
+        "simulated-learning"
+      ],
       "min_subtasks": 3,
       "max_subtasks": 6,
-      "note": "The live failure case: distinct asks (explain / code / blog) must each become a subtask on the right specialist."
+      "note": "Multi-ask: theory -> stanford-llm, code -> coding-playground, blog -> blogs-playground."
     },
     {
       "id": "two-distinct-asks-news-and-papers",
@@ -180,12 +182,14 @@
       "id": "explain-plus-code-gradient-descent",
       "task": "Explain gradient descent and show me runnable Python that demonstrates it.",
       "must_include": [
+        "coding-playground"
+      ],
+      "must_not_include": [
         "simulated-learning"
       ],
-      "must_not_include": [],
       "min_subtasks": 2,
       "max_subtasks": 3,
-      "note": "Explanation + runnable code -> at least a code step on Simulated Learning; explanation may share the app."
+      "note": "Explain + runnable code: the code half must go to coding-playground (user rule 2026-08-11)."
     },
     {
       "id": "single-ask-dont-overdecompose",
@@ -210,6 +214,19 @@
       "min_subtasks": 1,
       "max_subtasks": 5,
       "note": "Graph/chart work needs a plotting library. Simulated Learning's sandbox has none; Coding Playground's kernel renders matplotlib. This is the live CLT-graphs failure of 2026-08-04."
+    },
+    {
+      "id": "lesson-practice-to-simulated-learning",
+      "task": "I'm working through a machine-learning lesson \u2014 ask the tutor to explain the current concept's theory.",
+      "must_include": [
+        "simulated-learning"
+      ],
+      "must_not_include": [
+        "coding-playground"
+      ],
+      "min_subtasks": 1,
+      "max_subtasks": 3,
+      "note": "Learning/lesson Q&A is what simulated-learning IS for; the code-routing rule must not kill it."
     }
   ]
 }

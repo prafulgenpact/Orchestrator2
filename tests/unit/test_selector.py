@@ -370,3 +370,25 @@ def test_select_clamps_undersized_count(fake_llm: MakeLLM) -> None:
     client = fake_llm(['{"operation": "search", "arguments": {"query": "clt", "max_results": 1}}'])
     _, args = select_operation(client, app, _subtask(), model="m")
     assert args["max_results"] == 5
+
+
+# The code-writer must never manufacture its own inputs. In the 2026-08-11 HR re-run the chart
+# step generated 1,000 rows with np.random, called them "the same representative IBM HR Attrition
+# dataset", drew six charts from that noise and reported success — a step that fabricates while
+# looking green. No status rule can catch that, so the prohibition has to be stated outright.
+
+
+def test_prompt_forbids_inventing_data() -> None:
+    prompt = load_system_prompt().lower()
+    assert "never invent" in prompt or "never generate" in prompt
+    # the specific failure mode, named so it cannot be read as advice about arguments only
+    assert "np.random" in prompt or "random" in prompt
+    assert "synthetic" in prompt or "stand-in" in prompt or "simulate" in prompt
+    # and it must say what to do INSTEAD of faking it
+    assert "fail" in prompt or "say so" in prompt or "stop" in prompt
+
+
+def test_prompt_requires_declared_libraries() -> None:
+    prompt = load_system_prompt().lower()
+    assert "librar" in prompt  # matches "library"/"libraries"
+    assert "import" in prompt
