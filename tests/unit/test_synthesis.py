@@ -8,7 +8,13 @@ from typing import Any
 from conftest import FakeLLM
 
 from orchestrator.models import PlanResult, SubtaskResult
-from orchestrator.synthesis import Synthesis, _render_output, synthesize
+from orchestrator.synthesis import (
+    Synthesis,
+    _render_output,
+    build_synthesis_message,
+    load_system_prompt,
+    synthesize,
+)
 
 MakeLLM = Callable[[Sequence[str]], FakeLLM]
 
@@ -255,3 +261,80 @@ def test_synthesis_to_dict() -> None:
         "sources": ["u1", "u2"],
         "artifacts": [],
     }
+
+
+# --- the answer must never describe work that did not happen ------------------------------------
+# Live bug (run 39c3bcb9, 2026-08-11): 3 of 4 steps were skipped, yet the answer described the EDA
+# and the modelling as if both had run, and never once said "skipped" / "could not" / "unable".
+# Cause: the honest failure lines only ran when EVERY step failed; with one success the writer was
+# handed the successful results alone and asked to answer the whole task.
+
+
+def test_synthesis_message_lists_failed_steps() -> None:
+    ok = (_res("t1", {"found": "a dataset"}, app_name="Web Search"),)
+    failed = (
+        _res(
+            "t2", None, status="skipped", app_name="Coding Playground", error="no data to work on"
+        ),
+    )
+    msg = build_synthesis_message("do the thing", ok, failed)
+    assert "Coding Playground" in msg
+    assert "no data to work on" in msg
+    assert "t2" in msg
+
+
+def test_answer_discloses_failures_when_some_succeeded(fake_llm: MakeLLM) -> None:
+    client = fake_llm(["Here is what the one working step found."])
+    pr = _plan_result(
+        _res("t1", {"found": "a dataset"}, app_name="Web Search"),
+        _res(
+            "t2", None, status="skipped", app_name="Coding Playground", error="no data to work on"
+        ),
+        _res("t3", None, status="error", app_name="Blogs Playground", error="upstream failed"),
+    )
+    s = synthesize(client, pr, model="m")
+    assert "Coding Playground" in s.answer  # the answer names what did not run
+    assert "Blogs Playground" in s.answer
+    # and the writer was TOLD, not left to guess
+    sent = client.requests[0].messages[0]["content"]
+    assert "Coding Playground" in sent
+
+
+def test_verbatim_answer_still_discloses_failures(fake_llm: MakeLLM) -> None:
+    # Pass-through modes must disclose too — otherwise one app's tuned prose hides the failures.
+    client = fake_llm([])
+    pr = _plan_result(
+        _res("t1", "The answer is 42.", app_name="Teach Me"),
+        _res("t2", None, status="error", app_name="Coding Playground", error="kernel died"),
+    )
+    s = synthesize(client, pr, model="m")
+    assert s.answer.startswith("The answer is 42.")  # the app's voice is preserved first
+    assert "Coding Playground" in s.answer  # then the honest note
+    assert "kernel died" in s.answer
+
+
+def test_final_step_answer_still_discloses_failures(fake_llm: MakeLLM) -> None:
+    client = fake_llm([])
+    deps = {"t1": (), "t2": ("t1",)}
+    pr = _plan_result(
+        _res("t1", {"data": 1}, app_name="Coding Playground"),
+        _res("t2", "The finished blog post.", app_name="Blogs Playground"),
+        _res("t3", None, status="skipped", app_name="Simulated Learning", error="no inputs"),
+    )
+    s = synthesize(client, pr, model="m", subtask_deps=deps)
+    assert "The finished blog post." in s.answer
+    assert "Simulated Learning" in s.answer
+
+
+def test_no_disclosure_when_all_steps_succeeded(fake_llm: MakeLLM) -> None:
+    # A clean run must be untouched — no note, no extra section.
+    client = fake_llm([])
+    pr = _plan_result(_res("t1", "The answer is 42.", app_name="Teach Me"))
+    s = synthesize(client, pr, model="m")
+    assert s.answer == "The answer is 42."
+
+
+def test_prompt_requires_reporting_failures() -> None:
+    prompt = load_system_prompt().lower()
+    assert "did not" in prompt or "failed" in prompt
+    assert "never describe work that did not happen" in prompt

@@ -122,12 +122,37 @@ def _results_block(ok: Sequence[SubtaskResult]) -> str:
     return "\n\n".join(blocks)
 
 
-def build_synthesis_message(task: str, ok: Sequence[SubtaskResult]) -> str:
-    return (
-        f"TASK:\n{task}\n\n"
-        f"RESULTS (from the apps that ran — use only these):\n{_results_block(ok)}\n\n"
+def _failed_block(failed: Sequence[SubtaskResult]) -> str:
+    """What each step that produced nothing was supposed to do, and why it did not."""
+    lines: list[str] = []
+    for r in failed:
+        detail = f" — {r.error}" if r.error else ""
+        lines.append(f"[{r.subtask_id}] {r.app_name} ({r.status}){detail}")
+    return "\n".join(lines)
+
+
+def build_synthesis_message(
+    task: str, ok: Sequence[SubtaskResult], failed: Sequence[SubtaskResult] = ()
+) -> str:
+    """The synthesizer's user message: what succeeded AND what did not.
+
+    Both halves matter. Given only the successes it cannot tell which parts of the task went
+    unanswered, so it answers the whole task and fills the gaps from general knowledge — the
+    2026-08-11 HR run described an EDA and a model that never ran.
+    """
+    parts = [
+        f"TASK:\n{task}",
+        f"RESULTS (from the apps that ran — use only these):\n{_results_block(ok)}",
+    ]
+    if failed:
+        parts.append(
+            "STEPS THAT PRODUCED NOTHING (these did NOT run — you must not describe their work "
+            f"as if it happened):\n{_failed_block(failed)}"
+        )
+    parts.append(
         "Write ONE grounded answer to the task in the user's voice, using only the results above."
     )
+    return "\n\n".join(parts)
 
 
 def _emit(on_delta: DeltaFn | None, text: str) -> None:
@@ -144,11 +169,12 @@ def _synthesize_llm(
     *,
     model: str,
     on_delta: DeltaFn | None = None,
+    failed: Sequence[SubtaskResult] = (),
 ) -> str:
     request = LLMRequest(
         model=model,
         system=load_system_prompt(),
-        messages=({"role": "user", "content": build_synthesis_message(task, ok)},),
+        messages=({"role": "user", "content": build_synthesis_message(task, ok, failed)},),
         max_tokens=_MAX_TOKENS,
     )
     # Stream the fused answer live when the client supports it; otherwise fall back to a blocking
@@ -205,10 +231,23 @@ def synthesize(
     ok = _ok_results(plan_result)
     sources = _sources(ok)
     artifacts = _artifacts(ok)
+    failed = _failed_results(plan_result)
+
+    def _disclose(answer: str) -> str:
+        """Append the honest note about steps that produced nothing.
+
+        Mechanical on purpose. The prompt asks the writer to report failures, but a request is
+        not a guarantee — and the pass-through modes never consult a model at all, so one app's
+        tuned prose would otherwise hide every failure around it.
+        """
+        if not failed:
+            return answer
+        lines = "\n".join(_failure_line(r) for r in failed)
+        return f"{answer}\n\n---\n\nNot completed in this run:\n{lines}"
+
     if not ok:
         # No app produced grounded data. Be honest about WHY (per app), not bland — and never
         # reach for the web here: web is only the planner's no-app route, not a runtime rescue.
-        failed = _failed_results(plan_result)
         if failed:
             answer = "This task could not be completed by the selected apps:\n" + "\n".join(
                 _failure_line(r) for r in failed
@@ -220,14 +259,16 @@ def synthesize(
     terminal = _dominant_terminal(ok, subtask_deps)
     if terminal is not None and isinstance(terminal.output, str) and terminal.output.strip():
         # The final step already folded in the upstream results — pass it through, don't re-fuse.
-        answer = terminal.output.strip()
+        answer = _disclose(terminal.output.strip())
         _emit(on_delta, answer)
         return Synthesis(answer=answer, mode="final-step", sources=sources, artifacts=artifacts)
     only = ok[0]
     if len(ok) == 1 and isinstance(only.output, str) and only.output.strip():
         # One app fully answered in prose — pass it through verbatim to keep its tuned voice.
-        answer = only.output.strip()
+        answer = _disclose(only.output.strip())
         _emit(on_delta, answer)
         return Synthesis(answer=answer, mode="verbatim", sources=sources, artifacts=artifacts)
-    answer = _synthesize_llm(client, plan_result.task, ok, model=model, on_delta=on_delta)
+    answer = _disclose(
+        _synthesize_llm(client, plan_result.task, ok, model=model, on_delta=on_delta, failed=failed)
+    )
     return Synthesis(answer=answer, mode="synthesized", sources=sources, artifacts=artifacts)

@@ -1,6 +1,6 @@
 # Project State — A multi agent orchestrator system calling relevant apps basis intent recognition
 
-Last updated: 2026-08-11 (all-code-to-coding-playground task)
+Last updated: 2026-08-11 (answer-discloses-what-failed task)
 
 ## Next — agreed with the user 2026-08-11 (RCA: the HR-dataset run; fixes taken ONE BY ONE)
 
@@ -44,6 +44,16 @@ fixes agreed, in this order:
    before push.
 
 ## In progress
+
+- 2026-08-11 answer-discloses-what-failed (fix 3 taken, from the fix-2 live run; bugfix-first).
+  The final answer no longer describes work that did not happen. `synthesize()` now computes the
+  failed/skipped steps once and (a) passes them to the answer-writer in a "STEPS THAT PRODUCED
+  NOTHING" block, and (b) appends a mechanical "Not completed in this run:" section in EVERY mode
+  — synthesized, verbatim AND final-step. The mechanical half matters: the pass-through modes make
+  no LLM call at all, so one app's tuned prose used to hide every failure around it. Prompt v1->v2
+  spells out the rule (never narrate an analysis/model/chart only a failed step could have
+  produced, never substitute what it "would" show). A clean run is byte-for-byte unchanged.
+  6 tests written first (5 failed pre-fix); 23/23 synthesis tests; `make verify` PASS.
 
 - 2026-08-11 all-code-to-coding-playground (fix 2 of 6 from the HR-run RCA; bugfix-first). DONE,
   live-proven (run 39c3bcb9): both code steps -> coding-playground, NO fabricated data anywhere,
@@ -904,6 +914,16 @@ fixes agreed, in this order:
 - 2026-07-03 project initialized: objective written (4 ACs), e2e kit installed (agent)
 
 ## In progress
+
+- 2026-08-11 answer-discloses-what-failed (fix 3 taken, from the fix-2 live run; bugfix-first).
+  The final answer no longer describes work that did not happen. `synthesize()` now computes the
+  failed/skipped steps once and (a) passes them to the answer-writer in a "STEPS THAT PRODUCED
+  NOTHING" block, and (b) appends a mechanical "Not completed in this run:" section in EVERY mode
+  — synthesized, verbatim AND final-step. The mechanical half matters: the pass-through modes make
+  no LLM call at all, so one app's tuned prose used to hide every failure around it. Prompt v1->v2
+  spells out the rule (never narrate an analysis/model/chart only a failed step could have
+  produced, never substitute what it "would" show). A clean run is byte-for-byte unchanged.
+  6 tests written first (5 failed pre-fix); 23/23 synthesis tests; `make verify` PASS.
 
 - (nothing — synthesis-voice sealed; the MoE depth demo now returns ONE grounded answer. Next is
   plan-depth-orchestration.md Task 3: a hermetic replay e2e for a 2-step dependent task (records
