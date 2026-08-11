@@ -1,6 +1,6 @@
 # Task: all-code-to-coding-playground
 
-Status: in progress
+Status: DONE (all 6 acceptance criteria met, incl. the live HR re-run)
 Type: bugfix
 Scope: registry/apps.json, src/orchestrator/prompts/operation_select_system.md, tests/unit/test_selector.py, tests/eval/cases.json, tests/eval/fixtures/**, tests/e2e/fixtures/**, STATE.md
 Phase: Phase 3 — routing accuracy / honest output
@@ -58,4 +58,18 @@ Each one names the test that proves it.
 
 ## Done
 
-Proof commit: <sha>   Auditor verdict: <ON_TRACK/...>   Docs updated: yes/no/n-a
+Proof commit: 4cd2f9e (see git log)   Auditor verdict: pending   Docs updated: STATE.md
+
+Live proof (run 39c3bcb9, 2026-08-11): both code steps routed to coding-playground (none to
+simulated-learning); NO step generated stand-in data — the EDA step declined to write code
+rather than fabricating, where the previous run had produced 1,000 np.random rows; and fix 1
+fired for the first time in the wild (t3, t4 skipped: "every step it depends on failed").
+
+FOLLOW-UP FOUND BY THIS RUN (new task, not this one): the FINAL ANSWER still fabricates. With
+t1 (web search) ok and t2-t4 skipped, `synthesize()` passes ONLY the ok results to the LLM
+(`_synthesize_llm(client, task, ok, ...)`, synthesis.py:232) — the failed/skipped steps are used
+only in the `if not ok:` branch. So the synthesiser is asked to answer the whole task, is never
+told anything failed, and writes a full EDA + modelling narrative from the web blurb without
+once saying 3 of 4 steps were skipped. Also: the run is recorded status "ok" (quality 0.25)
+though only 1 of 4 steps produced anything, and t2's skip reason ("missing required input:
+code") does not say the real cause (no data available to write code against).

@@ -45,7 +45,14 @@ fixes agreed, in this order:
 
 ## In progress
 
-- 2026-08-11 all-code-to-coding-playground (fix 2 of 6 from the HR-run RCA; bugfix-first). Three
+- 2026-08-11 all-code-to-coding-playground (fix 2 of 6 from the HR-run RCA; bugfix-first). DONE,
+  live-proven (run 39c3bcb9): both code steps -> coding-playground, NO fabricated data anywhere,
+  and fix 1 fired in the wild. NEXT FIX FOUND BY THAT RUN — the final ANSWER still invents:
+  `synthesize()` hands the LLM only the successful steps (synthesis.py:232), so with 1 of 4 steps
+  ok it was asked to answer the whole task, never told the rest were skipped, and wrote a full
+  EDA/modelling narrative from a web blurb. Honest-failure lines exist but only run when EVERY
+  step fails. Also found: run status recorded "ok" at quality 0.25, and a misleading skip reason
+  ("missing required input: code" rather than "no data available to write code against"). Three
   things, because the live HR re-run showed they are one problem. (a) USER RULE: all coding /
   analysis / modelling goes to coding-playground; simulated-learning is LEARNING ONLY — its card
   now says so outright and states its sandbox has numpy + scikit-learn only. (b) Coding
