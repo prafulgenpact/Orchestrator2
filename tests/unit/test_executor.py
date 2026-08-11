@@ -511,18 +511,27 @@ def test_proceeds_when_required_fields_present(
 
 
 def test_execute_skips_failed_upstream(monkeypatch: pytest.MonkeyPatch, fake_llm: MakeLLM) -> None:
-    """A failed dependency is NOT fed downstream (only successful outputs flow forward)."""
+    """A failed dependency is NOT fed downstream — and when it is the ONLY dependency, the
+    downstream step does not run at all (it would have nothing real to answer from).
+
+    This assertion was tightened deliberately on 2026-08-11: it used to check that t2's selection
+    prompt carried no UPSTREAM section, i.e. t2 still ran, just blind. Running blind is what let
+    the HR run's blog step invent its numbers, so the guarantee is now the stronger one — t2 is
+    skipped and never consults the model at all. The partial case (some dependencies succeeded)
+    keeps the original upstream-filtering check, in
+    ``test_step_runs_when_any_dependency_succeeded``.
+    """
     monkeypatch.setattr(
         "orchestrator.executor.call_operation", _stub_call(ok=False, error="retry: boom")
     )
-    # both calls fail, so each subtask returns after selection (no relevance check): 2 LLM calls
-    client = fake_llm([_SELECT, _SELECT])
+    # ONLY t1 may consult the model: a selection call for t2 would exhaust the queue and raise.
+    client = fake_llm([_SELECT])
     plan = _plan(_sub_id("t1"), _sub_id("t2", depends_on=("t1",)))
     result = _run(plan, client)
 
     assert result.results[0].status == "error"
-    messages = [r.messages[0]["content"] for r in client.requests]
-    assert "UPSTREAM" not in messages[1]  # t2's selection has no failed upstream
+    assert result.results[1].status == "skipped"
+    assert len(client.requests) == 1  # t2 never reached the selector
 
 
 # --- NO runtime web rescue: a CHOSEN app that fails is reported honestly, never web-substituted --
@@ -1220,3 +1229,117 @@ def test_app_failure_without_message_gets_generic_error(
     r = _run(_plan(_sub("arxiv-papers", "ArXiv Paper Guide")), client).results[0]
     assert r.status == "error"
     assert r.error == "the app reported the step failed"
+
+
+# No answer without inputs: a step that depends on other steps must NOT run when every one of
+# them failed. The HR run's blog step received nothing (both analysis steps had failed) and
+# invented "95% accuracy / 12% recall" — numbers no computation ever produced. A step with no
+# real inputs is skipped, honestly, instead of being allowed to fill the gap.
+
+
+def _stub_call_counting(calls: list[str], *, fail_on: tuple[int, ...] = ()) -> Callable[..., Any]:
+    """Record every app call; fail the ones whose 1-based call number is in ``fail_on``."""
+
+    async def _call(
+        app: AppEntry, op: AppOperation, args: dict[str, Any], **_kw: Any
+    ) -> CallResult:
+        calls.append(f"{app.id}.{op.name}")
+        ok = len(calls) not in fail_on
+        return CallResult(
+            app.id,
+            op.name,
+            f"http://x{op.path}",
+            ok,
+            200 if ok else 500,
+            {"echo": args} if ok else None,
+            None if ok else "boom",
+            0.01,
+        )
+
+    return _call
+
+
+def test_step_skipped_when_all_dependencies_failed(
+    monkeypatch: pytest.MonkeyPatch, fake_llm: MakeLLM
+) -> None:
+    calls: list[str] = []
+    monkeypatch.setattr(
+        "orchestrator.executor.call_operation", _stub_call_counting(calls, fail_on=(1,))
+    )
+    # Only t1 may consult the LLM: a selection call for t2 would exhaust the queue and raise.
+    client = fake_llm([_SELECT])
+    plan = _plan(_sub_id("t1"), _sub_id("t2", depends_on=("t1",)))
+    results = _run(plan, client).results
+    assert [r.status for r in results] == ["error", "skipped"]
+    assert calls == ["arxiv-papers.search_papers_by_query"]  # t2's app was never called
+    assert results[1].output is None  # nothing to invent an answer from
+
+
+def test_skip_reason_names_the_failed_dependencies(
+    monkeypatch: pytest.MonkeyPatch, fake_llm: MakeLLM
+) -> None:
+    calls: list[str] = []
+    monkeypatch.setattr(
+        "orchestrator.executor.call_operation", _stub_call_counting(calls, fail_on=(1,))
+    )
+    client = fake_llm([_SELECT])
+    plan = _plan(_sub_id("t1"), _sub_id("t2", depends_on=("t1",)))
+    skipped = _run(plan, client).results[1]
+    assert skipped.error is not None
+    assert "t1" in skipped.error  # the answer can say WHICH step it was waiting on
+
+
+def test_step_runs_when_any_dependency_succeeded(
+    monkeypatch: pytest.MonkeyPatch, fake_llm: MakeLLM
+) -> None:
+    # Partial upstream is still upstream: one good dependency is enough to run on.
+    # Each subtask must select DIFFERENT arguments, or the per-run call cache would coalesce them
+    # into a single app call and t2 would inherit t1's success instead of failing on its own.
+    calls: list[str] = []
+    monkeypatch.setattr(
+        "orchestrator.executor.call_operation", _stub_call_counting(calls, fail_on=(2,))
+    )
+    sel = '{"operation": "search_papers_by_query", "arguments": {"query": "%s"}}'
+    client = fake_llm([sel % "a", _RELEVANT, sel % "b", sel % "c", _RELEVANT])
+    plan = _plan(
+        _sub_id("t1"),
+        _sub_id("t2", depends_on=("t1",)),
+        _sub_id("t3", depends_on=("t1", "t2")),
+    )
+    results = _run(plan, client).results
+    assert [r.status for r in results] == ["ok", "error", "ok"]
+    assert len(calls) == 3  # t3 really did call its app
+    # ...and only the SUCCESSFUL dependency reached t3's selection prompt.
+    t3_selection = client.requests[3].messages[0]["content"]
+    assert "UPSTREAM" in t3_selection
+    assert '"a"' in t3_selection or "'a'" in t3_selection  # t1's output flowed forward
+    assert "boom" not in t3_selection  # t2's failure did not
+
+
+def test_step_without_dependencies_always_runs(
+    monkeypatch: pytest.MonkeyPatch, fake_llm: MakeLLM
+) -> None:
+    # The rule applies ONLY to steps that declare dependencies; a standalone step is untouched.
+    calls: list[str] = []
+    monkeypatch.setattr("orchestrator.executor.call_operation", _stub_call_counting(calls))
+    client = fake_llm([_SELECT, _RELEVANT])
+    r = _run(_plan(_sub_id("t1")), client).results[0]
+    assert r.status == "ok"
+    assert len(calls) == 1
+
+
+def test_skip_cascades_downstream(monkeypatch: pytest.MonkeyPatch, fake_llm: MakeLLM) -> None:
+    # t1 fails -> t2 is skipped -> t3 (which waited on t2) is skipped too. One app call in total.
+    calls: list[str] = []
+    monkeypatch.setattr(
+        "orchestrator.executor.call_operation", _stub_call_counting(calls, fail_on=(1,))
+    )
+    client = fake_llm([_SELECT])
+    plan = _plan(
+        _sub_id("t1"),
+        _sub_id("t2", depends_on=("t1",)),
+        _sub_id("t3", depends_on=("t2",)),
+    )
+    results = _run(plan, client).results
+    assert [r.status for r in results] == ["error", "skipped", "skipped"]
+    assert len(calls) == 1

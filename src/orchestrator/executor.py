@@ -313,6 +313,15 @@ async def execute_plan(
         # The semaphore bounds concurrency; upstream is read here (all of this subtask's
         # dependencies live in an earlier, already-completed wave, so by_id is fully populated).
         async with sem:
+            # No answer without inputs: if EVERY step this one waits on failed, it has nothing
+            # real to work from. Running it anyway invites the app to fill the gap with invented
+            # content, so we stop here and say so. The skip cascades to whatever waited on it.
+            blocked = _blocking_dependencies(sub, by_id)
+            if blocked:
+                result = _skipped_for_failed_inputs(sub, blocked)
+                progress(f"[{result.status}] {sub.title} ({result.duration_s:.1f}s)")
+                on_result(result)
+                return result
             upstream = _upstream_for(sub, by_id)
             progress(f"-> {sub.title}")
             result = await _run_subtask(
@@ -345,6 +354,30 @@ async def execute_plan(
 def _upstream_for(sub: Subtask, by_id: dict[str, SubtaskResult]) -> tuple[SubtaskResult, ...]:
     """The successful results of the subtasks ``sub`` depends on (feeds the selector)."""
     return tuple(by_id[dep] for dep in sub.depends_on if dep in by_id and by_id[dep].status == "ok")
+
+
+def _blocking_dependencies(sub: Subtask, by_id: dict[str, SubtaskResult]) -> tuple[str, ...]:
+    """The steps ``sub`` waited on when NONE of them succeeded — else an empty tuple.
+
+    Empty when the subtask has no dependencies at all, when at least one dependency produced
+    grounded data, or (defensively) when no dependency has run yet: those all mean "go ahead".
+    """
+    finished = [dep for dep in sub.depends_on if dep in by_id]
+    if not finished or any(by_id[dep].status == "ok" for dep in finished):
+        return ()
+    return tuple(finished)
+
+
+def _skipped_for_failed_inputs(sub: Subtask, blocked: tuple[str, ...]) -> SubtaskResult:
+    """An honest skip: this step never ran because everything it needed had already failed."""
+    steps = ", ".join(blocked)
+    reason = (
+        f"every step it depends on failed ({steps}) — with no results to work from, "
+        "any answer here would be invented"
+    )
+    return SubtaskResult(
+        sub.id, sub.app.app_id, sub.app.app_name, "skipped", None, None, None, reason, 0.0
+    )
 
 
 async def _run_subtask(

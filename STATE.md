@@ -1,8 +1,36 @@
 # Project State — A multi agent orchestrator system calling relevant apps basis intent recognition
 
-Last updated: 2026-08-10 (step-status-honesty task)
+Last updated: 2026-08-11 (no-answer-without-inputs task)
 
-## Next — agreed with the user 2026-08-04 (RCA: CLT-graphs run failed silently)
+## Next — agreed with the user 2026-08-11 (RCA: the HR-dataset run; fixes taken ONE BY ONE)
+
+The HR run ("research an HR dataset, do EDA + modelling, then blog it with charts") exposed a
+worse problem than the two crashes in it: the blog step received NOTHING (both analysis steps had
+failed) and invented its findings — "95% accuracy, 12% recall" that no computation produced. Six
+fixes agreed, in this order:
+
+1. ~~**no-answer-without-inputs**~~ DONE 2026-08-11 — see In progress below.
+2. **all-code-to-coding-playground** + tell the code-writer the environment truth. USER RULE
+   (2026-08-11): ALL coding requests go to coding-playground; simulated-learning is for LEARNING
+   ONLY. NOTE this inverts THREE existing eval cases that currently assert code ->
+   simulated-learning (`run-code-to-simulated-not-coding-playground`,
+   `explain-plus-code-gradient-descent`, `multiask-llm-explain-code-blog`) — they must be flipped
+   and ALL fixtures re-recorded. Also state per app what is installed, so the code-writer stops
+   reaching for absent libraries (it asked for `requests`, which is not installed AND was not
+   needed — pandas reads URLs directly, proven live).
+3. **ask-the-app-for-its-datasets** before writing code: the HR run never called `list_datasets`;
+   it guessed at `/datasets`, `/data`, then any CSV. Hand the real catalogue to the code-writer.
+4. **check-numbers-against-inputs**: the relevance judge only asks "is this on topic?", so
+   invented statistics pass. Verify figures in written output appear in that step's inputs; flag
+   unsupported ones (warn, don't delete — consistent with the existing advisory judge).
+5. **let-web-found-data-land**: research can name a dataset but nothing can fetch it. Either read
+   a public CSV URL directly, or (better) fetch + register it as a dataset so the built-in EDA/ML
+   /chart operations do the work.
+6. **install what is needed** — USER RULE (2026-08-11): install missing packages. Decided: do NOT
+   add `requests` to coding-playground (never needed); simulated-learning lacks pandas — but per
+   rule 2 it should not be receiving code work at all, so settle 2 first.
+
+## Earlier — agreed with the user 2026-08-04 (RCA: CLT-graphs run failed silently)
 
 1. ~~**route-graph-work-to-coding-playground**~~ DONE 2026-08-10 — see In progress below.
 2. ~~**step-status-honesty**~~ DONE 2026-08-10 — see In progress below. The optional
@@ -16,6 +44,22 @@ Last updated: 2026-08-10 (step-status-honesty task)
    before push.
 
 ## In progress
+
+- 2026-08-11 no-answer-without-inputs (fix 1 of 6 from the HR-run RCA; bugfix-first). A step that
+  declares dependencies no longer runs when EVERY one of them failed: `_blocking_dependencies` +
+  `_skipped_for_failed_inputs` in `executor.py` return a "skipped" result naming the steps it was
+  waiting on ("every step it depends on failed (t2, t3) — with no results to work from, any answer
+  here would be invented"), before any selector LLM call and any app call. The skip cascades, so a
+  chain of dependants all stop honestly. Reuses the existing "skipped" status, so counts, run
+  record, synthesis wording, trace badge and feed all follow unchanged. A step with NO dependencies
+  is untouched, and one with at least one GOOD dependency still runs on what survived.
+  5 new tests written first (3 failed pre-fix). One pre-existing test tightened deliberately:
+  `test_execute_skips_failed_upstream` used to assert the downstream step ran blind with no
+  UPSTREAM section — running blind is exactly the bug — so it now asserts the step is skipped and
+  never reaches the selector; its original upstream-filtering check lives on in the partial case
+  (`test_step_runs_when_any_dependency_succeeded`). Note found while testing: the per-run call
+  cache coalesces identical (app, op, args) calls, so multi-step tests need distinct arguments.
+  65/65 executor tests; `make verify` PASS.
 
 - 2026-08-10 step-status-honesty (executor fix, 2 of the 2 agreed CLT-RCA fixes; bugfix-first).
   The executor now looks INSIDE a successful HTTP reply: `_app_reported_failure` in `executor.py`
